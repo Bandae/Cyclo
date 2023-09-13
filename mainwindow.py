@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(btn6)
         self.stacklayout.addWidget(eksport)
 
-        #Menu główne :
+        #Menu główne:
 
         menu = self.menuBar()
 

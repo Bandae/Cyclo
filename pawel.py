@@ -203,7 +203,7 @@ class Animacja(QWidget):
 
         #skalowanie rysunku :
         scala = (self.data[1] * (self.data[0] + 1) * math.cos(0)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * 0))) - ((self.data[3] * ((math.cos(0) - (self.data[2] * math.cos((self.data[0] + 1) * 0))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * 0)) + (self.data[2] * self.data[2]))))))
-        scala = (200/scala)
+        scala = (220/scala)
 
         # rysowanie zarysu :
         for j in range(0,1440):
