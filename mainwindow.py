@@ -12,7 +12,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Przekładnia Cykolidalna")
-        self.setMinimumSize(600,600)
+        self.setMinimumSize(1050,750)
         self.showMaximized()
 
         #ustawienie ikonki :

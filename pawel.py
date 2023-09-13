@@ -1,5 +1,7 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QSpinBox, QPushButton
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtWidgets import QWidget, QLabel,QFrame,QStackedLayout, QGridLayout, QVBoxLayout, QDoubleSpinBox, QSpinBox, QPushButton
+from PySide6.QtGui import QPalette, QColor, QPainter, QPixmap,Qt, QPolygon, QGradient, QPen,QBrush
+from PySide6.QtCore import QLine, QPoint, QSize
+import math
 
 class Color(QWidget):
     def __init__(self, color):
@@ -17,15 +19,13 @@ class DataEdit(QWidget):
         layout = QVBoxLayout()
         layout1 = QGridLayout()
 
-
-
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h
-        self.dane = [20, 4.8, 0.625, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.refil_data()
         self.spin_z = SpinBox(self.dane[0],8,38,1)
         self.spin_z.lineEdit().setReadOnly(True)
         self.spin_ro = SpinBox(self.dane[1],3,8,0.05)
-        self.spin_h = SpinBox(self.dane[2],0.5,1,0.01)
+        self.spin_h = SpinBox(self.dane[2],0.5,0.99,0.01)
         self.spin_g = SpinBox(self.dane[3],5,14,0.02)
 
         self.spin_z.valueChanged.connect(self.z_changed)
@@ -43,17 +43,17 @@ class DataEdit(QWidget):
         layout.addWidget(QLabelD("Promień rolek [g]"))
         layout.addWidget(self.spin_g)
         layout.addSpacing(50)
-        self.Ra1 = QLabelD(str(self.dane[4]))
-        self.Rf1 = QLabelD(str(self.dane[5]))
-        self.Rw1 = QLabelD(str(self.dane[6]))
-        self.Ra2 = QLabelD(str(self.dane[7]))
-        self.Rf2 = QLabelD(str(self.dane[8]))
-        self.Rw2 = QLabelD(str(self.dane[9]))
-        self.Rb = QLabelD(str(self.dane[10]))
-        self.Rg = QLabelD(str(self.dane[11]))
-        self.g = QLabelD(str(self.dane[12]))
-        self.e = QLabelD(str(self.dane[13]))
-        self.h = QLabelD(str(self.dane[14]))
+        self.Ra1 = QLabelD(str(round(self.dane[4],2)))
+        self.Rf1 = QLabelD(str(round(self.dane[5],2)))
+        self.Rw1 = QLabelD(str(round(self.dane[6],2)))
+        self.Ra2 = QLabelD(str(round(self.dane[7],2)))
+        self.Rf2 = QLabelD(str(round(self.dane[8],2)))
+        self.Rw2 = QLabelD(str(round(self.dane[9],2)))
+        self.Rb = QLabelD(str(round(self.dane[10],2)))
+        self.Rg = QLabelD(str(round(self.dane[11],2)))
+        self.g = QLabelD(str(round(self.dane[12],2)))
+        self.e = QLabelD(str(round(self.dane[13],2)))
+        self.h = QLabelD(str(round(self.dane[14],2)))
 
         layout1.addWidget(QLabelD("DANE : "),0,0,1,2)
         layout1.addWidget(QLabelD("Ra1 : "), 1, 0)
@@ -122,14 +122,15 @@ class DataEdit(QWidget):
 
     def z_changed(self):
 
-        self.dane[0]=self.spin_z.value()
+        self.dane[0] = self.spin_z.value()
         self.dane[1] = self.spin_ro.value()
         self.dane[2] = self.spin_h.value()
         self.dane[3] = self.spin_g.value()
 
         self.refil_data()
         self.refili_labels()
-
+        update = Animacja(self.dane)
+        print("CP"+str(self.dane[0]))
 class SpinBox(QDoubleSpinBox):
     def __init__(self,a,b,c,d):
         super().__init__()
@@ -139,23 +140,28 @@ class SpinBox(QDoubleSpinBox):
         self.setRange(b, c)
         self.setSingleStep(d)
 
-
-
-
 class Tab_Pawel(QWidget):
 
     def __init__(self):
         super().__init__()
 
         main_layout = QVBoxLayout()
-        layout = QGridLayout()
+        self.layout = QGridLayout()
         self.data = DataEdit()
-        layout.addWidget(self.data,0,0,4,1)
-        layout.addWidget(Color('gray'), 0, 1,3,5)
-        layout.addWidget(Color('gray'), 3, 1,1,5)
-        main_layout.addLayout(layout)
-
+        self.animacja = Animacja(self.data.dane)
+        self.data.spin_z.valueChanged.connect(self.zmiana_danych)
+        self.data.spin_ro.valueChanged.connect(self.zmiana_danych)
+        self.data.spin_g.valueChanged.connect(self.zmiana_danych)
+        self.data.spin_h.valueChanged.connect(self.zmiana_danych)
+        self.layout.addWidget(self.data,0,0,4,1)
+        self.layout.addWidget(self.animacja, 0, 1,4,5)
+        main_layout.addLayout(self.layout)
         self.setLayout(main_layout)
+
+    def zmiana_danych(self):
+        self.animacja.rysowanko()
+        print("HEH")
+        self.layout.addWidget(self.animacja,0,1,4,5)
 
 class QLabelD(QLabel):
     def __init__(self,a):
@@ -164,3 +170,72 @@ class QLabelD(QLabel):
         self.setText(str(a))
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setLineWidth(1)
+
+class Animacja(QWidget):
+
+    def __init__(self, data):
+        super().__init__()
+
+        self.setMinimumSize(640,640)
+        self.data=data
+
+        self.layout = QGridLayout()
+        self.label = QLabel(self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("background-color: #f0f0f0")
+
+        self._size = QSize(self.width(), self.height())
+        self.layout.addWidget(self.label)
+
+        self.rysowanko()
+    def rysowanko(self):
+
+
+        pixmap = QPixmap(self._size)
+        pixmap.fill("#f0f0f0")
+        painter = QPainter(pixmap)
+        pen = QPen(Qt.black,1)
+        painter.setBrush(QBrush(Qt.gray, Qt.SolidPattern))
+        painter.setPen(pen)
+        points = QPolygon()
+        self.data[0]=int(self.data[0])
+        print(str(self.data[0]))
+
+        #skalowanie rysunku :
+        scala = (self.data[1] * (self.data[0] + 1) * math.cos(0)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * 0))) - ((self.data[3] * ((math.cos(0) - (self.data[2] * math.cos((self.data[0] + 1) * 0))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * 0)) + (self.data[2] * self.data[2]))))))
+        scala = (200/scala)
+
+        # rysowanie zarysu :
+        for j in range(0,1440):
+            i=j/4
+            x = (self.data[1] * (self.data[0] + 1) * math.cos(i * 0.0175)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * i * 0.0175))) - ((self.data[3] * ((math.cos(i * 0.0175) - (self.data[2] * math.cos((self.data[0] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * i * 0.0175)) + (self.data[2] * self.data[2]))))))
+            y = (self.data[1] * (self.data[0] + 1) * math.sin(i * 0.0175)) - (self.data[2] * self.data[1] * (math.sin((self.data[0] + 1) * i * 0.0175))) - ((self.data[3] * ((math.sin(i * 0.0175) - (self.data[2] * math.sin((self.data[0] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * i * 0.0175)) + (self.data[2] * self.data[2]))))))
+            x=x*scala
+            y=y*scala
+            points.insert(j, QPoint(x+320, y+320))
+        painter.drawPolygon(points)
+
+        #Rysowanie rolek :
+
+        painter.setBrush(QBrush(Qt.green))
+        liczba_rolek = int(self.data[0])
+        skok_kata = 360/liczba_rolek
+
+        for i in range(liczba_rolek):
+            x=320+self.data[11]*math.cos(i*skok_kata* 0.0175)*scala
+            y = 320 + self.data[11] * math.sin(i * skok_kata * 0.0175) * scala
+            painter.drawEllipse(x-(self.data[12]*scala),y-(self.data[12]*scala),self.data[12]*scala*2,self.data[12]*scala*2)
+
+        #Rysowanie Wałka
+
+        painter.setBrush(QBrush(Qt.yellow))
+        painter.drawEllipse(320-(10*scala),320-(10*scala),20*scala,20*scala)
+
+
+        self.setLayout(self.layout)
+        self.label.setPixmap(pixmap)
+        painter.end()
+
+
+
+
