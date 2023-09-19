@@ -11,7 +11,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Przekładnia Cykolidalna")
+        self.setWindowTitle("Przekładnia Cykloidalna")
         self.setMinimumSize(1050,750)
         self.showMaximized()
 
