@@ -12,21 +12,30 @@ class DataEdit(QWidget):
         layout = QVBoxLayout()
         layout1 = QGridLayout()
 
-                    #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h
-        self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
+        self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1000, 2]
         self.refil_data()
         self.spin_z = SpinBox(self.dane[0],8,38,1)
         self.spin_z.lineEdit().setReadOnly(True)
         self.spin_ro = SpinBox(self.dane[1],3,8,0.05)
         self.spin_h = SpinBox(self.dane[2],0.5,0.99,0.01)
         self.spin_g = SpinBox(self.dane[3],5,14,0.02)
+        self.spin_obc = SpinBox(self.dane[15], 500, 5000, 100)
+        self.spin_l_k = SpinBox(self.dane[16], 1, 4, 1)
+        self.spin_l_k.lineEdit().setReadOnly(True)
 
         self.spin_z.valueChanged.connect(self.z_changed)
         self.spin_ro.valueChanged.connect(self.z_changed)
         self.spin_h.valueChanged.connect(self.z_changed)
         self.spin_g.valueChanged.connect(self.z_changed)
+        self.spin_obc.valueChanged.connect(self.z_changed)
+        self.spin_l_k.valueChanged.connect(self.z_changed)
 
         layout.addWidget(QLabelD("DANE WEJSCIOWE :"))
+        layout.addWidget(QLabelD("Obciążenie wejsciowe [M]"))
+        layout.addWidget(self.spin_obc)
+        layout.addWidget(QLabelD("Liczba Kół [K]"))
+        layout.addWidget(self.spin_l_k)
         layout.addWidget(QLabelD("Liczba Zębów [z]"))
         layout.addWidget(self.spin_z)
         layout.addWidget(QLabelD("Promień [ρ]"))
@@ -38,7 +47,8 @@ class DataEdit(QWidget):
         self.start_animation_button = QPushButton("START ANIMACJI")
         self.start_animation_button.setCheckable(True)
         layout.addWidget(self.start_animation_button)
-        layout.addSpacing(50)
+        layout.addSpacing(10)
+
         self.Ra1 = QLabelD(str(round(self.dane[4],2)))
         self.Rf1 = QLabelD(str(round(self.dane[5],2)))
         self.Rw1 = QLabelD(str(round(self.dane[6],2)))
@@ -190,6 +200,7 @@ class Animacja(QWidget):
         self.kat_=0
         self.kat_dorotacji = 0
         self.status_animacji = 0
+        self.skok_kata = 0
 
         self.layout = QGridLayout()
         self.label = QLabel(self)
@@ -206,17 +217,13 @@ class Animacja(QWidget):
         pixmap = QPixmap(self._size)
         pixmap.fill("#f0f0f0")
         painter = QPainter(pixmap)
-        painter2 = QPainter(pixmap)
         pen = QPen(Qt.black,1)
         painter.setBrush(QBrush(Qt.gray, Qt.SolidPattern))
-        painter2.setBrush(QBrush(Qt.gray, Qt.SolidPattern))
         painter.setPen(pen)
-        painter2.setPen(pen)
         points = QPolygon()
         self.data[0]=int(self.data[0])
         #print(str(self.data[0]))
         painter.translate(320,320)
-        painter2.translate(320, 320)
         painter.rotate(self.kat_dorotacji)
 
         #skalowanie rysunku :
@@ -225,6 +232,14 @@ class Animacja(QWidget):
 
         przesuniecie_x = self.data[13]*math.cos(self.kat_* 0.0175)
         przesuniecie_y = self.data[13]*math.sin(self.kat_* 0.0175)
+
+        # Rysowanie pierscienia okalającego :
+
+        painter.setBrush(QBrush(Qt.green, Qt.SolidPattern))
+        painter.drawEllipse((-(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2), -(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2, ((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)),((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))
+        painter.setBrush(QBrush(Qt.black, Qt.SolidPattern))
+        painter.drawEllipse((-(((self.data[11] * scala * 2)))/ 2),-(((self.data[11] * scala * 2))) / 2,((self.data[11] * scala * 2)),((self.data[11] * scala * 2)))
+        painter.setBrush(QBrush(Qt.gray, Qt.SolidPattern))
 
         # rysowanie zarysu :
         for j in range(0,1440):
@@ -238,26 +253,32 @@ class Animacja(QWidget):
 
         #Rysowanie rolek :
 
-        painter.setBrush(QBrush(Qt.black,Qt.SolidPattern))
+        painter.setBrush(QBrush(Qt.blue,Qt.SolidPattern))
         painter.rotate(-self.kat_dorotacji)
         liczba_rolek = int(self.data[0])+1
-        skok_kata = 360/liczba_rolek
+        self.skok_kata = 360/liczba_rolek
 
         for i in range(liczba_rolek):
-            x = self.data[11]*math.cos(i*skok_kata* 0.0175)*scala
-            y = self.data[11] * math.sin(i * skok_kata * 0.0175) * scala
+            x = self.data[11]*math.cos(i*self.skok_kata* 0.0175)*scala
+            y = self.data[11] * math.sin(i * self.skok_kata * 0.0175) * scala
             painter.drawEllipse(x-(self.data[12]*scala),y-(self.data[12]*scala),self.data[12]*scala*2,self.data[12]*scala*2)
 
         #Rysowanie Wałka
 
-        painter.setBrush(QBrush(Qt.yellow))
-        painter.drawEllipse(-(10*scala),-(10*scala),20*scala,20*scala)
+        #painter.setBrush(QBrush(Qt.yellow))
+        #painter.drawEllipse(-(10*scala),-(10*scala),20*scala,20*scala)
 
         #Rysowanie punktu mimośrodu
 
         pen2 = QPen(Qt.red, 3)
         painter.setPen(pen2)
         painter.drawPoint(przesuniecie_x,przesuniecie_y)
+
+        #Rysowanie punktu "C"
+
+        xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
+        yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
+        painter.drawPoint(xp,yp)
 
 
         self.setLayout(self.layout)
@@ -269,12 +290,33 @@ class Animacja(QWidget):
         self.status_animacji = 1
         def animacja_thread():
             while self.status_animacji==1:
-                time.sleep(0.05)
-                self.kat_+=10
+                time.sleep(0.04)
+                self.kat_+=20
                 self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
+                self.obliczenia_sil()
                 self.rysowanko()
+                if self.kat_== 360*(self.data[0]+1):
+                    self.kat_ = 0
+                    self.kat_dorotacji = 0
+                    print("test")
             #print(str(self.kat_))
         threading.Thread(target=animacja_thread).start()
+
+    def obliczenia_sil(self):
+        #print(str(self.kat_dorotacji))
+        status = True
+        start_kat = -self.kat_dorotacji
+        #print(str(start_kat))
+        rolka_poczatkowa = 0
+        for i in range(0,self.data[0]+1):
+            #print("i : "+str(i))
+            #print("pkt : "+str(i*self.skok_kata))
+            if i * self.skok_kata>=start_kat and status == True:
+                status = False
+                rolka_poczatkowa = i
+
+        print(str(rolka_poczatkowa))
+
 
 
 

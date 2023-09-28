@@ -1,11 +1,12 @@
-from PySide6.QtWidgets import QTabWidget, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
+from PySide6.QtWidgets import QTabWidget,QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
 from PySide6.QtGui import QIcon, QAction
-from kamil import Tab_Kamil
-from milosz import Tab_Milosz
-from wiktor import Tab_Wiktor
-from pawel import Tab_Pawel
 from main_view import Main_View
+from pawel import Tab_Pawel
+from wiktor import Tab_Wiktor
+from milosz import Tab_Milosz
+from kamil import Tab_Kamil
 from eksportdanych import Eksport_Danych
+import json
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -76,7 +77,20 @@ class MainWindow(QMainWindow):
 
         #FILE MENU :
 
-        filemanu =menu.addMenu("&Plik")
+        filemenu =menu.addMenu("&Plik")
+
+        otworz = QAction("Otwórz",self)
+        filemenu.addAction(otworz)
+        otworz.triggered.connect(self.otworz)
+
+        zapis = QAction("Zapisz",self)
+        filemenu.addAction(zapis)
+        zapis.setShortcut("Ctrl+S")
+        #zapis.triggered.connect(self.zapisz(self.pawel))
+
+        exit_app = QAction("Wyjście",self)
+        filemenu.addAction(exit_app)
+        exit_app.triggered.connect(self.exit_applikacji)
 
         #EDIT MENU :
 
@@ -138,3 +152,40 @@ class MainWindow(QMainWindow):
 
     def activate_tab_6(self):
         self.stacklayout.setCurrentIndex(5)
+
+#OTWIERZANIE Z PLIKU JSON
+    def otworz(self):
+        print("otwieram")
+
+
+#ZAPIS DO PLIKU JSON
+    def zapisz(self,dane_pawel):
+
+        data = "{\n\"dane:\" [\n"
+        for i in range(0, 14):
+            data += "     {\n"
+
+            data += "        \"dane_id\": " + str(i) + ",\n"
+            data += "        \"wartosc_dane\": " + str(dane_pawel.data.dane[i])
+
+            data += "\n     }\n"
+        data += "\n}"
+
+        print("CO")
+
+        file_dialog = QFileDialog(self)
+        file_dialog.setFileMode(QFileDialog.AnyFile)
+        file_dialog.setNameFilter('JSON Files (*.json)')
+
+        if file_dialog.exec():
+            file_path = file_dialog.selectedFiles()[0]
+
+            try:
+                with open(file_path, 'w') as file:
+                    json.dump({'data': data}, file)
+                QMessageBox.information(self, 'File Saved', 'Data saved to JSON file successfully.')
+            except Exception as e:
+                QMessageBox.critical(self, 'Error', f'An error occurred while saving the file: {str(e)}')
+
+    def exit_applikacji(self):
+        exit()
