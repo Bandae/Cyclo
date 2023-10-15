@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QLabel,QFrame,QStackedLayout, QGridLayout, QVBoxLayout, QDoubleSpinBox, QSpinBox, QPushButton
 from PySide6.QtGui import QPalette, QColor, QPainter, QPixmap,Qt, QPolygon, QGradient, QPen,QBrush
 from PySide6.QtCore import QLine, QPoint, QSize
+from wykresy import Wykresy
 import math
 import time
 import threading
@@ -14,7 +15,11 @@ class DataEdit(QWidget):
 
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
         self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1000, 2]
+        self.sily = None
         self.refil_data()
+        self.liczba_obciazonych_rolek = 0
+        self.przyrost_kata = 360 / (self.dane[0] + 1)
+        self.obliczenia_sil()
         self.spin_z = SpinBox(self.dane[0],8,38,1)
         self.spin_z.lineEdit().setReadOnly(True)
         self.spin_ro = SpinBox(self.dane[1],3,8,0.05)
@@ -133,6 +138,8 @@ class DataEdit(QWidget):
         self.dane[1] = self.spin_ro.value()
         self.dane[2] = self.spin_h.value()
         self.dane[3] = self.spin_g.value()
+        self.dane[15] = self.spin_obc.value()
+        self.dane[16] = self.spin_l_k.value()
 
         h_min = (self.dane[0]-1)/(2*self.dane[0]+1)
         #print(str(h_min))
@@ -140,6 +147,28 @@ class DataEdit(QWidget):
 
         self.refil_data()
         self.refili_labels()
+        self.obliczenia_sil()
+        print(self.sily)
+    def obliczenia_sil(self):
+
+        if self.dane[0]%2==0:
+            self.liczba_obciazonych_rolek = int(self.dane[0]/2)
+        else :
+            self.liczba_obciazonych_rolek = int((self.dane[0]+1)/2)-1
+        self.przyrost_kata = 360/(self.dane[0]+1)
+        print(str(self.liczba_obciazonych_rolek))
+        sily = [None]*self.liczba_obciazonych_rolek
+        alfa = [None] * self.liczba_obciazonych_rolek
+        Mk = self.dane[15]/self.dane[16]
+        for a in range(self.liczba_obciazonych_rolek):
+            i=a+1
+            teta=i*self.przyrost_kata
+            x=math.sqrt((math.pow(self.dane[10],2))+(math.pow(self.dane[6],2))-(2*self.dane[10]*self.dane[6]*math.cos(teta * 0.0175)))
+            beta = math.degrees(math.asin(self.dane[10]*math.sin(teta * 0.0175)/x))
+            alfa[a]=90-beta
+            sily[a]=(4*Mk*math.cos(alfa[a] * 0.0175))/(self.dane[6]*(self.dane[0]+1))
+        print(alfa)
+        self.sily=sily
 
 class SpinBox(QDoubleSpinBox):
     def __init__(self,a,b,c,d):
@@ -178,9 +207,14 @@ class Tab_Pawel(QWidget):
             if self.animacja.status_animacji == 0:
                 self.animacja.start_animacji()
                 self.data.start_animation_button.setText("STOP ANIMACJI")
+            okno = Wykresy()
+            okno.exec()
+
         else :
             self.data.start_animation_button.setText("START ANIMACJI")
             self.animacja.status_animacji = 0
+
+
 
 class QLabelD(QLabel):
     def __init__(self,a):
@@ -201,6 +235,7 @@ class Animacja(QWidget):
         self.kat_dorotacji = 0
         self.status_animacji = 0
         self.skok_kata = 0
+
 
         self.layout = QGridLayout()
         self.label = QLabel(self)
@@ -291,31 +326,18 @@ class Animacja(QWidget):
         def animacja_thread():
             while self.status_animacji==1:
                 time.sleep(0.04)
-                self.kat_+=20
+                self.kat_+=self.skok_kata
                 self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
-                self.obliczenia_sil()
                 self.rysowanko()
-                if self.kat_== 360*(self.data[0]+1):
+                if self.kat_>= 360*(self.data[0]+1):
                     self.kat_ = 0
                     self.kat_dorotacji = 0
                     print("test")
             #print(str(self.kat_))
         threading.Thread(target=animacja_thread).start()
 
-    def obliczenia_sil(self):
-        #print(str(self.kat_dorotacji))
-        status = True
-        start_kat = -self.kat_dorotacji
-        #print(str(start_kat))
-        rolka_poczatkowa = 0
-        for i in range(0,self.data[0]+1):
-            #print("i : "+str(i))
-            #print("pkt : "+str(i*self.skok_kata))
-            if i * self.skok_kata>=start_kat and status == True:
-                status = False
-                rolka_poczatkowa = i
 
-        print(str(rolka_poczatkowa))
+
 
 
 
