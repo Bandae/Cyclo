@@ -128,7 +128,6 @@ class MainWindow(QMainWindow):
         #Pasek z Narzędziami :
         ###
 
-
         widget = QWidget()
         widget.setLayout(pagelayout)
         self.setCentralWidget(widget)

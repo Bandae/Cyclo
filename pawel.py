@@ -1,7 +1,7 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame,QStackedLayout, QGridLayout, QVBoxLayout, QDoubleSpinBox, QSpinBox, QPushButton
-from PySide6.QtGui import QPalette, QColor, QPainter, QPixmap,Qt, QPolygon, QGradient, QPen,QBrush
-from PySide6.QtCore import QLine, QPoint, QSize
-from wykresy import Wykresy
+from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton
+from PySide6.QtGui import QPainter, QPixmap,Qt, QPolygon, QPen,QBrush
+from PySide6.QtCore import QPoint, QSize
+from pawlowe.wykresy import Wykresy
 import math
 import time
 import threading
@@ -14,7 +14,7 @@ class DataEdit(QWidget):
         layout1 = QGridLayout()
 
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
-        self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1000, 2]
+        self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500, 2]
         self.sily = None
         self.refil_data()
         self.liczba_obciazonych_rolek = 0
@@ -25,7 +25,7 @@ class DataEdit(QWidget):
         self.spin_ro = SpinBox(self.dane[1],3,8,0.05)
         self.spin_h = SpinBox(self.dane[2],0.5,0.99,0.01)
         self.spin_g = SpinBox(self.dane[3],5,14,0.02)
-        self.spin_obc = SpinBox(self.dane[15], 500, 5000, 100)
+        self.spin_obc = SpinBox(self.dane[15], 500, 5000, 10)
         self.spin_l_k = SpinBox(self.dane[16], 1, 4, 1)
         self.spin_l_k.lineEdit().setReadOnly(True)
 
@@ -207,12 +207,13 @@ class Tab_Pawel(QWidget):
             if self.animacja.status_animacji == 0:
                 self.animacja.start_animacji()
                 self.data.start_animation_button.setText("STOP ANIMACJI")
-            okno = Wykresy()
-            okno.exec()
+                self.okno = Wykresy(self.data.dane,self.data.sily)
+                self.okno.show()
 
         else :
             self.data.start_animation_button.setText("START ANIMACJI")
             self.animacja.status_animacji = 0
+
 
 
 
