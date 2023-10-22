@@ -23,9 +23,9 @@ class MainWindow(QMainWindow):
 
         # stworzenie osobnych kart dla każdej czesci aplikacji :
 
-        tabs = QTabWidget()
-        tabs.setMovable(True)
-        tabs.setTabPosition(QTabWidget.North)
+        # tabs = QTabWidget()
+        # tabs.setMovable(True)
+        # tabs.setTabPosition(QTabWidget.North)
 
         view = Main_View()
         self.pawel = Tab_Pawel()
@@ -34,43 +34,37 @@ class MainWindow(QMainWindow):
         milosz = Tab_Milosz()
         eksport = Eksport_Danych()
 
-        pagelayout = QVBoxLayout()
+        main_layout = QHBoxLayout()
+        data_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         self.stacklayout = QStackedLayout()
+        animation_layout = QStackedLayout()
 
-        pagelayout.addLayout(button_layout)
-        pagelayout.addLayout(self.stacklayout)
+        animation_layout.addWidget(Tab_Pawel())
 
-        btn1 = QPushButton("Widok Główny")
-        btn1.pressed.connect(self.activate_tab_1)
-        button_layout.addWidget(btn1)
-        self.stacklayout.addWidget(view)
+        data_layout.addLayout(button_layout)
+        data_layout.addLayout(self.stacklayout)
 
-        btn2 = QPushButton("Przekładnia Cykloidalna")
-        btn2.pressed.connect(self.activate_tab_2)
-        button_layout.addWidget(btn2)
-        self.stacklayout.addWidget(self.pawel)
+        main_layout.addLayout(animation_layout)
+        main_layout.addLayout(data_layout)
 
-        btn3 = QPushButton("Mechanizm Wyjsciowy I")
-        btn3.pressed.connect(self.activate_tab_3)
-        button_layout.addWidget(btn3)
-        self.stacklayout.addWidget(wiktor)
+        tab_titles = ["Widok Główny", "Przekładnia Cykloidalna", "Mechanizm Wyjsciowy I", "Mechanizm Wyjsciowy II", "Mechanizm Wejsciowy", "Eksport danych"]
+        stacked_widgets = [view, self.pawel, wiktor, milosz, kamil, eksport]
+        buttons = []
 
-        btn4 = QPushButton("Mechanizm Wyjsciowy II")
-        btn4.pressed.connect(self.activate_tab_4)
-        button_layout.addWidget(btn4)
-        self.stacklayout.addWidget(milosz)
+        for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
+            buttons.append(QPushButton(title))
+            button_layout.addWidget(buttons[index])
+            self.stacklayout.addWidget(widget)
+            # buttons[index].pressed.connect(lambda: self.activate_tab(index + 1))
 
-        btn5 = QPushButton("Mechanizm Wejsciowy")
-        btn5.pressed.connect(self.activate_tab_5)
-        button_layout.addWidget(btn5)
-        self.stacklayout.addWidget(kamil)
-
-        btn6 = QPushButton("Eksport danych")
-        btn6.pressed.connect(self.activate_tab_6)
-        button_layout.addWidget(btn6)
-        self.stacklayout.addWidget(eksport)
-
+        buttons[0].pressed.connect(lambda: self.activate_tab(1))
+        buttons[1].pressed.connect(lambda: self.activate_tab(2))
+        buttons[2].pressed.connect(lambda: self.activate_tab(3))
+        buttons[3].pressed.connect(lambda: self.activate_tab(4))
+        buttons[4].pressed.connect(lambda: self.activate_tab(5))
+        buttons[5].pressed.connect(lambda: self.activate_tab(6))
+        
         #Menu główne:
 
         menu = self.menuBar()
@@ -90,7 +84,7 @@ class MainWindow(QMainWindow):
 
         exit_app = QAction("Wyjście",self)
         filemenu.addAction(exit_app)
-        exit_app.triggered.connect(self.exit_applikacji)
+        exit_app.triggered.connect(lambda: exit())
 
         #EDIT MENU :
 
@@ -99,58 +93,29 @@ class MainWindow(QMainWindow):
         #PRZECHPDZENIE MIĘDZY SEKCJAMI MENU :
 
         sectionmenu = menu.addMenu("&Sekcja")
+        section_buttons = []
 
-        btn_1 = QAction("Widok Główny",self)
-        sectionmenu.addAction(btn_1)
-        btn_1.triggered.connect(self.activate_tab_1)
+        for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
+            section_buttons.append(QAction(title, self))
+            sectionmenu.addAction(section_buttons[index])
+            # section_buttons[index].triggered.connect(lambda: self.activate_tab(index))
 
-        btn_2 = QAction("Przekładnia Cykloidalna", self)
-        sectionmenu.addAction(btn_2)
-        btn_2.triggered.connect(self.activate_tab_2)
-
-        btn_3 = QAction("Mechanizm Wyjsciowy I", self)
-        sectionmenu.addAction(btn_3)
-        btn_3.triggered.connect(self.activate_tab_3)
-
-        btn_4 = QAction("Mechanizm Wyjsciowy II", self)
-        sectionmenu.addAction(btn_4)
-        btn_4.triggered.connect(self.activate_tab_4)
-
-        btn_5 = QAction("Mechanizm Wejsciowy", self)
-        sectionmenu.addAction(btn_5)
-        btn_5.triggered.connect(self.activate_tab_5)
-
-        btn_6 = QAction("Eksport danych", self)
-        sectionmenu.addAction(btn_6)
-        btn_6.triggered.connect(self.activate_tab_6)
-
+        section_buttons[0].triggered.connect(lambda: self.activate_tab(1))
+        section_buttons[1].triggered.connect(lambda: self.activate_tab(2))
+        section_buttons[2].triggered.connect(lambda: self.activate_tab(3))
+        section_buttons[3].triggered.connect(lambda: self.activate_tab(4))
+        section_buttons[4].triggered.connect(lambda: self.activate_tab(5))
+        section_buttons[5].triggered.connect(lambda: self.activate_tab(6))
 
         #Pasek z Narzędziami :
         ###
 
         widget = QWidget()
-        widget.setLayout(pagelayout)
+        widget.setLayout(main_layout)
         self.setCentralWidget(widget)
 
-        self.setCentralWidget(widget)
-
-    def activate_tab_1(self):
-        self.stacklayout.setCurrentIndex(0)
-
-    def activate_tab_2(self):
-        self.stacklayout.setCurrentIndex(1)
-
-    def activate_tab_3(self):
-        self.stacklayout.setCurrentIndex(2)
-
-    def activate_tab_4(self):
-        self.stacklayout.setCurrentIndex(3)
-
-    def activate_tab_5(self):
-        self.stacklayout.setCurrentIndex(4)
-
-    def activate_tab_6(self):
-        self.stacklayout.setCurrentIndex(5)
+    def activate_tab(self, index):
+        self.stacklayout.setCurrentIndex(index - 1)
 
 #OTWIERZANIE Z PLIKU JSON
     def otworz(self):
@@ -185,6 +150,3 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, 'File Saved', 'Data saved to JSON file successfully.')
             except Exception as e:
                 QMessageBox.critical(self, 'Error', f'An error occurred while saving the file: {str(e)}')
-
-    def exit_applikacji(self):
-        exit()
