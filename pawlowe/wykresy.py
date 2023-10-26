@@ -10,7 +10,7 @@ class Wykresy(QTabWidget):
 
         self.layout = QVBoxLayout(self)
 
-        #self.setFixedSize(1200,500)
+        self.setFixedSize(1000,500)
         self.setWindowTitle("Przekładnia Cykloidalna - wykresy")
         self.showMaximized()
 
