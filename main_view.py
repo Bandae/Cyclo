@@ -24,18 +24,23 @@ def rysowanie_tuleje(painter, mimosrod, pozycja_mimosrodu, scala, R_wk=80, liczb
 
 
 class Animation_View(QWidget):
-    def __init__(self, parent, dane):
+    def __init__(self, parent, dane, pawel):
         super().__init__(parent)
         main_layout = QVBoxLayout()
+        layout = QHBoxLayout()
         # animation_controls = QHBoxLayout()
         self.start_animation_button = QPushButton("START ANIMACJI")
+        self.start_wykresow_button = QPushButton("WYKRESY")
         self.start_animation_button.setCheckable(True)
+        self.start_wykresow_button.clicked.connect(pawel.poka_wykres)
         self.start_animation_button.clicked.connect(self.start_przycisk)
         # animation_controls.addWidget(self.start_animation_button)
 
         self.animacja = Animacja(dane)
         main_layout.addWidget(self.animacja)
-        main_layout.addWidget(self.start_animation_button)
+        layout.addWidget(self.start_animation_button)
+        layout.addWidget(self.start_wykresow_button)
+        main_layout.addLayout(layout)
         self.setLayout(main_layout)
 
     def start_przycisk(self):
