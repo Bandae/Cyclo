@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
 
         self.pawel = Tab_Pawel(self)
         kamil = Tab_Kamil()
-        wiktor = Tab_Wiktor(self)
+        self.wiktor = Tab_Wiktor(self)
         milosz = Tab_Milosz()
         eksport = Eksport_Danych()
 
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(data_layout)
 
         tab_titles = ["Przekładnia Cykloidalna", "Mechanizm Wyjsciowy I", "Mechanizm Wyjsciowy II", "Mechanizm Wejsciowy", "Eksport danych"]
-        stacked_widgets = [self.pawel, wiktor, milosz, kamil, eksport]
+        stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
         buttons = []
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
     
     def update_animation_data(self):
         dane_pawel = self.pawel.data.dane
-        dane_wiktor = None
+        dane_wiktor = self.wiktor.data.anim_data
         self.animation_view.update_animation_data({
             'dane_pawel': dane_pawel,
             'dane_wiktor': dane_wiktor,

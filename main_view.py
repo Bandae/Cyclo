@@ -6,21 +6,34 @@ import math
 import time
 import threading
 
-def rysowanie_tuleje(painter, mimosrod, pozycja_mimosrodu, scala, R_wk=80, liczba_tuleji=8):
+def rysowanie_tuleje(painter, mimosrod, pozycja_mimosrodu, scala, dane_wiktor):
     mimo_x, mimo_y = pozycja_mimosrodu
+    liczba_tuleji = dane_wiktor["n"]
+    R_wk = dane_wiktor["R_wk"]
+    d_sw = dane_wiktor["d_sw"] * scala
+    d_tul = dane_wiktor["d_tul"] * scala
+    d_otw = dane_wiktor["d_otw"] * scala
 
     for i in range(liczba_tuleji):
         fi_kj = (2 * math.pi * (i - 1)) / liczba_tuleji
 
+        # rysowanie otworów
         painter.setBrush(QBrush(Qt.white, Qt.SolidPattern))
-        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - 20
-        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - 20
-        painter.drawEllipse(x_okj, y_okj, 40, 40)
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - d_otw / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - d_otw / 2
+        painter.drawEllipse(x_okj, y_okj, d_otw, d_otw)
 
+        # rysowanie tuleji
         painter.setBrush(QBrush(Qt.red, Qt.SolidPattern))
-        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - (40 - 2*mimosrod) / 2
-        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - (40 - 2*mimosrod) / 2 + mimosrod
-        painter.drawEllipse(x_okj, y_okj, (40 - 2*mimosrod), (40 - 2*mimosrod))
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - d_tul / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y + mimosrod) * scala - d_tul / 2
+        painter.drawEllipse(x_okj, y_okj, d_tul, d_tul)
+
+        # rysowanie sworzni
+        painter.setBrush(QBrush(Qt.green, Qt.SolidPattern))
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - d_sw / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y + mimosrod) * scala - d_sw / 2
+        painter.drawEllipse(x_okj, y_okj, d_sw, d_sw)
 
 
 class Animation_View(QWidget):
@@ -113,7 +126,7 @@ class Animacja(QWidget):
         
         #Rysowanie otworow, tuleji
         if self.data_wiktor is not None:
-            rysowanie_tuleje(painter, self.data[13], (przesuniecie_x, przesuniecie_y), scala)
+            rysowanie_tuleje(painter, self.data[13], (przesuniecie_x, przesuniecie_y), scala, self.data_wiktor)
 
         #Rysowanie rolek :
         painter.setBrush(QBrush(Qt.blue,Qt.SolidPattern))
