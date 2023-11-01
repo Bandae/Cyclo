@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QTabWidget,QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
+from PySide6.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
 from PySide6.QtGui import QIcon, QAction
 from main_view import Animation_View
 from pawel import Tab_Pawel
@@ -7,6 +7,7 @@ from milosz import Tab_Milosz
 from kamil import Tab_Kamil
 from eksportdanych import Eksport_Danych
 import json
+from functools import partial
 
 
 class MainWindow(QMainWindow):
@@ -23,10 +24,14 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(main_icon)
 
         self.pawel = Tab_Pawel(self)
-        kamil = Tab_Kamil()
+        self.pawel.anim_data_updated.connect(self.update_animation_data)
+
         self.wiktor = Tab_Wiktor(self)
-        milosz = Tab_Milosz()
-        eksport = Eksport_Danych()
+        self.wiktor.data.anim_data_updated.connect(self.update_animation_data)
+
+        kamil = Tab_Kamil(self)
+        milosz = Tab_Milosz(self)
+        eksport = Eksport_Danych(self)
 
         main_layout = QHBoxLayout()
         data_layout = QVBoxLayout()
@@ -44,20 +49,14 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(data_layout)
 
         tab_titles = ["Przekładnia Cykloidalna", "Mechanizm Wyjsciowy I", "Mechanizm Wyjsciowy II", "Mechanizm Wejsciowy", "Eksport danych"]
-        stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
+        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
         buttons = []
 
-        for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
+        for index, (title, widget) in enumerate(zip(tab_titles, self.stacked_widgets)):
             buttons.append(QPushButton(title))
             button_layout.addWidget(buttons[index])
             self.stacklayout.addWidget(widget)
-            # buttons[index].pressed.connect(lambda: self.activate_tab(index + 1))
-
-        buttons[0].pressed.connect(lambda: self.activate_tab(1))
-        buttons[1].pressed.connect(lambda: self.activate_tab(2))
-        buttons[2].pressed.connect(lambda: self.activate_tab(3))
-        buttons[3].pressed.connect(lambda: self.activate_tab(4))
-        buttons[4].pressed.connect(lambda: self.activate_tab(5))
+            buttons[index].pressed.connect(partial(self.activate_tab, index))
         
         #Menu główne:
         menu = self.menuBar()
@@ -85,30 +84,28 @@ class MainWindow(QMainWindow):
         sectionmenu = menu.addMenu("&Sekcja")
         section_buttons = []
 
-        for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
+        for index, (title, widget) in enumerate(zip(tab_titles, self.stacked_widgets)):
             section_buttons.append(QAction(title, self))
             sectionmenu.addAction(section_buttons[index])
-            # section_buttons[index].triggered.connect(lambda: self.activate_tab(index))
-
-        section_buttons[0].triggered.connect(lambda: self.activate_tab(1))
-        section_buttons[1].triggered.connect(lambda: self.activate_tab(2))
-        section_buttons[2].triggered.connect(lambda: self.activate_tab(3))
-        section_buttons[3].triggered.connect(lambda: self.activate_tab(4))
-        section_buttons[4].triggered.connect(lambda: self.activate_tab(5))
+            section_buttons[index].triggered.connect(partial(self.activate_tab, index))
 
         widget = QWidget()
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
 
     def activate_tab(self, index):
-        self.stacklayout.setCurrentIndex(index - 1)
+        previous = self.stacklayout.currentIndex()
+        new_data = self.stacked_widgets[previous].send_data()
+        for i, tab_widget in enumerate(self.stacked_widgets):
+            if i != previous:
+                tab_widget.receive_data(new_data)
+
+        self.stacklayout.setCurrentIndex(index)
     
-    def update_animation_data(self):
-        dane_pawel = self.pawel.data.dane
-        dane_wiktor = self.wiktor.data.anim_data
+    def update_animation_data(self, dane):
         self.animation_view.update_animation_data({
-            'dane_pawel': dane_pawel,
-            'dane_wiktor': dane_wiktor,
+            'pawel': dane.get("pawel"),
+            'wiktor': dane.get("wiktor"),
         })
 
 #OTWIERZANIE Z PLIKU JSON

@@ -3,9 +3,7 @@ import math
 # Czy w przypadku dwóch kół, dwóch momentów wystarczy wziąć pod uwagę większy z nich i na jego podstawie policzyć d_smax?
 # Czy M_u zawsze wieksze niz to srodkowe?
 
-def oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax):
-    e1 = 0 # przerwa miedzy kolem a tarczą wyjściową
-    e2 = 0 # przerwa miedzy kolami
+def oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax, e1, e2):
     l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
     l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
     l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
@@ -37,7 +35,7 @@ def oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax):
     
     return f_s
 
-def oblicz_Mgmax(wariant_podparcia, F_j, E, b_kola):
+def oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2):
     '''
     Oblicza Max moment gnący działający na sworzeń i strzałkę ugięcia
     wariant_podparcia:
@@ -48,8 +46,6 @@ def oblicz_Mgmax(wariant_podparcia, F_j, E, b_kola):
     5 - dwa koła, jeden koniec zamocowany, luźne śruby
     6 - dwa koła jeden koniec zamocowany, ciasne śruby
     '''
-    e1 = 0 # miedzy kolem a tarczą wyjściową
-    e2 = 0 # szpara miedzy kolami
     l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
     l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
     l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
@@ -124,16 +120,40 @@ def oblicz_sily(M_k, R_wk, n_sworzni):
     
     return F_list
 
-def obliczenia_mech_wyjsciowy(wariant_podparcia, k_g, E, b_kola, n_sworzni, M_k, R_wk):
-    '''
-    E, k_g, b_kola, R_wk - wziac z interfejsu od uzytkownika
-    M_k - policzone, od Pawla
-    '''
+def oblicz_naciski(sily, sr_otw, sr_tul, b_kola, v_k, v_t, E_k, E_t):
+    R_otw = sr_otw / 2
+    R_tul = sr_tul / 2
+
+    # TODO: usunac to abs(), sily nie powinny byc ujemne
+    stala = (R_otw - R_tul) / (b_kola * math.pi * R_tul * R_otw * (((1 - (v_k ** 2)) / E_k) + ((1 - (v_t ** 2)) / E_t)))
+    try:
+        return [math.sqrt(abs(F_j) * stala) for F_j in sily]
+    except ValueError:
+        return None
+
+def obliczenia_mech_wyjsciowy(dane, sr_otw=1):
+    M_k = dane["M_k"]
+    k_g = dane["mat_sw"]["k_g"]
+    E = dane["mat_sw"]["E"]
+    b_kola = dane["b"]
+    n_sworzni = dane["n"]
+    R_wk = dane["R_wk"]
+    e1 = dane["e1"]
+    e2 = dane["e2"]
+    wariant_podparcia = dane["podparcie"]
+    sr_tul = dane["d_tul"]
+
     sily = oblicz_sily(M_k, R_wk, n_sworzni)
-    momenty = [oblicz_Mgmax(wariant_podparcia, F_j, E, b_kola) for F_j in sily]
+
+    # TODO: dodac zaciaganie materialow z bazy pietro wyzej
+    v_k, v_t, E_k, E_t = 5, 5, 5, 5
+    naciski = oblicz_naciski(sily, sr_otw, sr_tul, b_kola, v_k, v_t, E_k, E_t)
+    momenty = [oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2) for F_j in sily]
     d_smax = oblicz_d_sworzen(max(momenty), k_g)
-    strzalki = [oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax) for F_j in sily]
+    strzalki = [oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax, e1, e2) for F_j in sily]
 
     return {
         "d_smax": d_smax,
+        "sily": sily,
+        "naciski": naciski,
     }

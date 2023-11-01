@@ -1,6 +1,8 @@
 from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton
+from PySide6.QtCore import Signal
 from pawlowe.wykresy import Wykresy
 import math
+from widgets import AbstractTab
 
 class DataEdit(QWidget):
     def __init__(self):
@@ -133,7 +135,9 @@ class SpinBox(QDoubleSpinBox):
         self.setRange(b, c)
         self.setSingleStep(d)
 
-class Tab_Pawel(QWidget):
+class Tab_Pawel(AbstractTab):
+    anim_data_updated = Signal(dict)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
@@ -149,7 +153,7 @@ class Tab_Pawel(QWidget):
         self.setLayout(self.layout)
 
     def update_animation_data(self):
-        self.parent.update_animation_data()
+        self.anim_data_updated.emit({"pawel": self.data.dane})
 
 
 class QLabelD(QLabel):
