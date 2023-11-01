@@ -1,12 +1,14 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton, QComboBox, QSpinBox, QHBoxLayout, QStackedLayout
+from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QSpinBox, QHBoxLayout, QStackedLayout
 from PySide6.QtCore import Signal
 from Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
 from Mech_wyj_tuleje.wykresy import ChartTab
 from functools import partial
-from widgets import AbstractTab
+from abstract_tab import AbstractTab
+from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
 
-# TODO: wyciagnac mimosrod od Pawla jakos i inne dane
+# TODO: wyciagnac od Pawla jeszcze srednice wewnetrzna kola
 # TODO: sily wychodza ujemnie
+# TODO: v i E kola juz przyjete od Pawla, uzyc ich
 
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(dict)
@@ -34,18 +36,20 @@ class DataEdit(QWidget):
             "d_tul": 20,
             "d_otw": 20
         }
+        self.zew_dane = {
+            "e": 3,
+            "M": 500,
+            "K": 1,
+        }
         # TODO: ostatecznie brac z bazy danych
         self.materialy = {
             "17Cr3": {"E": 210000, "v": 0.3, "k_g": 300},
             "20MnCr5": {"E": 210000, "v": 0.3, "k_g": 450},
             "C45": {"E": 210000, "v": 0.3, "k_g": 205},
         }
-        # TODO: brac od Pawla
-        self.mimosrod = 3
 
         # TODO: zmienic dokladnie te min i maxy
         self.input_widgets = {
-            "obc": DoubleSpinBox(self.input_dane["M_k"], 200, 5000, 10),
             "n_sw": IntSpinBox(self.input_dane["n"], 4, 16, 1),
             "R_wk": DoubleSpinBox(self.input_dane["R_wk"], 80, 200, 1),
             "mat_sw": QComboBox(),
@@ -55,8 +59,8 @@ class DataEdit(QWidget):
             "e1": DoubleSpinBox(self.input_dane["e1"], 0, 5, 0.05),
             "e2": DoubleSpinBox(self.input_dane["e2"], 0, 5, 0.05),
             "wsp_k": DoubleSpinBox(1.3, 1.2, 1.5, 0.05),
-            "d_sw": DoubleSpinBox(6,5,14,0.2),
-            "d_tul": DoubleSpinBox(6,5,14,0.2),
+            "d_sw": DoubleSpinBox(6, 5, 14, 0.1),
+            "d_tul": DoubleSpinBox(6, 5, 14, 0.1),
         }
 
         self.input_widgets["mat_sw"].addItems([mat for mat in self.materialy])
@@ -93,8 +97,6 @@ class DataEdit(QWidget):
         layout1 = QGridLayout()
 
         layout.addWidget(QLabelD("DANE WEJSCIOWE :"), 0, 0, 1, 2)
-        layout.addWidget(QLabelD("Obciążenie [Mk]"), 1, 0)
-        layout.addWidget(self.input_widgets["obc"], 1, 1)
         layout.addWidget(QLabelD("Ilość sworzni [n]"), 2, 0)
         layout.addWidget(self.input_widgets["n_sw"], 2, 1)
         layout.addWidget(QLabelD("Promień rozstawu sworzni [R_wk]"), 3, 0)
@@ -137,7 +139,6 @@ class DataEdit(QWidget):
         self.setLayout(layout_main)
 
     def inputs_modified(self):
-        self.input_dane["M_k"] = self.input_widgets["obc"].value()
         self.input_dane["n"] = self.input_widgets["n_sw"].value()
         self.input_dane["R_wk"] = self.input_widgets["R_wk"].value()
         self.input_dane["mat_sw"] = self.materialy[self.input_widgets["mat_sw"].currentText()]
@@ -147,14 +148,13 @@ class DataEdit(QWidget):
         self.input_dane["e1"] = self.input_widgets["e1"].value()
         self.input_dane["e2"] = self.input_widgets["e2"].value()
         
-        wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.obliczone_dane["d_otw"])
+        wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.obliczone_dane["d_otw"])
         d_sw = round(wyniki["d_smax"], 2)
         self.obliczone_dane["d_sw"] = d_sw
         self.obl_srednice_labels[0].setText(str(d_sw))
 
         self.wykresy_data_updated.emit({
             "sily": wyniki["sily"],
-            "naciski": wyniki["naciski"],
         })
 
         self.input_widgets["d_sw"].modify(minimum=d_sw, maximum=d_sw+10)
@@ -166,11 +166,11 @@ class DataEdit(QWidget):
         self.input_widgets["d_tul"].modify(minimum=self.obliczone_dane["d_tul"], maximum=self.obliczone_dane["d_tul"]+10)
         self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
 
-        self.obliczone_dane["d_otw"] = round(self.input_dane["d_tul"] + (2 * self.mimosrod), 2)
+        self.obliczone_dane["d_otw"] = round(self.input_dane["d_tul"] + (2 * self.zew_dane["e"]), 2)
         self.obl_srednice_labels[2].setText(str(self.obliczone_dane["d_otw"]))
 
         self.wykresy_data_updated.emit({
-            "naciski": obliczenia_mech_wyjsciowy(self.input_dane, self.obliczone_dane["d_otw"])['naciski'],
+            "naciski": obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.obliczone_dane["d_otw"])['naciski'],
         })
 
         if self.input_widgets["wariant"].currentIndex() >= 3:
@@ -194,35 +194,6 @@ class DataEdit(QWidget):
         }
         if all(anim_data.values()):
             self.anim_data_updated.emit({"wiktor": anim_data})
-        
-    def obliczenia_sil(self):
-        Mk = self.dane[15] / self.dane[16]
-
-
-class DoubleSpinBox(QDoubleSpinBox):
-    def __init__(self, value, minimum, maximum, step):
-        super().__init__()
-        self.setValue(value)
-        self.lineEdit().setReadOnly(False)
-        self.setRange(minimum, maximum)
-        self.setSingleStep(step)
-    
-    def modify(self, value=None, minimum=None, maximum=None):
-        if minimum is not None:
-            self.setMinimum(minimum)
-        if maximum is not None:
-            self.setMaximum(maximum)
-        if value is not None:
-            self.setValue(value)
-
-
-class IntSpinBox(QSpinBox):
-    def __init__(self, value, minimum, maximum, step):
-        super().__init__()
-        self.setValue(value)
-        self.lineEdit().setReadOnly(False)
-        self.setRange(minimum, maximum)
-        self.setSingleStep(step)
 
 
 class Tab_Wiktor(AbstractTab):
@@ -254,13 +225,9 @@ class Tab_Wiktor(AbstractTab):
         ...
     
     def receive_data(self, new_data):
-        ...
-
-
-class QLabelD(QLabel):
-    def __init__(self,a):
-        super().__init__()
-
-        self.setText(str(a))
-        self.setFrameStyle(QFrame.Box | QFrame.Raised)
-        self.setLineWidth(1)
+        if new_data is None:
+            return
+        dane_pawla = new_data.get("pawel")
+        if dane_pawla is not None:
+            for key in dane_pawla:
+                self.data.zew_dane[key] = dane_pawla[key]

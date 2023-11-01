@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, QStackedLayout
-from widgets import AbstractTab
+from abstract_tab import AbstractTab
 
 
 class Tab_Kamil(AbstractTab):

@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
 
         kamil = Tab_Kamil(self)
         milosz = Tab_Milosz(self)
-        eksport = Eksport_Danych(self)
+        eksport = Eksport_Danych(self, self.pawel.data.sily)
 
         main_layout = QHBoxLayout()
         data_layout = QVBoxLayout()
@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
 
         exit_app = QAction("Wyjście",self)
         filemenu.addAction(exit_app)
-        exit_app.triggered.connect(lambda: exit())
+        exit_app.triggered.connect(self.closeApp)
 
         #EDIT MENU :
         editmenu = menu.addMenu("&Edycja")
@@ -92,6 +92,14 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(main_layout)
         self.setCentralWidget(widget)
+    
+    def closeEvent(self, event):
+        self.animation_view.animacja.status_animacji = 0
+        return super().closeEvent(event)
+    
+    def closeApp(self):
+        self.animation_view.animacja.status_animacji = 0
+        exit()
 
     def activate_tab(self, index):
         previous = self.stacklayout.currentIndex()

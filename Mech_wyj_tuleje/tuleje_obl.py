@@ -2,6 +2,7 @@ import math
 
 # Czy w przypadku dwóch kół, dwóch momentów wystarczy wziąć pod uwagę większy z nich i na jego podstawie policzyć d_smax?
 # Czy M_u zawsze wieksze niz to srodkowe?
+# TODO: l_k3 cos z nim zrobic bo złe jest
 
 def oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax, e1, e2):
     l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
@@ -64,7 +65,6 @@ def oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2):
         M_gmax = max(M_gI, M_gII, M_u)
 
     elif wariant_podparcia == "jedno koło, jeden koniec zamocowany, ciasne śruby":
-        # R_B = F_j * ((2 * ((l_2 - l_1) ** 3) - 3 * ((l_2 - l_1) ** 2) * l_2 + (l_2 ** 3)) / (l_2 ** 3))
         R_B = F_j * ((2 * ((l_2 - l_1) ** 2)) / (l_2 ** 3)) * (l_2 + 2 * l_1)
         M_uA = F_j * (((l_2 - l_1) * (l_1 ** 2)) / (l_2 ** 2))
         M_uB = F_j * ((((l_2 - l_1) ** 2) * l_1) / (l_2 ** 2))
@@ -131,8 +131,8 @@ def oblicz_naciski(sily, sr_otw, sr_tul, b_kola, v_k, v_t, E_k, E_t):
     except ValueError:
         return None
 
-def obliczenia_mech_wyjsciowy(dane, sr_otw=1):
-    M_k = dane["M_k"]
+def obliczenia_mech_wyjsciowy(dane, dane_zew, sr_otw=1):
+    M_k = dane_zew["M"] / dane_zew["K"]
     k_g = dane["mat_sw"]["k_g"]
     E = dane["mat_sw"]["E"]
     b_kola = dane["b"]
@@ -146,7 +146,7 @@ def obliczenia_mech_wyjsciowy(dane, sr_otw=1):
     sily = oblicz_sily(M_k, R_wk, n_sworzni)
 
     # TODO: dodac zaciaganie materialow z bazy pietro wyzej
-    v_k, v_t, E_k, E_t = 5, 5, 5, 5
+    v_k, v_t, E_k, E_t = 0.3, 0.3, 210000, 210000
     naciski = oblicz_naciski(sily, sr_otw, sr_tul, b_kola, v_k, v_t, E_k, E_t)
     momenty = [oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2) for F_j in sily]
     d_smax = oblicz_d_sworzen(max(momenty), k_g)
