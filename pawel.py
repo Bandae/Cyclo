@@ -130,7 +130,7 @@ class DataEdit(QWidget):
         for a in range(self.liczba_obciazonych_rolek):
             i=a+1
             kat = i*self.przyrost_kata
-            reke=((self.dane[1]*(self.dane[0]+1)*math.pow((1-(2*self.dane[2]*math.cos(self.dane[0]*kat))+math.pow(self.dane[2],2)),(3/2)))/(1-(self.dane[2]*(self.dane[0]+2)*(math.cos(self.dane[0]*kat)))+(math.pow(self.dane[2],2)*(self.dane[0]+1)))-(self.dane[3]))
+            reke=((self.dane[1]*(self.dane[0]+1)*math.pow((1-(2*self.dane[2]*math.cos(self.dane[0]*kat*0.0175))+math.pow(self.dane[2],2)),(3/2)))/(1-(self.dane[2]*(self.dane[0]+2)*(math.cos(self.dane[0]*kat*0.0175)))+(math.pow(self.dane[2],2)*(self.dane[0]+1)))-(self.dane[3]))
             teta=i*self.przyrost_kata
             x=math.sqrt((math.pow(self.dane[10],2))+(math.pow(self.dane[6],2))-(2*self.dane[10]*self.dane[6]*math.cos(teta * 0.0175)))
             beta = math.degrees(math.asin(self.dane[10]*math.sin(teta * 0.0175)/x))
