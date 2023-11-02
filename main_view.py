@@ -149,14 +149,14 @@ class Animacja(QWidget):
         #painter.drawEllipse(-(10*scala),-(10*scala),20*scala,20*scala)
 
         #Rysowanie punktu mimośrodu
-        pen2 = QPen(Qt.red, 3)
-        painter.setPen(pen2)
-        painter.drawPoint(przesuniecie_x,przesuniecie_y)
+        #pen2 = QPen(Qt.red, 3)
+        #painter.setPen(pen2)
+        #painter.drawPoint(przesuniecie_x,przesuniecie_y)
 
         #Rysowanie punktu "C"
-        xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
-        yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
-        painter.drawPoint(xp,yp)
+        #xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
+        #yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
+        #painter.drawPoint(xp,yp)
 
         self.setLayout(self.layout)
         self.label.setPixmap(pixmap)
@@ -170,7 +170,7 @@ class Animacja(QWidget):
                 self.kat_+=self.skok_kata
                 self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
                 self.rysowanko()
-                # if self.kat_>= 360*(self.data[0]+1):
-                #     self.kat_ = 0
-                #     self.kat_dorotacji = 0
+                if self.kat_>= 360*(self.data[0]+1):
+                     self.kat_ = 0
+                     self.kat_dorotacji = 0
         threading.Thread(target=animacja_thread).start()
