@@ -6,21 +6,38 @@ import math
 import time
 import threading
 
-def rysowanie_tuleje(painter, mimosrod, pozycja_mimosrodu, scala, R_wk=80, liczba_tuleji=8):
+def rysowanie_tuleje(painter, mimosrod, pozycja_mimosrodu, scala, dane_wiktor, obecny_kat_obrotu):
     mimo_x, mimo_y = pozycja_mimosrodu
+    liczba_tuleji = dane_wiktor["n"]
+    R_wk = dane_wiktor["R_wk"]
+    d_sw = dane_wiktor["d_sw"] * scala
+    d_tul = dane_wiktor["d_tul"] * scala
+    d_otw = dane_wiktor["d_otw"] * scala
+
+    # TODO: tutaj inny kat. Trzeba go bedzie liczyc w animacji
+    wyj_prz_x = mimosrod * math.cos(obecny_kat_obrotu * 0.0175)
+    wyj_prz_y = mimosrod * math.sin(obecny_kat_obrotu * 0.0175)
 
     for i in range(liczba_tuleji):
         fi_kj = (2 * math.pi * (i - 1)) / liczba_tuleji
 
+        # rysowanie otworów
         painter.setBrush(QBrush(Qt.white, Qt.SolidPattern))
-        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - 20
-        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - 20
-        painter.drawEllipse(x_okj, y_okj, 40, 40)
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - d_otw / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - d_otw / 2
+        painter.drawEllipse(x_okj, y_okj, d_otw, d_otw)
 
+        # rysowanie tuleji
         painter.setBrush(QBrush(Qt.red, Qt.SolidPattern))
-        x_okj = (R_wk * math.sin(fi_kj) + mimo_x) * scala - (40 - 2*mimosrod) / 2
-        y_okj = (R_wk * math.cos(fi_kj) + mimo_y) * scala - (40 - 2*mimosrod) / 2 + mimosrod
-        painter.drawEllipse(x_okj, y_okj, (40 - 2*mimosrod), (40 - 2*mimosrod))
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x + wyj_prz_x) * scala - d_tul / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y + wyj_prz_y) * scala - d_tul / 2
+        painter.drawEllipse(x_okj, y_okj, d_tul, d_tul)
+
+        # rysowanie sworzni
+        painter.setBrush(QBrush(Qt.green, Qt.SolidPattern))
+        x_okj = (R_wk * math.sin(fi_kj) + mimo_x + wyj_prz_x) * scala - d_sw / 2
+        y_okj = (R_wk * math.cos(fi_kj) + mimo_y + wyj_prz_y) * scala - d_sw / 2
+        painter.drawEllipse(x_okj, y_okj, d_sw, d_sw)
 
 
 class Animation_View(QWidget):
@@ -48,8 +65,8 @@ class Animation_View(QWidget):
             self.animacja.status_animacji = 0
     
     def update_animation_data(self, data):
-        self.animacja.data = data['dane_pawel']
-        self.animacja.data_wiktor = data['dane_wiktor']
+        self.animacja.data = data['pawel'] if data.get('pawel') else self.animacja.data
+        self.animacja.data_wiktor = data['wiktor'] if data.get('wiktor') else self.animacja.data_wiktor
         self.animacja.rysowanko()
 
 
@@ -113,7 +130,7 @@ class Animacja(QWidget):
         
         #Rysowanie otworow, tuleji
         if self.data_wiktor is not None:
-            rysowanie_tuleje(painter, self.data[13], (przesuniecie_x, przesuniecie_y), scala)
+            rysowanie_tuleje(painter, self.data[13], (przesuniecie_x, przesuniecie_y), scala, self.data_wiktor, self.kat_)
 
         #Rysowanie rolek :
         painter.setBrush(QBrush(Qt.blue,Qt.SolidPattern))
@@ -132,14 +149,14 @@ class Animacja(QWidget):
         #painter.drawEllipse(-(10*scala),-(10*scala),20*scala,20*scala)
 
         #Rysowanie punktu mimośrodu
-        pen2 = QPen(Qt.red, 3)
-        painter.setPen(pen2)
-        painter.drawPoint(przesuniecie_x,przesuniecie_y)
+        #pen2 = QPen(Qt.red, 3)
+        #painter.setPen(pen2)
+        #painter.drawPoint(przesuniecie_x,przesuniecie_y)
 
         #Rysowanie punktu "C"
-        xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
-        yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
-        painter.drawPoint(xp,yp)
+        #xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
+        #yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
+        #painter.drawPoint(xp,yp)
 
         self.setLayout(self.layout)
         self.label.setPixmap(pixmap)
@@ -153,7 +170,7 @@ class Animacja(QWidget):
                 self.kat_+=self.skok_kata
                 self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
                 self.rysowanko()
-                # if self.kat_>= 360*(self.data[0]+1):
-                #     self.kat_ = 0
-                #     self.kat_dorotacji = 0
+                if self.kat_>= 360*(self.data[0]+1):
+                     self.kat_ = 0
+                     self.kat_dorotacji = 0
         threading.Thread(target=animacja_thread).start()
