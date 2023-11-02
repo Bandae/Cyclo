@@ -12,7 +12,6 @@ class DataEdit(QWidget):
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
         self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500, 2]
         self.sily = None
-        self.naprezenia = None
         self.refil_data()
         self.liczba_obciazonych_rolek = 0
         self.przyrost_kata = 360 / (self.dane[0] + 1)
@@ -64,11 +63,9 @@ class DataEdit(QWidget):
         layout_main = QVBoxLayout()
         layout_main.addLayout(layout)
         layout_main.addLayout(layout1)
-
         self.setLayout(layout_main)
 
     def refil_data(self):
-
         z=self.dane[0]
         ro=self.dane[1]
         lam=self.dane[2]
@@ -91,7 +88,6 @@ class DataEdit(QWidget):
             qlabel.setText(str(round(self.dane[index], 2)))
 
     def z_changed(self):
-
         self.dane[0] = self.spin_z.value()
         self.dane[1] = self.spin_ro.value()
         self.dane[2] = self.spin_h.value()
@@ -109,7 +105,6 @@ class DataEdit(QWidget):
         print(self.sily)
 
     def obliczenia_sil(self):
-
         if self.dane[0]%2==0:
             self.liczba_obciazonych_rolek = int(self.dane[0]/2)
         else :
@@ -118,13 +113,9 @@ class DataEdit(QWidget):
         print(str(self.liczba_obciazonych_rolek))
         sily = [None]*self.liczba_obciazonych_rolek
         alfa = [None] * self.liczba_obciazonych_rolek
-        obciazenia = [None] * self.liczba_obciazonych_rolek
         Mk = self.dane[15]/self.dane[16]
         for a in range(self.liczba_obciazonych_rolek):
             i=a+1
-            kat = i*self.przyrost_kata
-            reke=-((self.dane[1]*(self.dane[0]+1)*math.pow((1-(2*self.dane[2]*math.cos(self.dane[0]*kat))+math.pow(self.dane[2],2)),(3/2)))/(1-(self.dane[2]*(self.dane[0]+2)*(math.cos(self.dane[0]*kat)))+(math.pow(self.dane[2],2)*(self.dane[0]+1)))-(self.dane[3]))
-            #print(reke)
             teta=i*self.przyrost_kata
             x=math.sqrt((math.pow(self.dane[10],2))+(math.pow(self.dane[6],2))-(2*self.dane[10]*self.dane[6]*math.cos(teta * 0.0175)))
             beta = math.degrees(math.asin(self.dane[10]*math.sin(teta * 0.0175)/x))
@@ -149,24 +140,16 @@ class Tab_Pawel(QWidget):
 
         self.layout = QGridLayout()
         self.data = DataEdit()
-        self.dane_materialowe = DaneMaterialowe()
         self.data.spin_z.valueChanged.connect(self.update_animation_data)
         self.data.spin_ro.valueChanged.connect(self.update_animation_data)
         self.data.spin_g.valueChanged.connect(self.update_animation_data)
         self.data.spin_h.valueChanged.connect(self.update_animation_data)
 
-        #self.data.start_wykresow_button.clicked.connect(self.poka_wykres)
-
         self.layout.addWidget(self.data,0,0,4,1)
-        self.layout.addWidget(self.dane_materialowe, 0, 1, 4, 1)
         self.setLayout(self.layout)
 
     def update_animation_data(self):
         self.parent.update_animation_data()
-
-    def poka_wykres(self):
-        self.okno = Wykresy(self.data.dane, self.data.sily)
-        self.okno.show()
 
 
 class QLabelD(QLabel):
@@ -176,47 +159,3 @@ class QLabelD(QLabel):
         self.setText(str(a))
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setLineWidth(1)
-
-class DaneMaterialowe(QWidget):
-    def __init__(self):
-        super().__init__()
-                            #     Y1         Y2     v1 v2   B
-        self.dane_materialowe = [210000.0,210000.0,0.3,0.3,50]
-
-        self.spin_Y1 = SpinBox(210000, 100000, 500000, 10000)
-        self.spin_Y2 = SpinBox(self.dane_materialowe[1], 100000, 500000, 10000)
-        self.spin_P1 = SpinBox(self.dane_materialowe[2], 0.1, 0.7, 0.02)
-        self.spin_P2 = SpinBox(self.dane_materialowe[3], 0.1, 0.7, 0.02)
-
-        #print(str(self.dane_materialowe[0]))
-
-        layout = QVBoxLayout()
-        layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
-        layout.addWidget(QLabelD("Modół Younga koła:"))
-        layout.addWidget(self.spin_Y1)
-        layout.addWidget(QLabelD("Modół Younga rolki:"))
-        layout.addWidget(self.spin_Y2)
-        layout.addWidget(QLabelD("Liczba Poissona koła:"))
-        layout.addWidget(self.spin_P1)
-        layout.addWidget(QLabelD("Liczba Poissona rolki:"))
-        layout.addWidget(self.spin_P2)
-        layout.addSpacing(50)
-        layout.addWidget(QLabelD("PRZYJĘTE LUZY :"))
-
-
-        #Zmiana w danych :
-
-        self.spin_Y1.valueChanged.connect(self.zmiana_danych)
-        self.spin_Y2.valueChanged.connect(self.zmiana_danych)
-        self.spin_P1.valueChanged.connect(self.zmiana_danych)
-        self.spin_P2.valueChanged.connect(self.zmiana_danych)
-
-        self.setLayout(layout)
-
-    def zmiana_danych(self):
-        self.dane_materialowe[0]=self.spin_Y1.value()
-        self.dane_materialowe[1] = self.spin_Y2.value()
-        self.dane_materialowe[2] = self.spin_P1.value()
-        self.dane_materialowe[3] = self.spin_P2.value()
-
-        print(self.dane_materialowe)

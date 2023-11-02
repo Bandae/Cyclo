@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
 
-        self.animation_view = Animation_View(self, self.pawel.data.dane, self.pawel)
+        self.animation_view = Animation_View(self, self.pawel.data.dane)
         animation_layout.addWidget(self.animation_view)
 
         data_layout.addLayout(button_layout)
