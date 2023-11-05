@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QSpinBox, QHBoxLayout, QStackedLayout
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QStackedLayout, QCheckBox
+from PySide6.QtCore import Signal, Qt
 from Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
 from Mech_wyj_tuleje.wykresy import ChartTab
 from functools import partial
@@ -8,7 +8,6 @@ from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
 
 # TODO: wyciagnac od Pawla jeszcze srednice wewnetrzna kola
 # TODO: sily wychodza ujemnie
-# TODO: v i E kola juz przyjete od Pawla, uzyc ich
 
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(dict)
@@ -21,8 +20,8 @@ class DataEdit(QWidget):
             "M_k": 500,
             "n": 8,
             "R_wk": 80,
-            "mat_sw": "17Cr3",
-            "mat_tul": "17Cr3",
+            "mat_sw": {"E": 210000, "v": 0.3, "k_g": 300},
+            "mat_tul": {"E": 210000, "v": 0.3, "k_g": 300},
             "b": 25,
             "podparcie": "jedno koło cykloidalne",
             "d_sw": 0,
@@ -40,6 +39,8 @@ class DataEdit(QWidget):
             "e": 3,
             "M": 500,
             "K": 1,
+            "E_kola": 210000,
+            "v_kola": 0.3,
         }
         # TODO: ostatecznie brac z bazy danych
         self.materialy = {
@@ -196,6 +197,100 @@ class DataEdit(QWidget):
             self.anim_data_updated.emit({"wiktor": anim_data})
 
 
+class ToleranceInput(QWidget):
+    def __init__(self, parent, label_text):
+        super().__init__(parent)
+        self.tol = [0, 0]
+
+        label = QLabelD(label_text)
+        self.low_input = DoubleSpinBox(self.tol[0], -0.05, 0.05, 0.001)
+        self.high_input = DoubleSpinBox(self.tol[1], -0.05, 0.05, 0.001)
+
+        self.low_input.setDecimals(3)
+        self.high_input.setDecimals(3)
+
+        self.low_input.valueChanged.connect(self.modified_low)
+        self.high_input.valueChanged.connect(self.modified_high)
+
+        layout = QGridLayout()
+        layout.addWidget(label, 0, 0)
+        layout.addWidget(self.low_input, 0, 1)
+        layout.addWidget(self.high_input, 0, 2)
+        self.setLayout(layout)
+    
+    def modified_low(self):
+        self.tol[0] = round(self.low_input.value(), 3)
+        self.high_input.modify(minimum=self.tol[0])
+        # self.low_input.modify(maximum=self.tol[1])
+    
+    def modified_high(self):
+        self.tol[1] = round(self.high_input.value(), 3)
+        self.low_input.modify(maximum=self.tol[1])
+        # self.high_input.modify(minimum=self.tol[0])
+
+
+class ToleranceEdit(QWidget):
+    tolerance_data_updated = Signal(dict)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        # przepraszam za to
+        self.fields = {
+            "T_o": ToleranceInput(self, "T_o: Promienia otworu koła cykloidalnego" + 37 * " "),
+            "T_t": ToleranceInput(self, "T_t: Promienia zewnętrznego tulei" + 51 * " "),
+            "T_Rk": ToleranceInput(self, "T_Rk: Promienia rozmieszczenia otworów w kole cykloidalnym" + " "),
+            "T_Rt": ToleranceInput(self, "T_Rt: Promienia rozmieszczenia tulei w elemencie wyjściowym" + " "),
+            "T_fi_k": ToleranceInput(self, "T_fi_k: Kątowego rozmieszczenia otworów w kole cykloidalnym"),
+            "T_fi_t": ToleranceInput(self, "T_fi_t: Kątowego rozmieszczenia tulei w elemencie wyjściowym"),
+            "T_e": ToleranceInput(self, "T_e: Mimośrodu" + 82 * " "),
+        }
+        self.labels = { key: [QLabelD(key), QLabelD("0"), QLabelD("0")] for key in self.fields }
+        self.tolerancje = { key: widget.tol for key, widget in self.fields.items() }
+        self.check = QCheckBox(text="Używaj luzów w obliczeniach")
+        self.check.stateChanged.connect(self.on_check)
+        self.accept_button = QPushButton(text="Ustaw tolerancje")
+        self.accept_button.clicked.connect(self.data_updated)
+        self.accept_button.setEnabled(False)
+
+        layout = QGridLayout()
+        layout.addWidget(self.check, 0, 0)
+        layout.addWidget(QLabelD("Tolerancja:"), 1, 0, 1, 3)
+        for ind, widget in enumerate(self.fields.values()):
+            # widget.low_input.valueChanged.connect(self.data_updated)
+            # widget.high_input.valueChanged.connect(self.data_updated)
+            layout.addWidget(widget, 2+ind, 0)
+            widget.setEnabled(False)
+        layout.addWidget(QLabelD("Obecne tolerancje:"), 9, 0, 1, 2)
+        for ind, (l1, l2, l3) in enumerate(self.labels.values()):
+            layout.addWidget(l1, 10+ind, 0)
+            layout.addWidget(l2, 10+ind, 1)
+            layout.addWidget(l3, 10+ind, 2)
+        layout.addWidget(self.accept_button)
+
+        self.setLayout(layout)
+    
+    def on_check(self, state):
+        enable = False if state == 0 else True
+        self.accept_button.setEnabled(enable)
+        for widget in self.fields.values():
+            widget.setEnabled(enable)
+            self.accept_button.setEnabled(enable)
+        if enable:
+            self.data_updated()
+        else:
+            for (_, l2, l3) in self.labels.values():
+                l2.setText("0")
+                l3.setText("0")
+
+    def data_updated(self):
+        for key, widget in self.fields.items():
+            for ind in range(2):
+                temp_text = str(widget.tol[ind]) if widget.tol[ind] <= 0 else "+" + str(widget.tol[ind])
+                self.labels[key][ind+1].setText(temp_text)
+        self.tolerance_data_updated.emit(self.tolerancje)
+
+
 class Tab_Wiktor(AbstractTab):
     def __init__(self, parent):
         super().__init__(parent)
@@ -207,10 +302,11 @@ class Tab_Wiktor(AbstractTab):
         layout.addLayout(stacklayout)
         self.data = DataEdit(self)
         self.wykresy = ChartTab()
+        self.tol_edit = ToleranceEdit(self)
         self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
 
-        tab_titles = ["Wprowadzanie Danych", "Wykresy"]
-        stacked_widgets = [self.data, self.wykresy]
+        tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
+        stacked_widgets = [self.data, self.wykresy, self.tol_edit]
         buttons = []
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
@@ -228,6 +324,27 @@ class Tab_Wiktor(AbstractTab):
         if new_data is None:
             return
         dane_pawla = new_data.get("pawel")
-        if dane_pawla is not None:
-            for key in dane_pawla:
+        if dane_pawla is None:
+            return
+        for key in dane_pawla:
+            if self.data.zew_dane.get(key) is not None:
                 self.data.zew_dane[key] = dane_pawla[key]
+        self.data.inputs_modified()
+
+    def save_data(self):
+        self.data.inputs_modified()
+        return {
+            "input_dane": self.data.input_dane,
+            "obliczone_dane": self.data.obliczone_dane,
+            "zew_dane": self.data.zew_dane,
+            "tolerancje": self.tol_edit.tolerancje
+        }
+
+    def load_data(self, new_data):
+        if new_data is None:
+            return
+        self.data.input_dane = new_data.get("input_dane") if new_data.get("input_dane") else self.data.input_dane
+        self.data.obliczone_dane = new_data.get("obliczone_dane") if new_data.get("obliczone_dane") else self.data.obliczone_dane
+        self.data.zew_dane = new_data.get("zew_dane") if new_data.get("zew_dane") else self.data.zew_dane
+        self.data.tolerancje = new_data.get("tolerancje") if new_data.get("tolerancje") else self.data.tolerancje
+        self.data.inputs_modified()
