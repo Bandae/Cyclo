@@ -17,9 +17,15 @@ class DataEdit(QWidget):
         layout = QVBoxLayout()
         layout1 = QGridLayout()
 
+#TODO: Uporządkować te dane w jakiś fany sposób :D
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
         self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500, 2]
+        self.n_wejsciowe = 750
+        self.omega = math.pi*self.n_wejsciowe/30
+        self.tarcie_stali =0.00003
         self.dane_materialowe = DaneMaterialowe()
+
+
         self.sily = None
         self.naprezenia = None
         self.refil_data()
@@ -27,7 +33,7 @@ class DataEdit(QWidget):
         self.przyrost_kata = 360 / (self.dane[0] + 1)
         self.obliczenia_sil()
 
-        self.spin_z = DoubleSpinBox(self.dane[0],8,38,1)
+        self.spin_z = DoubleSpinBox(self.dane[0],8,68,1)
         self.spin_z.lineEdit().setReadOnly(True)
         self.spin_ro = DoubleSpinBox(self.dane[1],3,8,0.05)
         self.spin_h = DoubleSpinBox(self.dane[2],0.5,0.99,0.01)
@@ -126,11 +132,16 @@ class DataEdit(QWidget):
         sily = [None]*self.liczba_obciazonych_rolek
         alfa = [None] * self.liczba_obciazonych_rolek
         naprezenia = [None] * self.liczba_obciazonych_rolek
+        straty_mocy = [None] * self.liczba_obciazonych_rolek
         Mk = self.dane[15]/self.dane[16]
         for a in range(self.liczba_obciazonych_rolek):
             i=a+1
             kat = i*self.przyrost_kata
-            reke=((self.dane[1]*(self.dane[0]+1)*math.pow((1-(2*self.dane[2]*math.cos(self.dane[0]*kat*0.0175))+math.pow(self.dane[2],2)),(3/2)))/(1-(self.dane[2]*(self.dane[0]+2)*(math.cos(self.dane[0]*kat*0.0175)))+(math.pow(self.dane[2],2)*(self.dane[0]+1)))-(self.dane[3]))
+            #reke=((self.dane[1]*(self.dane[0]+1)*math.pow((1-(2*self.dane[2]*math.cos(self.dane[0]*kat*0.0175))+math.pow(self.dane[2],2)),(3/2)))/(1-(self.dane[2]*(self.dane[0]+2)*(math.cos(self.dane[0]*kat*0.0175)))+(math.pow(self.dane[2],2)*(self.dane[0]+1)))-(self.dane[3]))
+            reke = ((self.dane[1] * (self.dane[0] + 1) * math.pow(
+                (1 - (2 * self.dane[2] * math.cos(kat * 0.0175)) + math.pow(self.dane[2], 2)),
+                (3 / 2))) / (1 - (self.dane[2] * (self.dane[0] + 2) * (math.cos(kat * 0.0175))) + (
+                        math.pow(self.dane[2], 2) * (self.dane[0] + 1))) - (self.dane[3]))
             teta=i*self.przyrost_kata
             x=math.sqrt((math.pow(self.dane[10],2))+(math.pow(self.dane[6],2))-(2*self.dane[10]*self.dane[6]*math.cos(teta * 0.0175)))
             beta = math.degrees(math.asin(self.dane[10]*math.sin(teta * 0.0175)/x))
@@ -138,12 +149,18 @@ class DataEdit(QWidget):
             sily[a]=(4*Mk*math.cos(alfa[a] * 0.0175))/(self.dane[6]*(self.dane[0]+1))
             #naprezenia[a]=math.sqrt((sily[a]*(reke+self.dane[3]))/(self.dane_materialowe.dane_materialowe[4]*math.pi*reke*self.dane[3]*(((1-math.pow(self.dane_materialowe.dane_materialowe[2],2))/(self.dane_materialowe.dane_materialowe[0])))+((1-math.pow(self.dane_materialowe.dane_materialowe[3],2))/(self.dane_materialowe.dane_materialowe[1]))))
             naprezenia[a]=math.sqrt((sily[a]*(reke+self.dane[3]))/((self.dane_materialowe.dane_materialowe[4]*3.1415*reke*self.dane[3])*(((1-math.pow(self.dane_materialowe.dane_materialowe[2],2))/(self.dane_materialowe.dane_materialowe[0]))+((1-math.pow(self.dane_materialowe.dane_materialowe[3],2))/(self.dane_materialowe.dane_materialowe[1])))))
+
+            #Straty Mocy
+
+            AIC = (math.sqrt(math.pow(self.dane[9],2)+math.pow((self.dane[5]+self.dane[3]),2)-2*self.dane[3]*(self.dane[5]+self.dane[3])*math.cos(kat*0.0175)))-self.dane[3]
+            straty_mocy[a]= self.omega*(self.dane[8]/self.dane[13])*(((AIC/self.dane[3])+1)*self.tarcie_stali+(AIC/self.dane[3])*self.tarcie_stali)*sily[a]
         self.sily=sily
         self.naprezenia=naprezenia
 
         self.wykresy_data_updated.emit(self.dane[0], {
             "sily": sily,
             "naprezenia": naprezenia,
+            "straty_mocy": straty_mocy,
         })
 
 
@@ -160,10 +177,11 @@ class Tab_Pawel(AbstractTab):
         layout.addLayout(stacklayout)
         self.data = DataEdit()
         self.wykresy = Wykresy()
+        self.tolerancje = Tolerancje()
         self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
 
-        tab_titles = ["Wprowadzanie Danych", "Wykresy"]
-        stacked_widgets = [self.data, self.wykresy]
+        tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
+        stacked_widgets = [self.data, self.wykresy, self.tolerancje]
         buttons = []
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
@@ -200,12 +218,19 @@ class DaneMaterialowe(QWidget):
         super().__init__()
                             #     Y1         Y2     v1 v2   B
         self.dane_materialowe = [210000.0,210000.0,0.3,0.3,50]
+                            #   nwej,nwyj  fzarysu frolki
+        self.dane_kinematyczne =[800,0,0.00003,0.00003]
 
-        self.spin_Y1 = DoubleSpinBox(210000, 100000, 500000, 10000)
+        self.spin_Y1 = DoubleSpinBox(self.dane_materialowe[0], 100000, 500000, 10000)
         self.spin_Y2 = DoubleSpinBox(self.dane_materialowe[1], 100000, 500000, 10000)
         self.spin_P1 = DoubleSpinBox(self.dane_materialowe[2], 0.1, 0.7, 0.02)
         self.spin_P2 = DoubleSpinBox(self.dane_materialowe[3], 0.1, 0.7, 0.02)
         self.spin_B = DoubleSpinBox(self.dane_materialowe[4], 20, 100, 2)
+
+        self.spin_nwej = DoubleSpinBox(self.dane_kinematyczne[0], 500, 5000, 10)
+        self.spin_nwyj = DoubleSpinBox(self.dane_kinematyczne[1], 10, 1000, 10)
+        self.spin_fzarysu = DoubleSpinBox(self.dane_kinematyczne[2], 0.00001, 0.0001, 0.00001)
+        self.spin_frolki = DoubleSpinBox(self.dane_kinematyczne[3], 0.00001, 0.0001, 0.00001)
 
         layout = QVBoxLayout()
         layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
@@ -220,7 +245,16 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(QLabelD("Długość rolki:"))
         layout.addWidget(self.spin_B)
         layout.addSpacing(50)
-        layout.addWidget(QLabelD("PRZYJĘTE LUZY :"))
+        layout.addWidget(QLabelD("DANE KINEMATYCZNE : "))
+        layout.addWidget(QLabelD("Obroty wejsciowe :"))
+        layout.addWidget(self.spin_nwej)
+        layout.addWidget(QLabelD("Obroty wyjsciowe :"))
+        layout.addWidget(self.spin_nwyj)
+        layout.addWidget(QLabelD("Współczynnik tarcia koła :"))
+        layout.addWidget(self.spin_fzarysu)
+        layout.addWidget(QLabelD("Współczynnik tarcia rolki :"))
+        layout.addWidget(self.spin_frolki)
+
 
         #Zmiana w danych :
         self.spin_Y1.valueChanged.connect(self.zmiana_danych)
@@ -228,6 +262,10 @@ class DaneMaterialowe(QWidget):
         self.spin_P1.valueChanged.connect(self.zmiana_danych)
         self.spin_P2.valueChanged.connect(self.zmiana_danych)
         self.spin_B.valueChanged.connect(self.zmiana_danych)
+        self.spin_nwej.valueChanged.connect(self.zmiana_danych)
+        self.spin_nwyj.valueChanged.connect(self.zmiana_danych)
+        self.spin_fzarysu.valueChanged.connect(self.zmiana_danych)
+        self.spin_frolki.valueChanged.connect(self.zmiana_danych)
 
         self.setLayout(layout)
 
@@ -237,3 +275,14 @@ class DaneMaterialowe(QWidget):
         self.dane_materialowe[2] = self.spin_P1.value()
         self.dane_materialowe[3] = self.spin_P2.value()
         self.dane_materialowe[4] = self.spin_B.value()
+
+        self.dane_kinematyczne[0] = self.spin_nwej.value()
+        self.dane_kinematyczne[1] = self.spin_nwyj.value()
+        self.dane_kinematyczne[2] = self.spin_fzarysu.value()
+        self.dane_kinematyczne[3] = self.spin_frolki.value()
+
+# Wprowadzenie danych dolerancji - karta
+
+class Tolerancje(QWidget):
+    def __init__(self):
+        super().__init__()
