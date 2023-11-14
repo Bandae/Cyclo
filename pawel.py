@@ -232,6 +232,9 @@ class DaneMaterialowe(QWidget):
         self.spin_fzarysu = DoubleSpinBox(self.dane_kinematyczne[2], 0.00001, 0.0001, 0.00001)
         self.spin_frolki = DoubleSpinBox(self.dane_kinematyczne[3], 0.00001, 0.0001, 0.00001)
 
+        self.spin_fzarysu.setDecimals(5)
+        self.spin_frolki.setDecimals(5)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
         layout.addWidget(QLabelD("Moduł Younga koła:"))

@@ -44,15 +44,18 @@ class Animation_View(QWidget):
     def __init__(self, parent, dane):
         super().__init__(parent)
         main_layout = QVBoxLayout()
-        # animation_controls = QHBoxLayout()
+        animation_controls = QHBoxLayout()
         self.start_animation_button = QPushButton("START ANIMACJI")
+        self.restet_animacji = QPushButton("POZYCJA POCZĄTKOWA")
         self.start_animation_button.setCheckable(True)
         self.start_animation_button.clicked.connect(self.start_przycisk)
-        # animation_controls.addWidget(self.start_animation_button)
-
         self.animacja = Animacja(dane)
+        self.restet_animacji.clicked.connect(self.reset_animacji(self.animacja))
+
+        animation_controls.addWidget(self.start_animation_button)
+        animation_controls.addWidget(self.restet_animacji)
         main_layout.addWidget(self.animacja)
-        main_layout.addWidget(self.start_animation_button)
+        main_layout.addLayout(animation_controls)
         self.setLayout(main_layout)
 
     def start_przycisk(self):
@@ -68,6 +71,11 @@ class Animation_View(QWidget):
         self.animacja.data = data['pawel'] if data.get('pawel') else self.animacja.data
         self.animacja.data_wiktor = data['wiktor'] if data.get('wiktor') else self.animacja.data_wiktor
         self.animacja.rysowanko()
+
+    def reset_animacji(self, animacja):
+        animacja.kat_=90
+        animacja.kat_dorotacji=90
+        print("omega")
 
 
 class Animacja(QWidget):
