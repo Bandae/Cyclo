@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton, QHBoxLayout, QStackedLayout
-from PySide6.QtCore import Signal
+from PySide2.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton, QHBoxLayout, QStackedLayout
+from PySide2.QtCore import Signal
 from pawlowe.wykresy import Wykresy
 import math
 from functools import partial
@@ -33,7 +33,7 @@ class DataEdit(QWidget):
         self.spin_h = DoubleSpinBox(self.dane[2],0.5,0.99,0.01)
         self.spin_g = DoubleSpinBox(self.dane[3],5,14,0.02)
         self.spin_obc = DoubleSpinBox(self.dane[15], 500, 5000, 10)
-        self.spin_l_k = DoubleSpinBox(self.dane[16], 1, 4, 1)
+        self.spin_l_k = DoubleSpinBox(self.dane[16], 1, 2, 1)
         self.spin_l_k.lineEdit().setReadOnly(True)
 
         self.spin_z.valueChanged.connect(self.z_changed)
@@ -184,6 +184,8 @@ class Tab_Pawel(AbstractTab):
 
     def send_data(self):
         return {"pawel": {
+            "R_w1": self.data.dane[6],
+            "R_f1": self.data.dane[5],
             "e": self.data.dane[13],
             "M": self.data.dane[15],
             "K": self.data.dane[16],

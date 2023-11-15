@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
-from PySide6.QtGui import QIcon, QAction
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction
+from PySide2.QtGui import QIcon
 from main_view import Animation_View
 from pawel import Tab_Pawel
 from wiktor import Tab_Wiktor
@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
 
         self.animation_view = Animation_View(self, self.pawel.data.dane)
         animation_layout.addWidget(self.animation_view)
+        self.animation_view.animacja.animation_tick.connect(self.wiktor.data.inputs_modified)
 
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
@@ -127,7 +128,7 @@ class MainWindow(QMainWindow):
         file_dialog.setWindowTitle("Wczytywanie danych")
         file_dialog.setNameFilter('JSON Files (*.json)')
 
-        if file_dialog.exec():
+        if file_dialog.exec_():
             file_path = file_dialog.selectedFiles()[0]
             try:
                 with open(file_path, 'r') as f:
@@ -171,7 +172,7 @@ class MainWindow(QMainWindow):
         file_dialog.setWindowTitle("Zapis")
         file_dialog.setNameFilter('JSON Files (*.json)')
 
-        if file_dialog.exec():
+        if file_dialog.exec_():
             file_path = file_dialog.selectedFiles()[0]
             file_name = re.search(r"/([^\s\./]+)(\.[^\s\./]+)?$", file_path)
             if file_name is None or file_name.group(1) is None:

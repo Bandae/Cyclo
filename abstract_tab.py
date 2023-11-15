@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QMainWindow
+from PySide2.QtWidgets import QWidget, QMainWindow
 from typing import Union, Dict
 
 # Typ danych przekazywanych miedzy zakladkami

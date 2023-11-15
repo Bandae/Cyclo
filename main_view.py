@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton, QHBoxLayout
-from PySide6.QtGui import QPainter, QPixmap,Qt, QPolygon, QPen,QBrush
-from PySide6.QtCore import QPoint, QSize
+from PySide2.QtWidgets import QWidget, QLabel,QFrame, QGridLayout, QVBoxLayout, QDoubleSpinBox, QPushButton, QHBoxLayout
+from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush
+from PySide2.QtCore import QPoint, QSize, Qt, Signal
 from pawlowe.wykresy import Wykresy
 import math
 import time
@@ -71,6 +71,7 @@ class Animation_View(QWidget):
 
 
 class Animacja(QWidget):
+    animation_tick = Signal(float)
     def __init__(self, data):
         super().__init__()
 
@@ -173,4 +174,5 @@ class Animacja(QWidget):
                 if self.kat_>= 360*(self.data[0]+1):
                      self.kat_ = 0
                      self.kat_dorotacji = 0
+                self.animation_tick.emit(self.kat_dorotacji)
         threading.Thread(target=animacja_thread).start()

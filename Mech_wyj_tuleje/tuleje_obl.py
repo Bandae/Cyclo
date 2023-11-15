@@ -1,165 +1,211 @@
 import math
 
-# Czy w przypadku dwóch kół, dwóch momentów wystarczy wziąć pod uwagę większy z nich i na jego podstawie policzyć d_smax?
-# Czy M_u zawsze wieksze niz to srodkowe?
-# Czy nie trzeba dawac - prze MuA MuB i innymi?
-# Czy l_2 powinno byc e1 * 2 czy jedno tylko
-# Czy jak są dwa koła to mam obie strzałki i momenty zapisywać i wykreślać, czy tylko większe z danej pary
-# TODO: jednostki
+# nie sprawdzilem wersji z jednym kolem momentow obliczen, ale podzielilem wszystkie przez 1000
+# TODO: wziac tez od pawla omg0, albo policzyc = pi * n_wej / 30. Wpisac uzywanie do obliczen strat
+# poczekac narazie z liczeniem luzow. Może to da rade statystką zrobić.
 
-def oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax, e1, e2):
-    l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
-    l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
-    l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
-    l_k3 = b_kola * 2 + e1 * 2 + e2 # odleglosc do podparcia jesli dwa kola cykloidalne
-
-    J = (math.pi * (d_smax ** 4)) / 64 # moment bezwladnosci trzpien
-
-    if wariant_podparcia == "jedno koło cykloidalne":
-        return - (F_j * l_1**3) / (3 * E * J)
-    
-    elif wariant_podparcia == "jedno koło, jeden koniec zamocowany, luźne śruby":
-        return (F_j * l_1**2 * (l_2 - l_1)) / (2 * E * J)
-
-    elif wariant_podparcia == "jedno koło, jeden koniec zamocowany, ciasne śruby":
-        return (2 * F_j * l_1**3 * (l_2 - l_1)**2) / (3 * E * J * (l_2 + 2 * l_1)**2)
-
-    elif wariant_podparcia == "dwa koła":
-        f_sI = - ((F_j/2) * l_1**3) / (3 * E * J)
-        f_sII = - ((F_j/2) * l_k2**3) / (3 * E * J)
-        return max(f_sI, f_sII)
-
-    elif wariant_podparcia == "dwa koła, jeden koniec zamocowany, luźne śruby":
-        f_sI = ((F_j/2) * l_1**2 * (l_k3 - l_1)) / (2 * E * J)
-        f_sII = ((F_j/2) * l_k2**2 * (l_k3 - l_k2)) / (2 * E * J)
-        return max(f_sI, f_sII)
-
-    elif wariant_podparcia == "dwa koła jeden koniec zamocowany, ciasne śruby":
-        f_sI = (2 * (F_j/2) * l_1**3 * (l_k3 - l_1)**2) / (3 * E * J * (l_k3 + 2 * l_1)**2)
-        f_sII = (2 * (F_j/2) * l_k2**3 * (l_k3 - l_k2)**2) / (3 * E * J * (l_k3 + 2 * l_k2)**2)
-        return max(f_sI, f_sII)
-
-def oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2):
-    '''
-    Oblicza Max moment gnący działający na sworzeń i strzałkę ugięcia
-    wariant_podparcia:
-    1 - jedno koło cykloidalne
-    2 - jedno koło, jeden koniec zamocowany, luźne śruby
-    3 - jedno koło, jeden koniec zamocowany, ciasne śruby
-    4 - dwa koła
-    5 - dwa koła, jeden koniec zamocowany, luźne śruby
-    6 - dwa koła jeden koniec zamocowany, ciasne śruby
-    '''
-    l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
-    l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
-    l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
-    l_k3 = b_kola * 2 + e1 * 2 + e2 # odleglosc do podparcia jesli dwa kola cykloidalne
-
-    if wariant_podparcia == "jedno koło cykloidalne":
-        return F_j * l_1
-
-    elif wariant_podparcia == "jedno koło, jeden koniec zamocowany, luźne śruby":
-        M_u = F_j * (l_1 / (2 * l_2**2)) * (l_1**2 - 3 * l_1 * l_2 + 2 * l_2**2)
-        R = F_j - (F_j * (l_1**2 / (2 * l_2**3)) * (3 * l_2 - l_1))
-        M_gI = -M_u + R * l_1
-        M_gII = -M_u + R * l_2 - F_j * (l_2 - l_1)
-        return max(M_gI, M_gII, M_u)
-
-    elif wariant_podparcia == "jedno koło, jeden koniec zamocowany, ciasne śruby":
-        R_B = F_j * ((l_2 - l_1)**2 / l_2**3) * (l_2 + 2 * l_1)
-        M_uA = F_j * (((l_2 - l_1) * l_1**2) / l_2**2)
-        M_uB = F_j * (((l_2 - l_1)**2 * l_1) / l_2**2)
-        M_g = -M_uB + R_B * l_1
-        return max(M_uA, M_uB, M_g)
- 
-    elif wariant_podparcia == "dwa koła":
-        M_gI = (F_j/2) * l_1
-        M_gII = (F_j/2) * l_k2
-        return max(M_gI, M_gII)
-
-    elif wariant_podparcia == "dwa koła, jeden koniec zamocowany, luźne śruby":
-        M_uI = (F_j/2) * (l_1 / (2 * l_k3**2)) * (l_1**2 - 3 * l_1 * l_k3 + 2 * l_k3**2)
-        M_uII = (F_j/2) * (l_k2 / (2 * l_k3**2)) * (l_k2**2 - 3 * l_k2 * l_k3 + 2 * l_k3**2)
-
-        M_gI = -M_uI + ((F_j/2) - ((F_j/2) * (l_1**2 / (2 * l_k3**3)) * (3 * l_k3 - l_1))) * l_1
-        M_gII = -M_uII + ((F_j/2) - ((F_j/2) * (l_k2**2 / (2 * l_k3**3)) * (3 * l_k3 - l_k2))) * l_k2
-        return max(max(M_uI, M_gI), max(M_uII, M_gII))
-
-    elif wariant_podparcia == "dwa koła jeden koniec zamocowany, ciasne śruby":
-        R_BI = (F_j/2) * ((l_k3 - l_1)**2 / l_k3**3) * (l_k3 + 2 * l_1)
-        R_BII = (F_j/2) * ((l_k3 - l_k2)**2 / l_k3**3) * (l_k3 + 2 * l_k2)
-
-        M_uAI = (F_j/2) * (((l_k3 - l_1) * l_1**2) / l_k3**2)
-        M_uAII = (F_j/2) * (((l_k3 - l_k2) * l_k2**2) / l_k3**2)
-        M_uBI = (F_j/2) * (((l_k3 - l_1)**2 * l_1) / l_k3**2)
-        M_uBII = (F_j/2) * (((l_k3 - l_k2)**2 * l_k2) / l_k3**2)
-
-        M_gI = -M_uBI + R_BI * l_1
-        M_gII = -M_uBII + R_BII * l_k2
-
-        M_gmaxI = max(M_uAI, M_uBI, M_gI)
-        M_gmaxII = max(M_uAII, M_uBII, M_gII)
-        return max(M_gmaxI, M_gmaxII)
-
-def oblicz_d_sworzen(M_gmax, k_g):
-    return ((32 * M_gmax) / (math.pi * k_g)) ** (1/3)
-
-def oblicz_sily(M_k, R_wk, n_sworzni):
-    F_list = []
-
+def lista_fi_sworzni(n_sworzni, kat):
     def obl_fi_kj(i):
         return (2 * math.pi * (i - 1)) / n_sworzni
     
-    for i in range(1, n_sworzni + 1):
-        F_j = M_k * (R_wk * math.sin(obl_fi_kj(i)) / sum(
-            [R_wk**2 * math.sin(obl_fi_kj(j))**2 for j in range(1, n_sworzni + 1)]
-        ))
-        F_list.append(F_j)
+    return [obl_fi_kj(i) + kat * 0.01745 for i in range(1, n_sworzni + 1)]
+    # return [obl_fi_kj(i) for i in range(1, int((n_sworzni / 2 + 1) + 1))]
+
+def oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2):
+    l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
+    l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
+    l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
+    l_k3 = b_kola * 2 + e1 * 2 + e2 # odleglosc do podparcia jesli dwa kola cykloidalne
+
+    J = math.pi * d_sw**4 / 64 # moment bezwladnosci sworznia
+
+    if podparcie == "jednostronnie utwierdzony" and K == 1:
+        return [(F_j * l_1**3) / (3 * E * J) for F_j in sily_0]
     
-    return F_list
+    elif podparcie == "utwierdzony podpartyy" and K == 1:
+        return [(F_j * l_1**2 * (l_2 - l_1)) / (2 * E * J) for F_j in sily_0]
 
-def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t):
-    R_otw = d_otw / 2
-    R_tul = d_tul / 2
+    elif podparcie == "obustronnie utwierdzony" and K == 1:
+        return [(2 * F_j * l_1**3 * (l_2 - l_1)**2) / (3 * E * J * (l_2 + 2 * l_1)**2) for F_j in sily_0]
 
-    # TODO: usunac te kombinacje, sily nie powinny byc ujemne
-    # jesli mi powie szef, ze tak maja wygladac, ze sily zrownywac z 0 , to dam w liczeniu sil
+    elif podparcie == "jednostronnie utwierdzony" and K == 2:
+        return [(F_j * l_k2**3) / (3 * E * J) for F_j in sily_0]
+        # f_sI = - (F_j * l_1**3) / (3 * E * J)
+        # f_sII = - (F_j * l_k2**3) / (3 * E * J)
+        # return max(f_sI, f_sII)
+
+    elif podparcie == "utwierdzony podparty" and K == 2:
+        return [(F_j * l_k2**2 * (l_k3 - l_k2)) / (2 * E * J) for F_j in sily_0]
+        # f_sI = (F_j * l_1**2 * (l_k3 - l_1)) / (2 * E * J)
+        # f_sII = (F_j * l_k2**2 * (l_k3 - l_k2)) / (2 * E * J)
+        # return max(f_sI, f_sII)
+
+    elif podparcie == "obustronnie utwierdzony" and K == 2:
+        return [(2 * F_j * l_1**3 * (l_k3 - l_1)**2) / (3 * E * J * (l_k3 + 2 * l_1)**2) for F_j in sily_0]
+        # f_sI = (2 * F_j * l_1**3 * (l_k3 - l_1)**2) / (3 * E * J * (l_k3 + 2 * l_1)**2)
+        # f_sII = (2 * F_j * l_k2**3 * (l_k3 - l_k2)**2) / (3 * E * J * (l_k3 + 2 * l_k2)**2)
+        # return max(f_sI, f_sII)
+
+def oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2):
+    '''
+    Oblicza max. moment gnący ze wszystkich działających na sworznie [Nm]
+    '''
+    l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
+    l_2 = b_kola + e1 # odleglosc do podparcia jesli jedno kolo cykloidalne
+    l_k2 = b_kola * 1.5 + e1 + e2 # odleglosc do polowy kola drugiego
+    l_k3 = b_kola * 2 + e1 * 2 + e2 # odleglosc do podparcia jesli dwa kola cykloidalne
+
+    if podparcie == "jednostronnie utwierdzony" and K == 1:
+        return abs(F_max * l_1 / 1000)
+
+    elif podparcie == "utwierdzony podparty" and K == 1:
+        M_u = F_max * (l_1 / (2 * l_2**2)) * (l_1**2 - 3 * l_1 * l_2 + 2 * l_2**2) / 1000
+        # R = F_max - (F_max * (l_1**2 / (2 * l_2**3)) * (3 * l_2 - l_1))
+        # M_gI = -M_u + R * l_1
+        # M_gII = -M_u + R * l_2 - F_max * (l_2 - l_1)
+        return abs(M_u)
+
+    elif podparcie == "obustronnie utwierdzony" and K == 1:
+        # R_B = F_max * ((l_2 - l_1)**2 / l_2**3) * (l_2 + 2 * l_1)
+        M_uA = F_max * (((l_2 - l_1) * l_1**2) / l_2**2) / 1000
+        M_uB = F_max * (((l_2 - l_1)**2 * l_1) / l_2**2) / 1000
+        # M_g = -M_uB + R_B * l_1
+        return max(abs(M_uA), abs(M_uB))
+ 
+    elif podparcie == "jednostronnie utwierdzony" and K == 2:
+        M_uI = F_max * l_1 / 1000
+        M_uII = F_max * l_k2 / 1000
+        return max(abs(M_uI), abs(M_uII))
+
+    elif podparcie == "utwierdzony podparty" and K == 2:
+        M_uI = F_max * (l_1 / (2 * l_k3**2)) * (l_1**2 - 3 * l_1 * l_k3 + 2 * l_k3**2) / 1000
+        M_uII = F_max * (l_k2 / (2 * l_k3**2)) * (l_k2**2 - 3 * l_k2 * l_k3 + 2 * l_k3**2) / 1000
+        # M_gI = -M_uI + (F_max - (F_max * (l_1**2 / (2 * l_k3**3)) * (3 * l_k3 - l_1))) * l_1
+        # M_gII = -M_uII + (F_max - (F_max * (l_k2**2 / (2 * l_k3**3)) * (3 * l_k3 - l_k2))) * l_k2
+
+        return max(abs(M_uI), abs(M_uII))
+
+    elif podparcie == "obustronnie utwierdzony" and K == 2:
+        # R_BI = F_max * ((l_k3 - l_1)**2 / l_k3**3) * (l_k3 + 2 * l_1)
+        # R_BII = F_max * ((l_k3 - l_k2)**2 / l_k3**3) * (l_k3 + 2 * l_k2)
+
+        M_uAI = F_max * (((l_k3 - l_1) * l_1**2) / l_k3**2) / 1000
+        M_uAII = F_max * (((l_k3 - l_k2) * l_k2**2) / l_k3**2) / 1000
+        M_uBI = F_max * (((l_k3 - l_1)**2 * l_1) / l_k3**2) / 1000
+        M_uBII = F_max * (((l_k3 - l_k2)**2 * l_k2) / l_k3**2) / 1000
+
+        # M_gI = -M_uBI + R_BI * l_1
+        # M_gII = -M_uBII + R_BII * l_k2
+
+        return max(abs(M_uAI), abs(M_uAII), abs(M_uBI), abs(M_uBII))
+
+def oblicz_d_sworzen(M_gmax, k_g):
+    return round((32 * M_gmax / (math.pi * k_g * 10**6))**(1/3) * 1000, 2)
+
+def oblicz_sily(F_max, lista_fi_kj):
+    # F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
+    return [F_max * math.sin(fi_kj) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
+    # for i in range(1, n_sworzni + 1):
+        # F_j = M_k * (R_wk * math.sin(obl_fi_kj(i)) / sum(
+        #     [R_wk**2 * math.sin(obl_fi_kj(j))**2 for j in range(1, n_sworzni + 1)]
+        # ))
+
+def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t, tolerancje):
+    R_otw = d_otw / 2 if tolerancje is None else d_otw / 2 + tolerancje["T_o"]
+    R_tul = d_tul / 2 if tolerancje is None else d_tul / 2 + tolerancje["T_t"]
+
     stala = (R_otw - R_tul) / (b_kola * math.pi * R_tul * R_otw * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)))
-    try:
-        return [math.sqrt(F_j if F_j >= 0 else 0 * stala) for F_j in sily]
-    except ValueError:
-        return None
+    return [math.sqrt(F_j * stala) for F_j in sily]
 
-def oblicz_straty(omg_0, mimosrod, sily, d_tul, d_sw, f_kt, f_ts):
-    # nie wiem...
-    R_tzj, R_sj = d_tul / 2, d_sw / 2
-    u = None
-    [omg_0 * ((u + 1) / u) * (mimosrod / (R_tzj - R_sj)) * (f_kt - f_ts) * sum(sily)]
+def oblicz_luzy_odchylka(R_wk, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje):
+    odch_R_otwj = (d_otw/2) + tolerancje["T_o"]
+    odch_R_tzj = (d_tul/2) + tolerancje["T_t"]
+    odch_R_wk = R_wk + tolerancje["T_Rk"]
+    odch_R_wt = R_wk + tolerancje["T_Rt"]
+    odch_e = mimosrod + tolerancje["T_e"]
 
-def obliczenia_mech_wyjsciowy(dane, dane_zew, d_otw=1):
+    def oblicz_luz(fi_kj):
+        y_otj = odch_R_wt * math.cos(fi_kj + tolerancje["T_fi_t"])
+        y_oktj = odch_R_wk * math.cos(fi_kj + tolerancje["T_fi_k"]) - odch_e
+        return (y_oktj - odch_R_tzj) - (y_otj - odch_R_otwj)
+        # return abs(y_oktj + odch_R_tzj) - abs(y_otj - odch_R_otwj)
+
+    return [oblicz_luz(fi_kj) for fi_kj in lista_fi_kj]
+
+def oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t):
+    R_otw, R_tul = (d_otw / 2), (d_tul / 2)
+    # c = math.sqrt(((4 * F_max) / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)) * (R_otw * R_tul / (R_otw - R_tul)))
+    # return (F_max / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) * ((1 / 3) + math.log((4 * R_otw) / c)) + ((1 - v_t**2) / E_t) * ((1 / 3) + math.log((4 * R_tul) / c)))
+    c = (4.9 * 10**-3) * math.sqrt((F_max / b_kola) * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)) * (R_otw * R_tul / (R_otw - R_tul)))
+    return (F_max / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) * ((1 / 3) + math.log((4 * R_otw) / c))) + ((1 - v_t**2) / E_t) * ((1 / 3) + math.log((4 * R_tul) / c))
+
+def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, mimosrod, d_tul, d_otw, strzalki, tolerancje, E_k, v_k, E_t, v_t):
+    del_max = oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t)
+    delty = [del_max * math.sin(fi) for fi in lista_fi_kj]
+    luzy = oblicz_luzy_odchylka(R_wk, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje)
+
+    list_h_j = [R_wk * math.sin(fi) for fi in lista_fi_kj]
+    min_beta_obr = min([luz / h_j for luz, h_j in zip(luzy, list_h_j) if h_j > 0])
+    temp = [(f_j + del_j - (luz_j - h_j * min_beta_obr)) * h_j for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
+    suma = sum([temp_j if temp_j > 0 else 0 for temp_j in temp])
+    sily_temp = [1000 * M_k * (f_j + del_j - (luz_j - h_j * min_beta_obr)) / suma for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
+    return [sila if sila > 0 else 0 for sila in sily_temp]
+    # suma = sum([del_j - luz_j for del_j, luz_j in zip(delty, luzy)])
+    # return [M_k * (del_j - luz_j) / (suma * math.sin(fi)) if del_j - luz_j > 0 else 0 for del_j, luz_j, fi in zip(delty, luzy, lista_fi_kj)]
+
+def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
+    odch_e = e if tolerancje is None else e + tolerancje["T_e"]
+    odch_R_sw = d_sw / 2 if tolerancje is None else d_sw / 2 + tolerancje["T_s"]
+    odch_R_tul = d_tul / 2 if tolerancje is None else d_tul / 2 + tolerancje["T_t"]
+
+    stala = omg_0 * (odch_e / R_w1) * ((R_w1 + odch_e) / (odch_R_tul - odch_R_sw)) * (f_kt + f_ts)
+    return [F_j * stala for F_j in sily]
+
+def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, dane_obl, kat):
     M_k = dane_zew["M"] / dane_zew["K"]
     E, k_g = dane["mat_sw"]["E"], dane["mat_sw"]["k_g"]
+    E_k, v_k = dane_zew["E_kola"], dane_zew["v_kola"]
+    E_t, v_t = dane["mat_tul"]["E"], dane["mat_tul"]["v"]
     b_kola = dane["b"]
     n_sworzni = dane["n"]
     R_wk = dane["R_wk"]
-    e1 = dane["e1"]
-    e2 = dane["e2"]
-    wariant_podparcia = dane["podparcie"]
-    d_tul = dane["d_tul"]
+    e1, e2 = dane["e1"], dane["e2"]
+    podparcie = dane["podparcie"]
+    d_tul, d_sw = dane["d_tul"], dane["d_sw"]
+    e, K = dane_zew["e"], dane_zew["K"]
+    f_kt, f_ts = dane["f_kt"], dane["f_ts"]
+    obl_tul, obl_otw = dane_obl["d_tul"], dane_obl["d_otw"]
 
-    sily = oblicz_sily(M_k, R_wk, n_sworzni)
+    mode = "ideal"
+    if tolerancje.get("tolerances") is not None and type(list(tolerancje["tolerances"].values())[0]) == list:
+        mode = "tolerances"
+    elif tolerancje.get("tolerances") is not None:
+        mode = "deviations"
 
-    E_k, v_k = dane_zew["E_kola"], dane_zew["v_kola"]
-    E_t, v_t = dane["mat_tul"]["E"], dane["mat_tul"]["v"]
-    naciski = oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t)
-    momenty = [oblicz_Mgmax(wariant_podparcia, F_j, b_kola, e1, e2) for F_j in sily]
-    d_smax = oblicz_d_sworzen(max(momenty), k_g)
-    strzalki = [oblicz_fs(wariant_podparcia, F_j, E, b_kola, d_smax, e1, e2) for F_j in sily]
+    F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
+    lista_fi_kj = lista_fi_sworzni(n_sworzni, kat)
+    sily_0 = oblicz_sily(F_max, lista_fi_kj)
+    strzalki = oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2)
+    sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, e, d_tul, obl_otw, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
+    M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
+    d_smax = oblicz_d_sworzen(M_gmax, k_g)
+
+
+    d_sw_wybrane = d_smax if d_sw <= d_smax or d_sw >= d_smax + 10 else d_sw
+    d_tul_obl = round(d_sw_wybrane * dane["wsp_k"], 2)
+    d_tul_wybrane = d_tul_obl if d_tul <= d_tul_obl or d_tul >= d_tul_obl + 10 else d_tul
+    d_otw_obl = round(d_tul_wybrane + (2 * e), 2)
+
+    naciski = oblicz_naciski(sily, obl_otw, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
+    straty = oblicz_straty(79, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
 
     return {
-        "d_smax": d_smax,
+        "d_s_obl": d_smax,
+        "d_t_obl": d_tul_obl,
+        "d_o_obl": d_otw_obl,
         "sily": sily,
         "naciski": naciski,
+        "straty": straty,
     }
 
 def oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje):
@@ -167,6 +213,7 @@ def oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje):
     Tolerancje:
     T_o: promienia otworu
     T_t: promienia zew tuleji
+    T_s: promienia zew tuleji
     T_Rk: promienia rozmieszczenia otworów
     T_Rt: promienia rozmieszczenia tuleji
     T_fi_k: kątowego rozmieszczenia otworów w kole cykloidalnym
@@ -199,21 +246,5 @@ def oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje):
 
     luzy = [oblicz_luz(obl_fi_kj(ind)) for ind in range(1, n_sworzni + 1)]
 
-def oblicz_przemieszczenie_tul_otw(sily, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t):
-    R_otw, R_tul = (d_otw / 2), (d_tul / 2)
-    c = math.sqrt(((4 * max(sily)) / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)) * (R_otw * R_tul / (R_otw - R_tul)))
-    return (max(sily) / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) * ((1 / 3) + math.log((4 * R_otw) / c)) + ((1 - v_t**2) / E_t) * ((1 / 3) + math.log((4 * R_tul) / c)))
-
-def oblicz_sily_z_luzami(M_k, n_sworzni, b_kola, R_wk, mimosrod, d_tul, d_otw, tolerancje, E_k, v_k, E_t, v_t):
-    def obl_fi_kj(i):
-        return (2 * math.pi * (i - 1)) / n_sworzni
-    
-    sily_0 = oblicz_sily(M_k, R_wk, n_sworzni)
-    del_max = oblicz_przemieszczenie_tul_otw(sily_0, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t)
-    delty = [del_max * math.sin(obl_fi_kj(i)) for i in range(1, n_sworzni+1)]
-    poprawione_luzy = [[luz[0] - delty[i], luz[1] - delty[i]] for i, luz in enumerate(oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje))]
-
-    # co dac w tych sum(), jak wziac pod uwage ze mam min i max luz...
-    sily_z_luzami = [[M_k * del_max / (R_wk * obl_fi_kj(i) * sum([0])),
-                      M_k * del_max / (R_wk * obl_fi_kj(i) * sum([0]))
-                      ] for i in range(1, n_sworzni + 1)]
+def oblicz_sily_z_luzami():
+    ...

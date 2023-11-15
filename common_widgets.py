@@ -1,12 +1,13 @@
-from PySide6.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox
+from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox
 
 class DoubleSpinBox(QDoubleSpinBox):
-    def __init__(self, value, minimum, maximum, step):
+    def __init__(self, value, minimum, maximum, step, decimal_places=2):
         super().__init__()
         self.setValue(value)
         self.lineEdit().setReadOnly(False)
         self.setRange(minimum, maximum)
         self.setSingleStep(step)
+        self.setDecimals(decimal_places)
     
     def modify(self, value=None, minimum=None, maximum=None):
         if minimum is not None:
