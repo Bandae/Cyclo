@@ -216,14 +216,14 @@ class Tab_Pawel(AbstractTab):
 
 
 class DaneMaterialowe(QWidget):
-    def __init__(self,liczba_z):
+    def __init__(self, liczba_z):
         super().__init__()
 
-        self.z=liczba_z
-                            #     Y1         Y2     v1 v2   B
-        self.dane_materialowe = [210000.0,210000.0,0.3,0.3,50]
-                            #   nwej,nwyj  fzarysu frolki
-        self.dane_kinematyczne =[500,0,0.00003,0.00003]
+        self.z = liczba_z
+        #     Y1         Y2     v1 v2   B
+        self.dane_materialowe = [210000.0, 210000.0, 0.3, 0.3, 50]
+        #   nwej,nwyj  fzarysu frolki
+        self.dane_kinematyczne = [500, 0, 0.00003, 0.00003]
 
         self.spin_Y1 = DoubleSpinBox(self.dane_materialowe[0], 100000, 500000, 10000)
         self.spin_Y2 = DoubleSpinBox(self.dane_materialowe[1], 100000, 500000, 10000)
@@ -263,8 +263,7 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(QLabelD("Współczynnik tarcia rolki :"))
         layout.addWidget(self.spin_frolki)
 
-
-        #Zmiana w danych  :
+        # Zmiana w danych  :
         self.spin_Y1.valueChanged.connect(self.zmiana_danych)
         self.spin_Y2.valueChanged.connect(self.zmiana_danych)
         self.spin_P1.valueChanged.connect(self.zmiana_danych)
@@ -290,7 +289,7 @@ class DaneMaterialowe(QWidget):
         self.obliczanie_predkosci_wyjsciowej()
 
     def obliczanie_predkosci_wyjsciowej(self):
-        self.dane_kinematyczne[1]=self.dane_kinematyczne[0]/self.z
+        self.dane_kinematyczne[1] = self.dane_kinematyczne[0] / self.z
         self.spin_nwyj.setText(str(round(self.dane_kinematyczne[1])))
 
 

@@ -1,5 +1,6 @@
 from PySide2.QtWidgets import QLabel, QGridLayout, QStackedLayout, QPushButton
 from abstract_tab import AbstractTab
+from common_widgets import QLabelD
 
 
 class Eksport_Danych(AbstractTab):
@@ -7,30 +8,28 @@ class Eksport_Danych(AbstractTab):
         super().__init__(parent)
         main_layout = QGridLayout()
 
-        pavel01 = QPushButton("Przekładnia Cykloidalna")
+        pavel01 = QLabelD("Przekładnia Cykloidalna")
         self.pavel11 = QPushButton("TO CSV")
-
         self.pavel11.clicked.connect(lambda: self.paveltocsv(sily))
         pavel12 = QPushButton("TO DXF")
-        pavel12.clicked.connect(lambda: self.paveltocsv(sily))
         pavel13 = QPushButton("inny ??")
 
-        wiktor01 = QPushButton("Mechanizm wyjsciowy I")
+        wiktor01 = QLabelD("Mechanizm wyjsciowy I")
         wiktor11 = QPushButton("TO CSV")
         wiktor12 = QPushButton("TO DXF")
         wiktor13 = QPushButton("inny ??")
 
-        milosz01 = QPushButton("Mechanizm wyjsciowy II")
+        milosz01 = QLabelD("Mechanizm wyjsciowy II")
         milosz11 = QPushButton("TO CSV")
         milosz12 = QPushButton("TO DXF")
         milosz13 = QPushButton("inny ??")
 
-        kamil01 = QPushButton("Układ Wejsciowy")
+        kamil01 = QLabelD("Układ Wejsciowy")
         kamil11 = QPushButton("TO CSV")
         kamil12 = QPushButton("TO DXF")
         kamil13 = QPushButton("inny ??")
 
-        all01 = QPushButton("Calosciowy eksport")
+        all01 = QLabelD("Calosciowy eksport")
         all11 = QPushButton("TO CSV")
         all12 = QPushButton("TO DXF")
         all13 = QPushButton("inny ??")
