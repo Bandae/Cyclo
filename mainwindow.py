@@ -1,4 +1,4 @@
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout
 from PySide2.QtGui import QIcon
 from main_view import Animation_View
 from pawel import Tab_Pawel
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         milosz = Tab_Milosz(self)
         eksport = Eksport_Danych(self, self.pawel.data.sily)
 
-        main_layout = QHBoxLayout()
+        main_layout = QGridLayout()
         data_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         self.stacklayout = QStackedLayout()
@@ -49,10 +49,10 @@ class MainWindow(QMainWindow):
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
 
-        main_layout.addLayout(animation_layout)
-        main_layout.addLayout(data_layout)
+        main_layout.addLayout(animation_layout,0,0,1,4)
+        main_layout.addLayout(data_layout,0,4,1,2)
 
-        self.tab_titles = ["Przekładnia Cykloidalna", "Mechanizm Wyjsciowy I", "Mechanizm Wyjsciowy II", "Mechanizm Wejsciowy", "Eksport danych"]
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej", "Eksport"]
         self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
