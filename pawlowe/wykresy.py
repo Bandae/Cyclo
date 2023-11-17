@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QTabWidget, QVBoxLayout
-from PySide6.QtGui import QPainter
-from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
+from PySide2.QtWidgets import QTabWidget, QVBoxLayout
+from PySide2.QtGui import QPainter
+from PySide2.QtCharts import QtCharts
 
 def punkty_wykresu(liczba_zebow, wartosci):
     '''wartosci to albo sily albo naprezenia, dla obu takie samo liczenie'''
@@ -21,19 +21,19 @@ def punkty_wykresu(liczba_zebow, wartosci):
     return punkty
 
 
-class Wykres(QChartView):
+class Wykres(QtCharts.QChartView):
     def __init__(self, chart_title, x_title, y_title):
         super().__init__()
-        self.chart = QChart()
+        self.chart = QtCharts.QChart()
         self.chart.legend().hide()
         self.chart.setTitle(chart_title)
         self.setRenderHint(QPainter.Antialiasing)
 
-        self.series = QLineSeries()
+        self.series = QtCharts.QLineSeries()
         self.chart.addSeries(self.series)
 
-        self.os_x = QValueAxis()
-        self.os_y = QValueAxis()
+        self.os_x = QtCharts.QValueAxis()
+        self.os_y = QtCharts.QValueAxis()
         self.os_x.setTitleText(x_title)
         self.os_x.setLabelFormat('%.0f')
         self.chart.setAxisX(self.os_x, self.series)
@@ -60,12 +60,14 @@ class Wykresy(QTabWidget):
         super().__init__()
         self.wykres_sil = Wykres("Wykres Sił w rolkach", "Numer Rolki [n]", "Wartość Siły [kN]")
         self.wykres_naprezen = Wykres("Wykres Naprężeń w rolkach", "Numer Rolki [n]", "Wartość Nacisku [MPa]")
+        self.wykres_strat_mocy = Wykres("Wykres Strat mocy w rolkach", "Numer Rolki [n]", "Wartość Straty [W]")
 
         tabs = QTabWidget()
         tabs.setMovable(True)
         tabs.setTabPosition(QTabWidget.North)
         tabs.addTab(self.wykres_sil, "Siły")
         tabs.addTab(self.wykres_naprezen, "Naprężenia")
+        tabs.addTab(self.wykres_strat_mocy, "Straty Mocy")
 
         layout = QVBoxLayout()
         layout.addWidget(tabs)
@@ -76,3 +78,5 @@ class Wykresy(QTabWidget):
             self.wykres_sil.update_data(punkty_wykresu(liczba_zebow, data["sily"]))
         if data.get("naprezenia") and data["naprezenia"] is not None:
             self.wykres_naprezen.update_data(punkty_wykresu(liczba_zebow, data["naprezenia"]))
+        if data.get("straty_mocy") and data["straty_mocy"] is not None:
+            self.wykres_strat_mocy.update_data(punkty_wykresu(liczba_zebow,data["straty_mocy"]))

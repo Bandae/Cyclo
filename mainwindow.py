@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout
-from PySide6.QtGui import QIcon, QAction
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout
+from PySide2.QtGui import QIcon
 from main_view import Animation_View
 from pawel import Tab_Pawel
 from wiktor import Tab_Wiktor
@@ -7,6 +7,7 @@ from milosz import Tab_Milosz
 from kamil import Tab_Kamil
 from eksportdanych import Eksport_Danych
 import json
+import re
 from functools import partial
 
 
@@ -23,6 +24,8 @@ class MainWindow(QMainWindow):
         main_icon.addFile("icons//mainwindow_icon.png")
         self.setWindowIcon(main_icon)
 
+        self.loaded_file = None
+
         self.pawel = Tab_Pawel(self)
         self.pawel.anim_data_updated.connect(self.update_animation_data)
 
@@ -33,7 +36,7 @@ class MainWindow(QMainWindow):
         milosz = Tab_Milosz(self)
         eksport = Eksport_Danych(self, self.pawel.data.sily)
 
-        main_layout = QHBoxLayout()
+        main_layout = QGridLayout()
         data_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         self.stacklayout = QStackedLayout()
@@ -41,22 +44,22 @@ class MainWindow(QMainWindow):
 
         self.animation_view = Animation_View(self, self.pawel.data.dane)
         animation_layout.addWidget(self.animation_view)
+        self.animation_view.animacja.animation_tick.connect(self.wiktor.data.inputs_modified)
 
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
 
-        main_layout.addLayout(animation_layout)
-        main_layout.addLayout(data_layout)
+        main_layout.addLayout(animation_layout,0,0,1,4)
+        main_layout.addLayout(data_layout,0,4,1,2)
 
-        tab_titles = ["Przekładnia Cykloidalna", "Mechanizm Wyjsciowy I", "Mechanizm Wyjsciowy II", "Mechanizm Wejsciowy", "Eksport danych"]
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej", "Eksport"]
         self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
-        buttons = []
 
-        for index, (title, widget) in enumerate(zip(tab_titles, self.stacked_widgets)):
-            buttons.append(QPushButton(title))
-            button_layout.addWidget(buttons[index])
+        for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
+            button = QPushButton(title)
+            button_layout.addWidget(button)
             self.stacklayout.addWidget(widget)
-            buttons[index].pressed.connect(partial(self.activate_tab, index))
+            button.pressed.connect(partial(self.activate_tab, index))
         
         #Menu główne:
         menu = self.menuBar()
@@ -66,12 +69,12 @@ class MainWindow(QMainWindow):
 
         otworz = QAction("Otwórz",self)
         filemenu.addAction(otworz)
-        otworz.triggered.connect(self.otworz)
+        otworz.triggered.connect(self.load_JSON)
 
         zapis = QAction("Zapisz",self)
         filemenu.addAction(zapis)
         zapis.setShortcut("Ctrl+S")
-        #zapis.triggered.connect(self.zapisz(self.pawel))
+        zapis.triggered.connect(self.save_to_JSON)
 
         exit_app = QAction("Wyjście",self)
         filemenu.addAction(exit_app)
@@ -82,12 +85,11 @@ class MainWindow(QMainWindow):
 
         #PRZECHPDZENIE MIĘDZY SEKCJAMI MENU :
         sectionmenu = menu.addMenu("&Sekcja")
-        section_buttons = []
 
-        for index, (title, widget) in enumerate(zip(tab_titles, self.stacked_widgets)):
-            section_buttons.append(QAction(title, self))
-            sectionmenu.addAction(section_buttons[index])
-            section_buttons[index].triggered.connect(partial(self.activate_tab, index))
+        for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
+            button = QAction(title, self)
+            sectionmenu.addAction(button)
+            button.triggered.connect(partial(self.activate_tab, index))
 
         widget = QWidget()
         widget.setLayout(main_layout)
@@ -116,34 +118,67 @@ class MainWindow(QMainWindow):
             'wiktor': dane.get("wiktor"),
         })
 
-#OTWIERZANIE Z PLIKU JSON
-    def otworz(self):
-        print("otwieram")
+    def load_JSON(self):
+        '''Wczytuje dane z pliku .json, wywołuje metodę load_data() każdej z zakładek, podając im słownik jej danych.
+        Może być None, każdy musi z osobna sprawdzić przed odczytywaniem pojedynczych pozycji.'''
+        data = None
+        file_path = None
+        file_dialog = QFileDialog(self)
+        file_dialog.setFileMode(QFileDialog.ExistingFile)
+        file_dialog.setWindowTitle("Wczytywanie danych")
+        file_dialog.setNameFilter('JSON Files (*.json)')
 
+        if file_dialog.exec_():
+            file_path = file_dialog.selectedFiles()[0]
+            try:
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                QMessageBox.information(self, 'Dane wczytane', 'Dane zostały wczytane.')
+            except Exception as e:
+                QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku: {str(e)}')
+        
+        if data is None or list(data.keys()) != self.tab_titles:
+            # QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku.')
+            return
+        
+        self.loaded_file = file_path
+        for key, tab in zip(self.tab_titles, self.stacked_widgets):
+            tab.load_data(data.get(key))
+        
+    def save_to_JSON(self):
+        '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę save_data(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
+        których klucze są takie same, jak self.tab_titles.
+        Wywołuje activate_tab(), żeby upewnić się, że przekazane są między nami dane, i wykonane obliczenia przed zapisem.
 
-#ZAPIS DO PLIKU JSON
-    def zapisz(self,dane_pawel):
+        Użycie tej metody, albo load_JSON(), zapisuje podaną przez użytkownika ścieżkę, i kolejne wywołania tej metody automatycznie zapisują do tego pliku.'''
+        def save_ess(f_path, dane):
+            try:
+                with open(f_path, 'w') as f:
+                    json.dump(dane, f)
+                QMessageBox.information(self, 'Plik zapisany', 'Dane zostały zapisane do pliku JSON.')
+                self.loaded_file = f_path
+            except Exception as e:
+                QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
 
-        data = "{\n\"dane:\" [\n"
-        for i in range(0, 14):
-            data += "     {\n"
-
-            data += "        \"dane_id\": " + str(i) + ",\n"
-            data += "        \"wartosc_dane\": " + str(dane_pawel.data.dane[i])
-
-            data += "\n     }\n"
-        data += "\n}"
+        self.activate_tab(0)
+        self.activate_tab(1)
+        data = { key: tab.save_data() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
+        if self.loaded_file is not None:
+            save_ess(self.loaded_file, data)
+            return
 
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.AnyFile)
+        file_dialog.setWindowTitle("Zapis")
         file_dialog.setNameFilter('JSON Files (*.json)')
 
-        if file_dialog.exec():
+        if file_dialog.exec_():
             file_path = file_dialog.selectedFiles()[0]
+            file_name = re.search(r"/([^\s\./]+)(\.[^\s\./]+)?$", file_path)
+            if file_name is None or file_name.group(1) is None:
+                QMessageBox.critical(self, 'Błąd', f'Niepoprawna nazwa pliku.')
+                return
+            elif file_name.group(2) != ".json":
+                file_path += '.json'
 
-            try:
-                with open(file_path, 'w') as file:
-                    json.dump({'data': data}, file)
-                QMessageBox.information(self, 'File Saved', 'Data saved to JSON file successfully.')
-            except Exception as e:
-                QMessageBox.critical(self, 'Error', f'An error occurred while saving the file: {str(e)}')
+            save_ess(file_path, data)

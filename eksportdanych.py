@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QLabel, QGridLayout, QStackedLayout, QPushButton
+from PySide2.QtWidgets import QLabel, QGridLayout, QStackedLayout, QPushButton
 from abstract_tab import AbstractTab
 
 
@@ -10,9 +10,9 @@ class Eksport_Danych(AbstractTab):
         pavel01 = QPushButton("Przekładnia Cykloidalna")
         self.pavel11 = QPushButton("TO CSV")
 
-        self.pavel11.clicked.connect(self.paveltocsv(sily))
+        self.pavel11.clicked.connect(lambda: self.paveltocsv(sily))
         pavel12 = QPushButton("TO DXF")
-        pavel12.clicked.connect(self.paveltocsv(sily))
+        pavel12.clicked.connect(lambda: self.paveltocsv(sily))
         pavel13 = QPushButton("inny ??")
 
         wiktor01 = QPushButton("Mechanizm wyjsciowy I")
