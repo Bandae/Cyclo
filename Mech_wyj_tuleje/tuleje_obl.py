@@ -161,7 +161,7 @@ def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     stala = omg_0 * (odch_e / R_w1) * ((R_w1 + odch_e) / (odch_R_tul - odch_R_sw)) * (f_kt + f_ts)
     return [F_j * stala for F_j in sily]
 
-def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, dane_obl, kat):
+def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
     M_k = dane_zew["M"] / dane_zew["K"]
     E, k_g = dane["mat_sw"]["E"], dane["mat_sw"]["k_g"]
     E_k, v_k = dane_zew["E_kola"], dane_zew["v_kola"]
@@ -174,7 +174,7 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, dane_obl, kat):
     d_tul, d_sw = dane["d_tul"], dane["d_sw"]
     e, K = dane_zew["e"], dane_zew["K"]
     f_kt, f_ts = dane["f_kt"], dane["f_ts"]
-    obl_tul, obl_otw = dane_obl["d_tul"], dane_obl["d_otw"]
+    omg_0 = math.pi * dane_zew["n_wej"] / 30
 
     mode = "ideal"
     if tolerancje.get("tolerances") is not None and type(list(tolerancje["tolerances"].values())[0]) == list:
@@ -185,8 +185,6 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, dane_obl, kat):
     F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
     lista_fi_kj = lista_fi_sworzni(n_sworzni, kat)
     sily_0 = oblicz_sily(F_max, lista_fi_kj)
-    strzalki = oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2)
-    sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, e, d_tul, obl_otw, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
     M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
     d_smax = oblicz_d_sworzen(M_gmax, k_g)
 
@@ -196,8 +194,10 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, dane_obl, kat):
     d_tul_wybrane = d_tul_obl if d_tul <= d_tul_obl or d_tul >= d_tul_obl + 10 else d_tul
     d_otw_obl = round(d_tul_wybrane + (2 * e), 2)
 
-    naciski = oblicz_naciski(sily, obl_otw, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
-    straty = oblicz_straty(79, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
+    strzalki = oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2)
+    sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
+    naciski = oblicz_naciski(sily, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
+    straty = oblicz_straty(omg_0, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
 
     return {
         "d_s_obl": d_smax,

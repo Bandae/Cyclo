@@ -49,6 +49,7 @@ class DataEdit(QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.kat_obrotu_kola = 0
         self.tol_data = {"tolerances": None}
         self.input_dane = {
             "M_k": 500,
@@ -77,6 +78,7 @@ class DataEdit(QWidget):
             "e": 3,
             "M": 500,
             "K": 2,
+            "n_wej": 500,
             "E_kola": 210000,
             "v_kola": 0.3,
         }
@@ -90,8 +92,8 @@ class DataEdit(QWidget):
 
         # TODO: zmienic dokladnie te min i maxy
         self.input_widgets = {
-            "n_sw": IntSpinBox(self.input_dane["n"], 4, 16, 2),
-            "R_wk": DoubleSpinBox(self.input_dane["R_wk"], 40, 200, 1),
+            "n_sw": IntSpinBox(self.input_dane["n"], 4, 20, 1),
+            "R_wk": DoubleSpinBox(self.input_dane["R_wk"], 40, 200, 1, 1),
             "mat_sw": QComboBox(),
             "mat_tul": QComboBox(),
             "b": DoubleSpinBox(self.input_dane["b"], 5, 30, 0.1),
@@ -113,22 +115,20 @@ class DataEdit(QWidget):
 
         self.label_e2 = QLabelD("Przerwa między kołami")
         self.obl_srednice_labels = [QLabel(), QLabel(), QLabel()]
-        self.accept_button = QPushButton(text="Zaktualizuj animację")
 
         self.errors = [
-            QLabelD("Dla obecnych danych, otwory nie zmieszczą się w kole cykloidalnym."),
-            QLabelD("Dla obecnych danych, otwory w kole cykloidalnym przecinają się."),
+            QLabelD("Dla obecnych danych, otwory nie zmieszczą się w kole cykloidalnym. Zmniejsz R<sub>wk</sub> lub wróć do edycji zarysu."),
+            QLabelD("Dla obecnych danych, otwory w kole cykloidalnym przecinają się. Zwiększ R<sub>wk</sub>, lub zmniejsz średnicę tuleji."),
         ]
 
         for widget in self.input_widgets.values():
             if type(widget) == QComboBox:
-                widget.currentIndexChanged.connect(self.inputs_modified)
+                widget.currentIndexChanged.connect(lambda: self.inputs_modified(self.kat_obrotu_kola))
             elif type(widget) == DoubleSpinBox or IntSpinBox:
-                widget.valueChanged.connect(self.inputs_modified)
-        self.accept_button.clicked.connect(self.button_clicked)
+                widget.valueChanged.connect(lambda: self.inputs_modified(self.kat_obrotu_kola))
         
         self.setup_layout()
-        self.inputs_modified()
+        self.inputs_modified(self.kat_obrotu_kola)
         
         self.input_widgets["e2"].hide()
         self.label_e2.hide()
@@ -145,7 +145,9 @@ class DataEdit(QWidget):
         layout.addWidget(self.input_widgets["mat_sw"], 2, 1)
         layout.addWidget(QLabelD("Materiał tuleji"), 3, 0)
         layout.addWidget(self.input_widgets["mat_tul"], 3, 1)
-        layout.addWidget(QLabelD("Grubość koła cykl. [b]"), 4, 0)
+        lab_b = QLabelD("b")
+        lab_b.setToolTip("Grubość koła cykloidalnego")
+        layout.addWidget(lab_b, 4, 0)
         layout.addWidget(self.input_widgets["b"], 4, 1)
 
         lab_f_kt = QLabelD("f<sub>kt</sub>")
@@ -181,7 +183,6 @@ class DataEdit(QWidget):
         layout1.addWidget(QLabelD("tuleji"), 5, 1)
         layout1.addWidget(self.input_widgets["d_sw"], 6, 0)
         layout1.addWidget(self.input_widgets["d_tul"], 6, 1)
-        layout1.addWidget(self.accept_button, 7, 0, 1, 3)
         for ind, widget in enumerate(self.errors):
             layout1.addWidget(widget, 8+ind, 0, 1, 3)
             widget.setStyleSheet("QLabel { color: red; }")
@@ -192,7 +193,12 @@ class DataEdit(QWidget):
         layout_main.addLayout(layout1)
         self.setLayout(layout_main)
 
-    def inputs_modified(self, kat=0):
+    def inputs_modified(self, kat, update=True):
+        self.kat_obrotu_kola = kat
+        if not update:
+            return
+        for widget in self.errors:
+            widget.hide()
         self.input_dane["n"] = self.input_widgets["n_sw"].value()
         self.input_dane["R_wk"] = self.input_widgets["R_wk"].value()
         self.input_dane["mat_sw"] = self.materialy[self.input_widgets["mat_sw"].currentText()]
@@ -205,29 +211,24 @@ class DataEdit(QWidget):
         self.input_dane["d_sw"] = self.input_widgets["d_sw"].value()
         self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
         self.input_dane["wsp_k"] = self.input_widgets["wsp_k"].value()
-        
-        wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.tol_data, self.obliczone_dane, kat)
+        wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.tol_data, self.kat_obrotu_kola)
 
         self.obliczone_dane["d_sw"] = wyniki["d_s_obl"]
-        self.obl_srednice_labels[0].setText(str(wyniki["d_s_obl"]))
-        self.input_widgets["d_sw"].modify(minimum=wyniki["d_s_obl"], maximum=wyniki["d_s_obl"]+10)
-        self.input_dane["d_sw"] = self.input_widgets["d_sw"].value()
         self.obliczone_dane["d_tul"] = wyniki["d_t_obl"]
-        self.obl_srednice_labels[1].setText(str(wyniki["d_t_obl"]))
-        self.input_widgets["d_tul"].modify(minimum=self.obliczone_dane["d_tul"], maximum=self.obliczone_dane["d_tul"]+10)
-        self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
         self.obliczone_dane["d_otw"] = wyniki["d_o_obl"]
+        self.obl_srednice_labels[0].setText(str(wyniki["d_s_obl"]))
+        self.obl_srednice_labels[1].setText(str(wyniki["d_t_obl"]))
         self.obl_srednice_labels[2].setText(str(wyniki["d_o_obl"]))
+        self.input_widgets["d_sw"].modify(minimum=wyniki["d_s_obl"], maximum=wyniki["d_t_obl"])
+        self.input_dane["d_sw"] = self.input_widgets["d_sw"].value()
+        self.input_widgets["d_tul"].modify(minimum=wyniki["d_t_obl"], maximum=wyniki["d_o_obl"])
+        self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
 
         self.wykresy_data_updated.emit({
             "sily": wyniki["sily"],
             "naciski": wyniki['naciski'],
             "straty": wyniki['straty'],
         })
-
-    def button_clicked(self):
-        for widget in self.errors:
-            widget.hide()
         anim_data = {
             "n": self.input_dane["n"],
             "R_wk": self.input_dane["R_wk"],
@@ -247,19 +248,20 @@ class DataEdit(QWidget):
     def close_choice_window(self, choice):
         self.input_dane["podparcie"] = choice
         self.popup.hide()
-        self.inputs_modified()
+        self.inputs_modified(self.kat_obrotu_kola)
 
     def tolerance_update(self, tol_data):
         self.tol_data = tol_data
-        self.inputs_modified()
+        self.inputs_modified(self.kat_obrotu_kola)
 
 
 class ToleranceInput(QWidget):
-    def __init__(self, parent, label_text):
+    def __init__(self, parent, label_text, tooltip_text):
         super().__init__(parent)
         self.tol = [0, 0, 0]
 
         self.label = QLabelD(label_text)
+        self.label.setToolTip(tooltip_text)
         self.low_input = DoubleSpinBox(self.tol[0], -0.05, 0.05, 0.001, 3)
         self.high_input = DoubleSpinBox(self.tol[1], -0.05, 0.05, 0.001, 3)
         self.deviation_input = DoubleSpinBox(self.tol[2], -0.05, 0.05, 0.001, 3)
@@ -275,6 +277,13 @@ class ToleranceInput(QWidget):
         layout.addWidget(self.deviation_input, 0, 3)
         self.setLayout(layout)
     
+    def setEnabled(self, arg__1: bool) -> None:
+        super().setEnabled(arg__1)
+        self.label.setEnabled(arg__1)
+        self.low_input.setEnabled(arg__1)
+        self.high_input.setEnabled(arg__1)
+        self.deviation_input.setEnabled(arg__1)
+
     def modified_low(self):
         self.tol[0] = round(self.low_input.value(), 3)
         self.high_input.modify(minimum=self.tol[0])
@@ -306,14 +315,14 @@ class ToleranceEdit(QWidget):
         super().__init__(parent)
 
         self.fields = {
-            "T_o": ToleranceInput(self, "T_o: Promienia otworu koła cykloidalnego"),
-            "T_t": ToleranceInput(self, "T_t: Promienia zewnętrznego tulei"),
-            "T_s": ToleranceInput(self, "T_t: Promienia zewnętrznego sworznia"),
-            "T_Rk": ToleranceInput(self, "T_Rk: Promienia rozmieszczenia otworów w kole cykloidalnym"),
-            "T_Rt": ToleranceInput(self, "T_Rt: Promienia rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_fi_k": ToleranceInput(self, "T_fi_k: Kątowego rozmieszczenia otworów w kole cykloidalnym"),
-            "T_fi_t": ToleranceInput(self, "T_fi_t: Kątowego rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_e": ToleranceInput(self, "T_e: Mimośrodu"),
+            "T_o": ToleranceInput(self, "T_o", "Tolerancja wykonania promieni otworów w kole cykloidalnym"),
+            "T_t": ToleranceInput(self, "T_t", "Tolerancja wykonania promieni tuleji"),
+            "T_s": ToleranceInput(self, "T_t", "Tolerancja wykonania promieni sworzni"),
+            "T_Rk": ToleranceInput(self, "T_Rk", "Tolerancja wykonania promienia rozmieszczenia otworów w kole cykloidalnym"),
+            "T_Rt": ToleranceInput(self, "T_Rt", "Tolerancja wykonania promienia rozmieszczenia tulei w elemencie wyjściowym"),
+            "T_fi_k": ToleranceInput(self, "T_fi_k", "Tolerancja wykonania kątowego rozmieszczenia otworów w kole cykloidalnym"),
+            "T_fi_t": ToleranceInput(self, "T_fi_t", "Tolerancja wykonania kątowego rozmieszczenia tulei w elemencie wyjściowym"),
+            "T_e": ToleranceInput(self, "T_e", "Tolerancja wykonania mimośrodu"),
         }
         self.labels = { key: [QLabelD(key), QLabelD("0"), QLabelD("0"), QLabelD("0")] for key in self.fields }
         self.tolerancje = { key: widget.tol for key, widget in self.fields.items() }
@@ -325,6 +334,8 @@ class ToleranceEdit(QWidget):
         self.label_bottom = QLabelD("Obecne odchyłki:")
 
         self.tol_check = QCheckBox(text="Wybierz pole tolerancji")
+        #TODO: odblokowac po ustaleniu sposobu obliczen
+        self.tol_check.setEnabled(False)
         self.dev_check = QCheckBox(text="Wybierz odchyłkę")
         self.check_group = QButtonGroup(self)
         self.check_group.addButton(self.tol_check)
@@ -344,20 +355,20 @@ class ToleranceEdit(QWidget):
         layout.addWidget(self.dev_check, 1, 1)
         layout.addWidget(self.label_top, 2, 0, 1, 3)
         for ind, widget in enumerate(self.fields.values()):
-            layout.addWidget(widget.label, 3+ind, 0)
-            layout.addWidget(widget.low_input, 3+ind, 1)
-            layout.addWidget(widget.high_input, 3+ind, 2)
-            layout.addWidget(widget.deviation_input, 3+ind, 3)
+            layout.addWidget(widget.label, 3+ind-ind%2, 0 + ind%2 * 3)
+            layout.addWidget(widget.low_input, 3+ind-ind%2, 1 + ind%2 * 3)
+            layout.addWidget(widget.high_input, 3+ind-ind%2, 2 + ind%2 * 3)
+            layout.addWidget(widget.deviation_input, 3+ind-ind%2, 1 + ind%2 * 3)
             widget.setEnabled(False)
             widget.low_input.setEnabled(False)
             widget.high_input.setEnabled(False)
             widget.deviation_input.setEnabled(False)
         layout.addWidget(self.label_bottom, 11, 0, 1, 2)
         for ind, (l1, l2, l3, l4) in enumerate(self.labels.values()):
-            layout.addWidget(l1, 12+ind, 0)
-            layout.addWidget(l2, 12+ind, 1)
-            layout.addWidget(l3, 12+ind, 2)
-            layout.addWidget(l4, 12+ind, 3)
+            layout.addWidget(l1, 12+ind-ind%2, 0 + ind%2 * 3)
+            layout.addWidget(l2, 12+ind-ind%2, 1 + ind%2 * 3)
+            layout.addWidget(l3, 12+ind-ind%2, 2 + ind%2 * 3)
+            layout.addWidget(l4, 12+ind-ind%2, 1 + ind%2 * 3)
             l2.hide()
             l3.hide()
         layout.addWidget(self.accept_button)
@@ -367,8 +378,10 @@ class ToleranceEdit(QWidget):
     def on_check(self, state):
         enable = False if state == 0 else True
         self.accept_button.setEnabled(enable)
-        self.tol_check.setEnabled(enable)
+        #TODO: odblokowac po ustaleniu sposobu obliczen
+        # self.tol_check.setEnabled(enable)
         self.dev_check.setEnabled(enable)
+        self.label_top.setEnabled(enable)
         for widget in self.fields.values():
             widget.setEnabled(enable)
             widget.low_input.setEnabled(enable)
@@ -413,11 +426,12 @@ class ToleranceEdit(QWidget):
 
 
 class Tab_Wiktor(AbstractTab):
+    enable_other = Signal(bool)
     def __init__(self, parent):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        button_layout = QHBoxLayout()
+        button_layout = QGridLayout()
         stacklayout = QStackedLayout()
         layout.addLayout(button_layout)
         layout.addLayout(stacklayout)
@@ -432,12 +446,28 @@ class Tab_Wiktor(AbstractTab):
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
             button = QPushButton(title)
-            button_layout.addWidget(button)
+            button_layout.addWidget(button, 0, index)
             stacklayout.addWidget(widget)
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
         
+        self.use_this_check = QCheckBox(text="Używaj tego mechanizmu wyjściowego")
+        self.use_this_check.stateChanged.connect(self.use_this_changed)
+        self.use_this_check.setChecked(True)
+        button_layout.addWidget(self.use_this_check, 1, 0, 1, 3)
+        
         self.setLayout(layout)
     
+    def use_this_changed(self, state):
+        self.use_this_check.setEnabled(not state)
+        self.data.setEnabled(state)
+        self.tol_edit.setEnabled(state)
+        if state:
+            self.enable_other.emit(False)
+            self.data.inputs_modified(self.data.kat_obrotu_kola)
+        else:
+            self.use_this_check.setChecked(False)
+            self.data.anim_data_updated.emit({"wiktor": None})
+
     def send_data(self):
         ...
     
@@ -457,10 +487,11 @@ class Tab_Wiktor(AbstractTab):
         elif dane_pawla.get("K") == 1:
             self.data.label_e2.hide()
             self.data.input_widgets["e2"].hide()
-        self.data.inputs_modified()
+        if self.use_this_check.isChecked():
+            self.data.inputs_modified(self.data.kat_obrotu_kola)
 
     def save_data(self):
-        self.data.inputs_modified()
+        self.data.inputs_modified(self.data.kat_obrotu_kola)
         return {
             "input_dane": self.data.input_dane,
             "obliczone_dane": self.data.obliczone_dane,
@@ -475,4 +506,4 @@ class Tab_Wiktor(AbstractTab):
         self.data.obliczone_dane = new_data.get("obliczone_dane") if new_data.get("obliczone_dane") else self.data.obliczone_dane
         self.data.zew_dane = new_data.get("zew_dane") if new_data.get("zew_dane") else self.data.zew_dane
         self.data.tolerancje = new_data.get("tolerancje") if new_data.get("tolerancje") else self.data.tolerancje
-        self.data.inputs_modified()
+        self.data.inputs_modified(self.data.kat_obrotu_kola)
