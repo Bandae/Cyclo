@@ -86,7 +86,7 @@ class Animacja(QWidget):
         self.setMinimumSize(640,640)
         self.data=data
         self.data_wiktor = None
-        self.kat_=0
+        self.kat_= 0
         self.kat_dorotacji = 0
         self.status_animacji = 0
         self.skok_kata = 0
@@ -136,7 +136,7 @@ class Animacja(QWidget):
             y=y*scala
             points.insert(j, QPoint(x, y))
         painter.drawPolygon(points)
-        
+
         #Rysowanie otworow, tuleji
         if self.data_wiktor is not None:
             rysowanie_tuleje(painter, self.data[13], (przesuniecie_x, przesuniecie_y), scala, self.data_wiktor, self.kat_)
