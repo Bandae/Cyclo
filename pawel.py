@@ -7,6 +7,8 @@ from abstract_tab import AbstractTab
 from common_widgets import DoubleSpinBox, QLabelD
 
 #TODO: pawel i wiktor tab, a takze nasze wykresy są tak podobne schematycznie, że może da rade z nich zrobić jakąś wspólną klase abstrakcyjną do dziedziczenia
+#TODO: podajesz kopie wartosci liczby zebow a nie odniesienie. wiec sie nie zmienia wcale n wyj jak sie zmieni liczbe zebow. wykorzystalem juz istniejace update_animation_data zeby to naprawic, mozna zmienic jeszcze
+#TODO: jak sie zmieni tu wartosci tak, ze wywali mi otwory poza zarys czy cos, to moje bledy tego nie lapią. Trzeba wysyłać dane innym po zmianie wartosci. Rozwiazlaem to tak, ze uzywam tej samej metody co do zmiany zakladki, tylko bez zmiany, bo ten sam index ktory jest podaje
 
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(int, dict)
@@ -166,6 +168,7 @@ class DataEdit(QWidget):
 
 class Tab_Pawel(AbstractTab):
     anim_data_updated = Signal(dict)
+    update_other_tabs = Signal()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -198,7 +201,10 @@ class Tab_Pawel(AbstractTab):
         self.setLayout(layout)
 
     def update_animation_data(self):
+        self.data.dane_materialowe.z = int(self.data.spin_z.value())
+        self.data.dane_materialowe.obliczanie_predkosci_wyjsciowej()
         self.anim_data_updated.emit({"pawel": self.data.dane})
+        self.update_other_tabs.emit()
 
     def send_data(self):
         return {"pawel": {
@@ -207,6 +213,7 @@ class Tab_Pawel(AbstractTab):
             "e": self.data.dane[13],
             "M": self.data.dane[15],
             "K": self.data.dane[16],
+            "n_wej": self.data.dane_materialowe.dane_kinematyczne[0],
             "E_kola": self.data.dane_materialowe.dane_materialowe[0],
             "v_kola": self.data.dane_materialowe.dane_materialowe[2],
         }}

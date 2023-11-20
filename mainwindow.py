@@ -28,12 +28,17 @@ class MainWindow(QMainWindow):
 
         self.pawel = Tab_Pawel(self)
         self.pawel.anim_data_updated.connect(self.update_animation_data)
+        self.pawel.update_other_tabs.connect(lambda: self.activate_tab(0))
 
         self.wiktor = Tab_Wiktor(self)
         self.wiktor.data.anim_data_updated.connect(self.update_animation_data)
+        milosz = Tab_Milosz(self)
+
+        # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
+        self.wiktor.enable_other.connect(milosz.use_this_changed)
+        milosz.enable_other.connect(self.wiktor.use_this_changed)
 
         kamil = Tab_Kamil(self)
-        milosz = Tab_Milosz(self)
         eksport = Eksport_Danych(self, self.pawel.data.sily)
 
         main_layout = QGridLayout()
@@ -44,7 +49,7 @@ class MainWindow(QMainWindow):
 
         self.animation_view = Animation_View(self, self.pawel.data.dane)
         animation_layout.addWidget(self.animation_view)
-        self.animation_view.animacja.animation_tick.connect(self.wiktor.data.inputs_modified)
+        self.animation_view.animacja.animation_tick.connect(self.on_animation_tick)
 
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
@@ -96,27 +101,29 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
     
     def closeEvent(self, event):
-        self.animation_view.animacja.status_animacji = 0
+        self.animation_view.start_event.clear()
         return super().closeEvent(event)
     
     def closeApp(self):
-        self.animation_view.animacja.status_animacji = 0
+        self.animation_view.start_event.clear()
         exit()
 
     def activate_tab(self, index):
         previous = self.stacklayout.currentIndex()
         new_data = self.stacked_widgets[previous].send_data()
-        for i, tab_widget in enumerate(self.stacked_widgets):
-            if i != previous:
-                tab_widget.receive_data(new_data)
+        for tab_widget in self.stacked_widgets:
+            tab_widget.receive_data(new_data)
 
         self.stacklayout.setCurrentIndex(index)
     
+    def on_animation_tick(self, kat):
+        self.wiktor.data.inputs_modified(kat, self.wiktor.use_this_check.isChecked())
+    
     def update_animation_data(self, dane):
-        self.animation_view.update_animation_data({
-            'pawel': dane.get("pawel"),
-            'wiktor': dane.get("wiktor"),
-        })
+        data = {'pawel': dane.get("pawel")}
+        if dane.get("wiktor"):
+            data.update({'wiktor': dane.get("wiktor")})
+        self.animation_view.update_animation_data(data)
 
     def load_JSON(self):
         '''Wczytuje dane z pliku .json, wywołuje metodę load_data() każdej z zakładek, podając im słownik jej danych.
