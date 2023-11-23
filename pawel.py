@@ -28,6 +28,39 @@ class DataEdit(QWidget):
         self.tarcie_stali =0.00003
         self.dane_materialowe = DaneMaterialowe(self.dane[0])
 
+        self.dane_all ={
+            "z" : 24,
+            "ro" : 4.8,
+            "lam" : 0.625,
+            "g" : 11,
+            "Ra1" : 0,
+            "Rf1": 0,
+            "Rw1": 0,
+            "Ra2": 0,
+            "Rf2": 0,
+            "Rw2": 0,
+            "Rb" : 0,
+            "Rg" : 0,
+            "e" : 0,
+            "h" : 0,
+            "Mwej" : 500,
+            "K" : 2,
+            "Y1" : 2100000,
+            "Y2" : 2100000,
+            "v1" :0.3,
+            "v2" :0.3,
+            "b" : 17,
+            "nwej" : 500,
+            "nwyj" : 21,
+            "t1" : 0.00001,
+            "t2" : 0.00001,
+            "l-ze" : 0.0000,
+            "l-rg" : 0,
+            "l-ri" : 0,
+            "l-rr" : 0,
+            "l-e" : 0
+        }
+
 
 
         self.sily = None
@@ -35,7 +68,6 @@ class DataEdit(QWidget):
         self.refil_data()
         self.liczba_obciazonych_rolek = 0
         self.przyrost_kata = 360 / (self.dane[0] + 1)
-        self.obliczenia_sil()
 
         self.spin_z = DoubleSpinBox(self.dane[0],8,68,1)
         self.spin_z.lineEdit().setReadOnly(True)
@@ -90,6 +122,7 @@ class DataEdit(QWidget):
 
         self.setLayout(layout_main)
 
+
     def refil_data(self):
         z=self.dane[0]
         ro=self.dane[1]
@@ -106,6 +139,8 @@ class DataEdit(QWidget):
         self.dane[12] = g
         self.dane[13] = ro*lam
         self.dane[14] = 2*self.dane[13]
+
+        self.obliczenia_sil()
 
     def refili_labels(self):
         # tutaj nie .items() tylko same wartosci zrobic
