@@ -22,10 +22,12 @@ class DataEdit(QWidget):
 #TODO: Uporządkować te dane w jakiś fany sposób :D
                     #z    ro    h    g  a1 a2 f1 f2 w1 w2 b  rg g  e  h obc.   l_k   -> obc. - obciążenie wejsciowe! , l_k -> liczba kół
         self.dane = [24, 4.8, 0.625, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 500, 2]
+        self.luzy = Tolerancje()
         self.n_wejsciowe = 750
         self.omega = math.pi*self.n_wejsciowe/30
         self.tarcie_stali =0.00003
         self.dane_materialowe = DaneMaterialowe(self.dane[0])
+
 
 
         self.sily = None
@@ -84,6 +86,7 @@ class DataEdit(QWidget):
         layout_1.addLayout(layout1)
         layout_main.addLayout(layout_1)
         layout_main.addWidget(self.dane_materialowe)
+        layout_main.addWidget(self.luzy)
 
         self.setLayout(layout_main)
 
@@ -135,6 +138,7 @@ class DataEdit(QWidget):
         alfa = [None] * self.liczba_obciazonych_rolek
         naprezenia = [None] * self.liczba_obciazonych_rolek
         straty_mocy = [None] * self.liczba_obciazonych_rolek
+        luzy = [None] * self.liczba_obciazonych_rolek
         Mk = self.dane[15]/self.dane[16]
         for a in range(self.liczba_obciazonych_rolek):
             i=a+1
@@ -156,6 +160,7 @@ class DataEdit(QWidget):
 
             AIC = (math.sqrt(math.pow(self.dane[9],2)+math.pow((self.dane[5]+self.dane[3]),2)-2*self.dane[3]*(self.dane[5]+self.dane[3])*math.cos(kat*0.0175)))-self.dane[3]
             straty_mocy[a]= self.omega*(self.dane[8]/self.dane[13])*(((AIC/self.dane[3])+1)*self.tarcie_stali+(AIC/self.dane[3])*self.tarcie_stali)*sily[a]
+            luzy[a]= 1+kat
         self.sily=sily
         self.naprezenia=naprezenia
 
@@ -163,6 +168,7 @@ class DataEdit(QWidget):
             "sily": sily,
             "naprezenia": naprezenia,
             "straty_mocy": straty_mocy,
+            "luz_miedzyzebny": luzy,
         })
 
 
@@ -180,11 +186,10 @@ class Tab_Pawel(AbstractTab):
         layout.addLayout(stacklayout)
         self.data = DataEdit()
         self.wykresy = Wykresy()
-        self.tolerancje = Tolerancje()
         self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
 
-        tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
-        stacked_widgets = [self.data, self.wykresy, self.tolerancje]
+        tab_titles = ["Wprowadzanie Danych", "Wykresy"]
+        stacked_widgets = [self.data, self.wykresy]
         buttons = []
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
@@ -223,7 +228,7 @@ class Tab_Pawel(AbstractTab):
 
 
 class DaneMaterialowe(QWidget):
-    def __init__(self, liczba_z):
+    def __init__(self, liczba_z,):
         super().__init__()
 
         self.z = liczba_z
@@ -245,6 +250,7 @@ class DaneMaterialowe(QWidget):
 
         self.spin_fzarysu.setDecimals(5)
         self.spin_frolki.setDecimals(5)
+
 
         layout = QVBoxLayout()
         layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
@@ -269,6 +275,8 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(self.spin_fzarysu)
         layout.addWidget(QLabelD("Współczynnik tarcia rolki :"))
         layout.addWidget(self.spin_frolki)
+
+
 
         # Zmiana w danych  :
         self.spin_Y1.valueChanged.connect(self.zmiana_danych)
@@ -305,3 +313,54 @@ class DaneMaterialowe(QWidget):
 class Tolerancje(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.luzy = [0.0,0.0,0.0,0.0,0.0]
+        self.rysunki = Rysunki_pomocnicze()
+        main_layout = QVBoxLayout()
+
+        layout = QVBoxLayout()
+        layout.addWidget(QLabelD("LUZY :"))
+
+
+        self.luzy_ze = DoubleSpinBox(self.luzy[0], -0.005, 0.005, 0.0001)
+        self.luzy_rg = DoubleSpinBox(self.luzy[1], -0.005, 0.005, 0.0001)
+        self.luzy_ri = DoubleSpinBox(self.luzy[2], -0.005, 0.005, 0.0001)
+        self.luzy_rr = DoubleSpinBox(self.luzy[3], -0.005, 0.005, 0.0001)
+        self.luzy_e = DoubleSpinBox(self.luzy[4], -0.005, 0.005, 0.0001)
+
+        layout.addWidget(QLabelD("Luz ze:"))
+        layout.addWidget(self.luzy_ze)
+        layout.addWidget(QLabelD("Luz rg:"))
+        layout.addWidget(self.luzy_rg)
+        layout.addWidget(QLabelD("Luz ri:"))
+        layout.addWidget(self.luzy_ri)
+        layout.addWidget(QLabelD("Luz rr:"))
+        layout.addWidget(self.luzy_rr)
+        layout.addWidget(QLabelD("Luz e:"))
+        layout.addWidget(self.luzy_e)
+
+        
+
+        main_layout.addLayout(layout)
+        main_layout.addSpacing(50)
+        main_layout.addWidget(self.rysunki)
+
+        self.setLayout(main_layout)
+
+
+
+
+class Rysunki_pomocnicze(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        layout = QVBoxLayout()
+
+        layout.addWidget(QLabelD("RYSUNEK 1 :"))
+        layout.addWidget(QLabelD("RYSUNEK 2 :"))
+        layout.addWidget(QLabelD("RYSUNEK 3 :"))
+        layout.addWidget(QLabelD("RYSUNEK 4 :"))
+        layout.addWidget(QLabelD("RYSUNEK 5 :"))
+
+
+        self.setLayout(layout)

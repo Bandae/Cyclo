@@ -61,6 +61,7 @@ class Wykresy(QTabWidget):
         self.wykres_sil = Wykres("Wykres Sił w rolkach", "Numer Rolki [n]", "Wartość Siły [kN]")
         self.wykres_naprezen = Wykres("Wykres Naprężeń w rolkach", "Numer Rolki [n]", "Wartość Nacisku [MPa]")
         self.wykres_strat_mocy = Wykres("Wykres Strat mocy w rolkach", "Numer Rolki [n]", "Wartość Straty [W]")
+        self.wykres_luzu_miedzyzebnego = Wykres("Wykres luzów miedzyzebnych w rolkach", "Numer Rolki [n]", "Wartość Luzu [mm]")
 
         tabs = QTabWidget()
         tabs.setMovable(True)
@@ -68,6 +69,7 @@ class Wykresy(QTabWidget):
         tabs.addTab(self.wykres_sil, "Siły")
         tabs.addTab(self.wykres_naprezen, "Naprężenia")
         tabs.addTab(self.wykres_strat_mocy, "Straty Mocy")
+        tabs.addTab(self.wykres_luzu_miedzyzebnego, "Luz Międzyzębny")
 
         layout = QVBoxLayout()
         layout.addWidget(tabs)
@@ -80,3 +82,5 @@ class Wykresy(QTabWidget):
             self.wykres_naprezen.update_data(punkty_wykresu(liczba_zebow, data["naprezenia"]))
         if data.get("straty_mocy") and data["straty_mocy"] is not None:
             self.wykres_strat_mocy.update_data(punkty_wykresu(liczba_zebow,data["straty_mocy"]))
+        if data.get("luz_miedzyzebny") and data["luz_miedzyzebny"] is not None:
+            self.wykres_luzu_miedzyzebnego.update_data(punkty_wykresu(liczba_zebow,data["luz_miedzyzebny"]))
