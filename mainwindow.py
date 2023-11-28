@@ -5,7 +5,6 @@ from pawel import Tab_Pawel
 from wiktor import Tab_Wiktor
 from milosz import Tab_Milosz
 from kamil import Tab_Kamil
-from eksportdanych import Eksport_Danych
 import json
 import re
 from functools import partial
@@ -39,7 +38,6 @@ class MainWindow(QMainWindow):
         milosz.enable_other.connect(self.wiktor.use_this_changed)
 
         kamil = Tab_Kamil(self)
-        eksport = Eksport_Danych(self, self.pawel.data.sily)
 
         main_layout = QGridLayout()
         data_layout = QVBoxLayout()
@@ -47,7 +45,7 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
 
-        self.animation_view = Animation_View(self, self.pawel.data.dane)
+        self.animation_view = Animation_View(self, self.pawel.data.dane_all)
         animation_layout.addWidget(self.animation_view)
         self.animation_view.animacja.animation_tick.connect(self.on_animation_tick)
 
@@ -57,8 +55,8 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(animation_layout,0,0,1,4)
         main_layout.addLayout(data_layout,0,4,1,2)
 
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej", "Eksport"]
-        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)
@@ -118,6 +116,7 @@ class MainWindow(QMainWindow):
     
     def on_animation_tick(self, kat):
         self.wiktor.data.inputs_modified(kat, self.wiktor.use_this_check.isChecked())
+        self.pawel.data.obliczenia_sil(kat)
     
     def update_animation_data(self, dane):
         data = {'pawel': dane.get("pawel")}

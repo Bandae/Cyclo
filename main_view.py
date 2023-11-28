@@ -124,6 +124,7 @@ class Animacja(QWidget):
 
         self.setMinimumSize(640,640)
         self.data=data
+        print(int(self.data["z"]))
         self.data_wiktor = None
         self.kat_=0
         self.kat_dorotacji = 0
@@ -146,29 +147,29 @@ class Animacja(QWidget):
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
         points = QPolygon()
-        self.data[0]=int(self.data[0])
+        self.data["z"]=int(self.data["z"])
         painter.translate(320,320)
         painter.rotate(self.kat_dorotacji)
 
         #skalowanie rysunku :
-        scala = (self.data[1] * (self.data[0] + 1) * math.cos(0)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * 0))) - ((self.data[3] * ((math.cos(0) - (self.data[2] * math.cos((self.data[0] + 1) * 0))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * 0)) + (self.data[2] * self.data[2]))))))
+        scala = (self.data["ro"] * (self.data["z"] + 1) * math.cos(0)) - (self.data["lam"] * self.data["ro"] * (math.cos((self.data["z"] + 1) * 0))) - ((self.data["g"] * ((math.cos(0) - (self.data["lam"] * math.cos((self.data["z"] + 1) * 0))) / (math.sqrt(1 - (2 * self.data["lam"] * math.cos(self.data["z"] * 0)) + (self.data["lam"] * self.data["lam"]))))))
         scala = (220/scala)
 
-        przesuniecie_x = self.data[13]*math.cos(self.kat_* 0.0175)
-        przesuniecie_y = self.data[13]*math.sin(self.kat_* 0.0175)
+        przesuniecie_x = self.data["e"]*math.cos(self.kat_* 0.0175)
+        przesuniecie_y = self.data["e"]*math.sin(self.kat_* 0.0175)
 
         # Rysowanie pierscienia okalającego :
         painter.setBrush(QBrush(self.GRAY_DARK, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2), -(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2, ((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)),((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))
+        painter.drawEllipse((-(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2), -(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2, ((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)),((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))
         painter.setBrush(QBrush(self.WHITE, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data[11] * scala * 2)))/ 2),-(((self.data[11] * scala * 2))) / 2,((self.data[11] * scala * 2)),((self.data[11] * scala * 2)))
+        painter.drawEllipse((-(((self.data["Rg"] * scala * 2)))/ 2),-(((self.data["Rg"] * scala * 2))) / 2,((self.data["Rg"] * scala * 2)),((self.data["Rg"] * scala * 2)))
 
         # rysowanie zarysu :
         zarys = QPainterPath()
         for j in range(0,1440):
             i=j/4
-            x = (self.data[1] * (self.data[0] + 1) * math.cos(i * 0.0175)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * i * 0.0175))) - ((self.data[3] * ((math.cos(i * 0.0175) - (self.data[2] * math.cos((self.data[0] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * i * 0.0175)) + (self.data[2] * self.data[2]))))))+przesuniecie_x
-            y = (self.data[1] * (self.data[0] + 1) * math.sin(i * 0.0175)) - (self.data[2] * self.data[1] * (math.sin((self.data[0] + 1) * i * 0.0175))) - ((self.data[3] * ((math.sin(i * 0.0175) - (self.data[2] * math.sin((self.data[0] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * i * 0.0175)) + (self.data[2] * self.data[2]))))))+przesuniecie_y
+            x = (self.data["ro"] * (self.data["z"] + 1) * math.cos(i * 0.0175)) - (self.data["lam"] * self.data["ro"] * (math.cos((self.data["z"] + 1) * i * 0.0175))) - ((self.data["g"] * ((math.cos(i * 0.0175) - (self.data["lam"] * math.cos((self.data["z"] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data["lam"] * math.cos(self.data["z"] * i * 0.0175)) + (self.data["lam"] * self.data["lam"]))))))+przesuniecie_x
+            y = (self.data["ro"] * (self.data["z"] + 1) * math.sin(i * 0.0175)) - (self.data["lam"] * self.data["ro"] * (math.sin((self.data["z"] + 1) * i * 0.0175))) - ((self.data["g"] * ((math.sin(i * 0.0175) - (self.data["lam"] * math.sin((self.data["z"] + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * self.data["lam"] * math.cos(self.data["z"] * i * 0.0175)) + (self.data["lam"] * self.data["lam"]))))))+przesuniecie_y
             x=x*scala
             y=y*scala
             points.insert(j, QPoint(x, y))
@@ -176,7 +177,7 @@ class Animacja(QWidget):
         
         #Rysowanie otworow, tuleji
         if self.data_wiktor is not None:
-            zarys = rysowanie_tuleje(painter, zarys, self.data[13], (przesuniecie_x, przesuniecie_y), scala, self.data_wiktor, self.kat_, {"tuleje": self.METAL_DARK,"sworznie": self.SLATE})
+            zarys = rysowanie_tuleje(painter, zarys, self.data["e"], (przesuniecie_x, przesuniecie_y), scala, self.data_wiktor, self.kat_, {"tuleje": self.METAL_DARK,"sworznie": self.SLATE})
 
         painter.setBrush(QBrush(self.METAL_LIGHT, Qt.SolidPattern))
         painter.drawPath(zarys)
@@ -184,13 +185,13 @@ class Animacja(QWidget):
         #Rysowanie rolek :
         painter.setBrush(QBrush(self.METAL_DARK, Qt.SolidPattern))
         painter.rotate(-self.kat_dorotacji)
-        liczba_rolek = int(self.data[0])+1
+        liczba_rolek = int(self.data["z"])+1
         self.skok_kata = 360/liczba_rolek
 
         for i in range(liczba_rolek):
-            x = self.data[11]*math.cos(i*self.skok_kata* 0.0175)*scala
-            y = self.data[11] * math.sin(i * self.skok_kata * 0.0175) * scala
-            painter.drawEllipse(x-(self.data[12]*scala),y-(self.data[12]*scala),self.data[12]*scala*2,self.data[12]*scala*2)
+            x = self.data["Rg"]*math.cos(i*self.skok_kata* 0.0175)*scala
+            y = self.data["Rg"] * math.sin(i * self.skok_kata * 0.0175) * scala
+            painter.drawEllipse(x-(self.data["g"]*scala),y-(self.data["g"]*scala),self.data["g"]*scala*2,self.data["g"]*scala*2)
 
         #Rysowanie Wałka
 
@@ -217,9 +218,9 @@ class Animacja(QWidget):
             time.sleep(0.04)
             # i += 0.04
             self.kat_ += self.skok_kata
-            self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
+            self.kat_dorotacji = -((360/(self.data["z"]+1))*(self.kat_/360))
             self.rysowanko()
-            if self.kat_ >= 360*(self.data[0]+1):
+            if self.kat_ >= 360*(self.data["z"]+1):
                 self.kat_ = 0
                 self.kat_dorotacji = 0
             self.animation_tick.emit(self.kat_dorotacji)
