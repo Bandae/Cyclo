@@ -161,7 +161,6 @@ class Animacja(QWidget):
 
         self.setMinimumSize(640,640)
         self.data=data
-        print(int(self.data["z"]))
         self.data_wiktor = None
         self.kat_=0
         self.kat_dorotacji = 0
@@ -196,7 +195,7 @@ class Animacja(QWidget):
 
         przesuniecie_x2 = self.data["e"]*math.cos((self.kat_+180)* 0.0175)
         przesuniecie_y2 = self.data["e"]*math.sin((self.kat_+180)* 0.0175)
-        kat_dorotacji2 = -((360/(self.data[0]+1))*((self.kat_+180)/360))
+        kat_dorotacji2 = -((360/(self.data["z"]+1))*((self.kat_+180)/360))
 
         # Rysowanie pierscienia okalającego :
         painter.setBrush(QBrush(self.GRAY_DARK, Qt.SolidPattern))
@@ -248,7 +247,7 @@ class Animacja(QWidget):
 
     def set_angle(self, new_angle):
         self.kat_ = self.kat_ // 360 + new_angle
-        self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
+        self.kat_dorotacji = -((360/(self.data["z"]+1))*(self.kat_/360))
         self.rysowanko()
 
     def start_animacji(self, event):

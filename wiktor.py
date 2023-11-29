@@ -243,7 +243,7 @@ class DataEdit(QWidget):
         else:
             self.anim_data_updated.emit({"wiktor": anim_data})
     
-    def copy_data_to_inputs(self, new_input_data):
+    def copyDataToInputs(self, new_input_data):
         for key, widget in self.input_widgets.items():
             if type(widget) == QComboBox:
                 loaded_index = self.materialy.index(new_input_data[key])
@@ -432,7 +432,7 @@ class ToleranceEdit(QWidget):
                 self.labels[key][ind+1].setText(temp_text)
         self.tolerance_data_updated.emit({"tolerances": {key: val[2] if self.mode == "deviations" else [val[0], val[1]] for key, val in self.tolerancje.items()}})
     
-    def copy_data_to_inputs(self, new_tolerances):
+    def copyDataToInputs(self, new_tolerances):
         for key, widget in self.fields.items():
             widget.low_input.setValue(new_tolerances[key][0])
             widget.high_input.setValue(new_tolerances[key][1])
@@ -526,7 +526,7 @@ class TabWiktor(AbstractTab):
     def loadData(self, new_data):
         if new_data is None:
             return
-        self.tol_edit.copy_data_to_inputs(new_data.get("tolerancje"))
+        self.tol_edit.copyDataToInputs(new_data.get("tolerancje"))
         if new_data.get("tol_mode") == "deviations":
             self.tol_edit.tol_check.setChecked(False)
             self.tol_edit.dev_check.setChecked(True)
@@ -536,7 +536,7 @@ class TabWiktor(AbstractTab):
         self.tol_edit.check.setChecked(new_data.get("use_tol"))
 
         self.data.zew_dane = new_data.get("zew_dane")
-        self.data.copy_data_to_inputs(new_data.get("input_dane"))
+        self.data.copyDataToInputs(new_data.get("input_dane"))
 
     def csvData(self):
         if not self.use_this_check.isChecked():
