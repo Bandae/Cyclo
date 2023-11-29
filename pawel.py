@@ -118,7 +118,6 @@ class DataEdit(QWidget):
         self.dane_all["Rw2"] = ro*lam*(z+1)
         self.dane_all["Rb"] = ro*z
         self.dane_all["Rg"] = ro*(z+1)
-        self.dane_all["g"] = g
         self.dane_all["e"] = ro*lam
         self.dane_all["h"] = 2*self.dane_all["e"]
 
@@ -187,6 +186,17 @@ class DataEdit(QWidget):
             "luz_miedzyzebny": luzy,
         })
 
+    def copyDataToInputs(self, new_input_data):
+        self.spin_z.setValue(new_input_data["z"])
+        self.spin_ro.setValue(new_input_data["ro"])
+        self.spin_h.setValue(new_input_data["lam"])
+        self.spin_g.setValue(new_input_data["g"])
+        self.spin_obc.setValue(new_input_data["Mwej"])
+        self.spin_l_k.setValue(new_input_data["K"])
+
+        self.z_changed()
+        self.dane_all = new_input_data
+
 
 class Tab_Pawel(AbstractTab):
     anim_data_updated = Signal(dict)
@@ -227,20 +237,35 @@ class Tab_Pawel(AbstractTab):
         self.anim_data_updated.emit({"pawel": self.data.dane_all})
         self.update_other_tabs.emit()
 
-    def send_data(self):
+    def sendData(self):
         return {"pawel": {
             "R_w1": self.data.dane_all["Rw1"],
             "R_f1": self.data.dane_all["Rf1"],
             "e": self.data.dane_all["e"],
             "M": self.data.dane_all["Mwej"],
             "K": self.data.dane_all["K"],
-            "n_wej": self.data.dane_materialowe.dane_kinematyczne[0],
-            "E_kola": self.data.dane_materialowe.dane_materialowe[0],
-            "v_kola": self.data.dane_materialowe.dane_materialowe[2],
+            "n_wej": self.data.dane_all["nwej"],
+            "E_kola": self.data.dane_all["E1"],
+            "v_kola": self.data.dane_all["v1"],
         }}
     
-    def receive_data(self, new_data):
+    def receiveData(self, new_data):
         ...
+    
+    def saveData(self):
+        self.data.z_changed()
+        return {
+            "data_pawel": self.data.dane_all,
+        }
+
+    def loadData(self, new_data):
+        if new_data is None:
+            return
+        dane = new_data.get("data_pawel")
+        self.data.copyDataToInputs(dane)
+        self.data.dane_materialowe.copyDataToInputs(dane)
+        self.data.dane_all = dane
+        self.data.dane_materialowe.zmiana_danych(dane)
 
 
 class DaneMaterialowe(QWidget):
@@ -257,12 +282,8 @@ class DaneMaterialowe(QWidget):
 
         self.spin_nwej = DoubleSpinBox(dane_all["nwej"], 500, 5000, 10)
         self.spin_nwyj = QLabelD(dane_all["nwyj"])
-        self.spin_fzarysu = DoubleSpinBox(dane_all["t1"], 0.00001, 0.0001, 0.00001)
-        self.spin_frolki = DoubleSpinBox(dane_all["t2"], 0.00001, 0.0001, 0.00001)
-
-        self.spin_fzarysu.setDecimals(5)
-        self.spin_frolki.setDecimals(5)
-
+        self.spin_fzarysu = DoubleSpinBox(dane_all["t1"], 0.00001, 0.0001, 0.00001, 5)
+        self.spin_frolki = DoubleSpinBox(dane_all["t2"], 0.00001, 0.0001, 0.00001, 5)
 
         layout = QVBoxLayout()
         layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
@@ -288,18 +309,15 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(QLabelD("Współczynnik tarcia rolki :"))
         layout.addWidget(self.spin_frolki)
 
-
-
-
         # Zmiana w danych  :
-        self.spin_Y1.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_Y2.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_P1.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_P2.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_B.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_nwej.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_fzarysu.valueChanged.connect(self.zmiana_danych(dane_all))
-        self.spin_frolki.valueChanged.connect(self.zmiana_danych(dane_all))
+        self.spin_Y1.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_Y2.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_P1.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_P2.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_B.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_nwej.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_fzarysu.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
+        self.spin_frolki.valueChanged.connect(lambda: self.zmiana_danych(dane_all))
 
         self.setLayout(layout)
 
@@ -319,6 +337,16 @@ class DaneMaterialowe(QWidget):
     def obliczanie_predkosci_wyjsciowej(self,dane_all):
         dane_all["nwyj"] = dane_all["nwej"] / self.z
         self.spin_nwyj.setText(str(round(dane_all["nwyj"])))
+    
+    def copyDataToInputs(self, new_input_data):
+        self.spin_Y1.setValue(new_input_data["E1"])
+        self.spin_Y2.setValue(new_input_data["E2"])
+        self.spin_P1.setValue(new_input_data["v1"])
+        self.spin_P2.setValue(new_input_data["v2"])
+        self.spin_B.setValue(new_input_data["b"])
+        self.spin_nwej.setValue(new_input_data["nwej"])
+        self.spin_fzarysu.setValue(new_input_data["t1"])
+        self.spin_frolki.setValue(new_input_data["t2"])
 
 
 # Wprowadzenie danych dolerancji - karta
