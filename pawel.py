@@ -206,7 +206,7 @@ class Tab_Pawel(AbstractTab):
         self.anim_data_updated.emit({"pawel": self.data.dane})
         self.update_other_tabs.emit()
 
-    def send_data(self):
+    def sendData(self):
         return {"pawel": {
             "R_w1": self.data.dane[6],
             "R_f1": self.data.dane[5],
@@ -218,8 +218,30 @@ class Tab_Pawel(AbstractTab):
             "v_kola": self.data.dane_materialowe.dane_materialowe[2],
         }}
     
-    def receive_data(self, new_data):
+    def receiveData(self, new_data):
         ...
+    
+    def saveData(self):
+        self.data.z_changed()
+        self.data.dane_materialowe.zmiana_danych()
+        return {
+            "data": self.data.dane,
+            "sily": self.data.sily,
+            "naprezenia": self.data.naprezenia,
+            "dane_materialowe": self.data.dane_materialowe.dane_materialowe,
+            "dane_kinematyczne": self.data.dane_materialowe.dane_kinematyczne,
+        }
+
+    def loadData(self, new_data):
+        if new_data is None:
+            return
+        self.data.dane = new_data.get("data")
+        self.data.sily = new_data.get("sily")
+        self.data.naprezenia = new_data.get("naprezenia")
+        self.data.dane_materialowe.dane_materialowe = new_data.get("dane_materialowe")
+        self.data.dane_materialowe.dane_kinematyczne = new_data.get("dane_kinematyczne")
+        self.data.z_changed()
+        self.data.dane_materialowe.zmiana_danych()
 
 
 class DaneMaterialowe(QWidget):

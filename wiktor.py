@@ -1,14 +1,15 @@
-from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QHBoxLayout, QStackedLayout, QCheckBox, QButtonGroup, QSizePolicy
+from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QStackedLayout, QCheckBox, QButtonGroup
 from PySide2.QtCore import Signal, QSize, Qt
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, QPixmap
 from Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
 from Mech_wyj_tuleje.wykresy import ChartTab
 from functools import partial
 from abstract_tab import AbstractTab
 from Mech_wyj_tuleje.utils import sprawdz_przecinanie_otworow
 from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
+from math import pi
 
-#TODO: mam przesunięte do tyłu w poziomie punkty wykresów
+#TODO: mam przesunięte do tyłu w poziomie punkty wykresów. Pawel też.
 
 class PopupWin(QWidget):
     choice_made = Signal(str)
@@ -55,8 +56,8 @@ class DataEdit(QWidget):
             "M_k": 500,
             "n": 10,
             "R_wk": 80,
-            "mat_sw": {"E": 210000, "v": 0.3, "k_g": 300},
-            "mat_tul": {"E": 210000, "v": 0.3, "k_g": 300},
+            "mat_sw": {"nazwa": "17Cr3", "E": 210000, "v": 0.3, "k_g": 300},
+            "mat_tul": {"nazwa": "17Cr3", "E": 210000, "v": 0.3, "k_g": 300},
             "b": 25,
             "podparcie": "jednostronnie utwierdzony",
             "d_sw": 5,
@@ -83,16 +84,16 @@ class DataEdit(QWidget):
             "v_kola": 0.3,
         }
         # TODO: ostatecznie brac z bazy danych
-        self.materialy = {
-            "17Cr3": {"E": 210000, "v": 0.3, "k_g": 300},
-            "20MnCr5": {"E": 210000, "v": 0.3, "k_g": 450},
-            "C45": {"E": 210000, "v": 0.3, "k_g": 205},
-            "test": {"E": 210000, "v": 0.3, "k_g": 325},
-        }
+        self.materialy = [
+            {"nazwa": "17Cr3", "E": 210000, "v": 0.3, "k_g": 300},
+            {"nazwa": "20MnCr5", "E": 210000, "v": 0.3, "k_g": 450},
+            {"nazwa": "C45", "E": 210000, "v": 0.3, "k_g": 205},
+            {"nazwa": "test", "E": 210000, "v": 0.3, "k_g": 325},
+        ]
 
         # TODO: zmienic dokladnie te min i maxy
         self.input_widgets = {
-            "n_sw": IntSpinBox(self.input_dane["n"], 4, 20, 1),
+            "n": IntSpinBox(self.input_dane["n"], 4, 20, 1),
             "R_wk": DoubleSpinBox(self.input_dane["R_wk"], 40, 200, 1, 1),
             "mat_sw": QComboBox(),
             "mat_tul": QComboBox(),
@@ -105,13 +106,14 @@ class DataEdit(QWidget):
             "f_kt": DoubleSpinBox(self.input_dane["f_kt"], 0.00001, 0.0001, 0.00001, 5),
             "f_ts": DoubleSpinBox(self.input_dane["f_ts"], 0.00001, 0.0001, 0.00001, 5),
         }
-        self.input_widgets["mat_sw"].addItems([mat for mat in self.materialy])
-        self.input_widgets["mat_tul"].addItems([mat for mat in self.materialy])
+        self.input_widgets["mat_sw"].addItems([mat["nazwa"] for mat in self.materialy])
+        self.input_widgets["mat_tul"].addItems([mat["nazwa"] for mat in self.materialy])
 
         self.popup = PopupWin()
         self.popup.choice_made.connect(self.close_choice_window)
         self.ch_var_button = QPushButton(text="Wybierz sposób podparcia kół")
         self.ch_var_button.clicked.connect(self.popup.show)
+        self.ch_var_label = QLabelD("jednostronnie utwierdzony")
 
         self.label_e2 = QLabelD("Przerwa między kołami")
         self.obl_srednice_labels = [QLabel(), QLabel(), QLabel()]
@@ -138,7 +140,7 @@ class DataEdit(QWidget):
         layout1 = QGridLayout()
 
         layout.addWidget(QLabelD("Ilość sworzni [n]"), 0, 0)
-        layout.addWidget(self.input_widgets["n_sw"], 0, 1)
+        layout.addWidget(self.input_widgets["n"], 0, 1)
         layout.addWidget(QLabelD("Promień rozstawu sworzni [R<sub>wk</sub>]"), 1, 0)
         layout.addWidget(self.input_widgets["R_wk"], 1, 1)
         layout.addWidget(QLabelD("Materiał sworznia"), 2, 0)
@@ -160,6 +162,7 @@ class DataEdit(QWidget):
         layout.addWidget(self.input_widgets["f_ts"], 6, 1)
 
         layout.addWidget(self.ch_var_button, 7, 0)
+        layout.addWidget(self.ch_var_label, 7, 1)
 
         layout.addWidget(QLabelD("Przerwa między kołem a tarczą"), 8, 0)
         layout.addWidget(self.input_widgets["e1"], 8, 1)
@@ -195,22 +198,17 @@ class DataEdit(QWidget):
 
     def inputs_modified(self, kat, update=True):
         self.kat_obrotu_kola = kat
-        if not update:
+        if not update or not self.parent().use_this_check.isChecked():
             return
         for widget in self.errors:
             widget.hide()
-        self.input_dane["n"] = self.input_widgets["n_sw"].value()
-        self.input_dane["R_wk"] = self.input_widgets["R_wk"].value()
-        self.input_dane["mat_sw"] = self.materialy[self.input_widgets["mat_sw"].currentText()]
-        self.input_dane["mat_tul"] = self.materialy[self.input_widgets["mat_tul"].currentText()]
-        self.input_dane["b"] = self.input_widgets["b"].value()
-        self.input_dane["e1"] = self.input_widgets["e1"].value()
-        self.input_dane["e2"] = self.input_widgets["e2"].value()
-        self.input_dane["f_kt"] = self.input_widgets["f_kt"].value()
-        self.input_dane["f_ts"] = self.input_widgets["f_ts"].value()
-        self.input_dane["d_sw"] = self.input_widgets["d_sw"].value()
-        self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
-        self.input_dane["wsp_k"] = self.input_widgets["wsp_k"].value()
+        
+        for key, widget in self.input_widgets.items():
+            if type(widget) == QComboBox:
+                self.input_dane[key] = self.materialy[self.input_widgets[key].currentIndex()]
+            elif type(widget) == DoubleSpinBox or IntSpinBox:
+                self.input_dane[key] = self.input_widgets[key].value()
+
         wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.tol_data, self.kat_obrotu_kola)
 
         self.obliczone_dane["d_sw"] = wyniki["d_s_obl"]
@@ -245,8 +243,18 @@ class DataEdit(QWidget):
         else:
             self.anim_data_updated.emit({"wiktor": anim_data})
     
+    def copy_data_to_inputs(self, new_input_data):
+        for key, widget in self.input_widgets.items():
+            if type(widget) == QComboBox:
+                loaded_index = self.materialy.index(new_input_data[key])
+                self.input_widgets[key].setCurrentIndex(loaded_index)
+            elif type(widget) == DoubleSpinBox or IntSpinBox:
+                self.input_widgets[key].setValue(new_input_data[key])
+        self.input_dane = new_input_data
+
     def close_choice_window(self, choice):
         self.input_dane["podparcie"] = choice
+        self.ch_var_label.setText(choice)
         self.popup.hide()
         self.inputs_modified(self.kat_obrotu_kola)
 
@@ -317,7 +325,7 @@ class ToleranceEdit(QWidget):
         self.fields = {
             "T_o": ToleranceInput(self, "T_o", "Tolerancja wykonania promieni otworów w kole cykloidalnym"),
             "T_t": ToleranceInput(self, "T_t", "Tolerancja wykonania promieni tuleji"),
-            "T_s": ToleranceInput(self, "T_t", "Tolerancja wykonania promieni sworzni"),
+            "T_s": ToleranceInput(self, "T_s", "Tolerancja wykonania promieni sworzni"),
             "T_Rk": ToleranceInput(self, "T_Rk", "Tolerancja wykonania promienia rozmieszczenia otworów w kole cykloidalnym"),
             "T_Rt": ToleranceInput(self, "T_Rt", "Tolerancja wykonania promienia rozmieszczenia tulei w elemencie wyjściowym"),
             "T_fi_k": ToleranceInput(self, "T_fi_k", "Tolerancja wykonania kątowego rozmieszczenia otworów w kole cykloidalnym"),
@@ -423,10 +431,16 @@ class ToleranceEdit(QWidget):
                 temp_text = str(widget.tol[ind]) if widget.tol[ind] <= 0 else "+" + str(widget.tol[ind])
                 self.labels[key][ind+1].setText(temp_text)
         self.tolerance_data_updated.emit({"tolerances": {key: val[2] if self.mode == "deviations" else [val[0], val[1]] for key, val in self.tolerancje.items()}})
+    
+    def copy_data_to_inputs(self, new_tolerances):
+        for key, widget in self.fields.items():
+            widget.low_input.setValue(new_tolerances[key][0])
+            widget.high_input.setValue(new_tolerances[key][1])
+            widget.deviation_input.setValue(new_tolerances[key][2])
 
 
-class Tab_Wiktor(AbstractTab):
-    enable_other = Signal(bool)
+class TabWiktor(AbstractTab):
+    this_enabled = Signal(bool)
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -435,43 +449,52 @@ class Tab_Wiktor(AbstractTab):
         stacklayout = QStackedLayout()
         layout.addLayout(button_layout)
         layout.addLayout(stacklayout)
+        self.use_this_check = QCheckBox(text="Używaj tego mechanizmu wyjściowego")
+        self.use_this_check.stateChanged.connect(self.useThisChanged)
+        button_layout.addWidget(self.use_this_check, 1, 0, 1, 3)
+
         self.data = DataEdit(self)
         self.wykresy = ChartTab()
         self.tol_edit = ToleranceEdit(self)
+        help_img = QLabel()
+        pixmap = QPixmap("icons//pomoc_mechanizm_I.png").scaledToWidth(650)
+        help_img.setPixmap(pixmap)
         self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
         self.tol_edit.tolerance_data_updated.connect(self.data.tolerance_update)
 
-        tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
-        stacked_widgets = [self.data, self.wykresy, self.tol_edit]
+        tab_titles = ["Pomoc", "Wprowadzanie Danych", "Wykresy", "Tolerancje"]
+        stacked_widgets = [help_img, self.data, self.wykresy, self.tol_edit]
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
             button = QPushButton(title)
             button_layout.addWidget(button, 0, index)
             stacklayout.addWidget(widget)
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
-        
-        self.use_this_check = QCheckBox(text="Używaj tego mechanizmu wyjściowego")
-        self.use_this_check.stateChanged.connect(self.use_this_changed)
-        self.use_this_check.setChecked(True)
-        button_layout.addWidget(self.use_this_check, 1, 0, 1, 3)
-        
+
         self.setLayout(layout)
     
-    def use_this_changed(self, state):
-        self.use_this_check.setEnabled(not state)
+    def useThisChanged(self, state):
         self.data.setEnabled(state)
         self.tol_edit.setEnabled(state)
         if state:
-            self.enable_other.emit(False)
+            self.this_enabled.emit(True)
             self.data.inputs_modified(self.data.kat_obrotu_kola)
         else:
-            self.use_this_check.setChecked(False)
+            self.this_enabled.emit(False)
             self.data.anim_data_updated.emit({"wiktor": None})
 
-    def send_data(self):
-        ...
+    def useOtherChanged(self, state):
+        self.use_this_check.setEnabled(not state)
+
+    def sendData(self):
+        M_k = self.data.zew_dane["M"] / self.data.zew_dane["K"]
+        R_wt = self.data.input_dane["R_wk"]
+        return {
+            "F_wm": 1000 * 4 * M_k/ (pi * R_wt),
+            "r_m": pi * R_wt / 4,
+        }
     
-    def receive_data(self, new_data):
+    def receiveData(self, new_data):
         if new_data is None:
             return
         dane_pawla = new_data.get("pawel")
@@ -490,20 +513,63 @@ class Tab_Wiktor(AbstractTab):
         if self.use_this_check.isChecked():
             self.data.inputs_modified(self.data.kat_obrotu_kola)
 
-    def save_data(self):
+    def saveData(self):
         self.data.inputs_modified(self.data.kat_obrotu_kola)
         return {
             "input_dane": self.data.input_dane,
-            "obliczone_dane": self.data.obliczone_dane,
             "zew_dane": self.data.zew_dane,
-            "tolerancje": self.tol_edit.tolerancje
+            "tolerancje": self.tol_edit.tolerancje,
+            "tol_mode": self.tol_edit.mode,
+            "use_tol": self.tol_edit.check.isChecked()
         }
 
-    def load_data(self, new_data):
+    def loadData(self, new_data):
         if new_data is None:
             return
-        self.data.input_dane = new_data.get("input_dane") if new_data.get("input_dane") else self.data.input_dane
-        self.data.obliczone_dane = new_data.get("obliczone_dane") if new_data.get("obliczone_dane") else self.data.obliczone_dane
-        self.data.zew_dane = new_data.get("zew_dane") if new_data.get("zew_dane") else self.data.zew_dane
-        self.data.tolerancje = new_data.get("tolerancje") if new_data.get("tolerancje") else self.data.tolerancje
-        self.data.inputs_modified(self.data.kat_obrotu_kola)
+        self.tol_edit.copy_data_to_inputs(new_data.get("tolerancje"))
+        if new_data.get("tol_mode") == "deviations":
+            self.tol_edit.tol_check.setChecked(False)
+            self.tol_edit.dev_check.setChecked(True)
+        else:
+            self.tol_edit.tol_check.setChecked(True)
+            self.tol_edit.dev_check.setChecked(False)
+        self.tol_edit.check.setChecked(new_data.get("use_tol"))
+
+        self.data.zew_dane = new_data.get("zew_dane")
+        self.data.copy_data_to_inputs(new_data.get("input_dane"))
+
+    def csvData(self):
+        if not self.use_this_check.isChecked():
+            return ''
+        wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.tol_data, self.data.kat_obrotu_kola)
+        title = "Mechanizm wyjściowy ze sworzniami\n"
+        sily_text = [f"{i},{wyniki['sily'][i]}\n" for i in range(1, len(wyniki['sily']) + 1)]
+        naciski_text = [f"{i},{wyniki['naciski'][i]}\n" for i in range(1, len(wyniki['naciski']) + 1)]
+        straty_text = [f"{i},{wyniki['straty'][i]}\n" for i in range(1, len(wyniki['straty']) + 1)]
+        return title + "Siły na sworzniach [N]\n".join(sily_text) + "Naciski powierzchniowe na sworzniach [MPa]\n".join(naciski_text) + "Straty mocy na sworzniach [W]\n".join(straty_text) + "\n"
+        # text = "Mechanizm wyjściowy ze sworzniami\n"
+        # text += f"Ilość kół cykloidalnych,{self.data.input_dane['K']}\n"
+        # text += f"Sposób podparcia,{self.data.zew_dane['podparcie']}\n"
+        # text += f"Liczba otworów,{self.data.input_dane['n']}\n"
+        # text += f"Średnica otworu,{self.data.obliczone_dane['d_otw']},mm\n"
+        # text += f"Średnica rozmieszczenia otworów,{self.data.input_dane['R_wk']},mm\n"
+        # text += "Tuleja:\n"
+        # text += f"Średnica zewnętrzna,{self.data.input_dane['d_tul']},mm\n"
+        # text += f"Średnica wewnętrzna,{self.data.input_dane['d_sw']},mm\n"
+        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
+        # text += f"Liczba,{self.data.input_dane['n']}\n"
+        # text += f"Materiał:,{self.data.input_dane['mat_tul']['nazwa']}\n"
+        # text += f"E,{self.data.input_dane['mat_tul']['E']},MPa\n"
+        # text += f"v,{self.data.input_dane['mat_tul']['v']}\n"
+        # text += "Sworzeń:\n"
+        # text += f"Średnica,{self.data.input_dane['d_sw']},mm\n"
+        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
+        # text += f"Liczba,{self.data.input_dane['n']}\n"
+        # text += f"Materiał,{self.data.input_dane['mat_sw']['nazwa']}\n"
+        # text += f"E,{self.data.input_dane['mat_sw']['E']},MPa\n"
+        # text += f"v,{self.data.input_dane['mat_sw']['v']}\n"
+        # text += f"f_kt,{self.data.input_dane['f_kt']}\n"
+        # text += f"f_ts,{self.data.input_dane['f_ts']}\n"
+        # text += f"Maksymalny nacisk powierzchniowy,{max(wyniki['naciski'])},MPa\n"
+        # text += f"Suma strat mocy,{sum(wyniki['straty'])},W\n\n"
+        # return text

@@ -15,21 +15,25 @@ class AbstractTab(QWidget):
     def __init__(self, parent: QMainWindow) -> None:
         super().__init__(parent)
     
-    def send_data(self) -> DaneZakladek:
+    def sendData(self) -> DaneZakladek:
         '''Wysyła potrzebne innym zakładkom dane w momencie zmiany zakładki z tej na inną.'''
         ...
     
-    def receive_data(self, new_data: DaneZakladek) -> None:
+    def receiveData(self, new_data: DaneZakladek) -> None:
         '''Przyjmuje i zapisuje dane przysłane przez inne zakładki przy zmianie zakładki.
         Powinna wywołać obliczenia jeśli konieczne.'''
         ...
     
-    def save_data(self) -> DaneZapis:
+    def saveData(self) -> DaneZapis:
         '''Wywoływana przed zapisem danych do pliku JSON. Powinna wykonać wszystkie wasze obliczenia,
         następnie ułożyć wszystkie wasze dane w słownik i zwrócić. Taki sam słownik dostaniecie po wczytaniu danych z pliku.'''
         ...
     
-    def load_data(self, new_data: DaneZapis) -> None:
+    def loadData(self, new_data: DaneZapis) -> None:
         '''Wywoływana po wczytaniu danych z pliku JSON.
         Powinna wczytać dane, wpisać je do waszych struktur danych i wywołać ewentualne obliczenia.'''
         ...
+
+    def csvData(self) -> str:
+        '''Zwraca dane zakładki konieczne do eksportu, sformatowane już do zapisu w CSV.'''
+        return ''

@@ -2,13 +2,15 @@ from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 from main_view import Animation_View
 from pawel import Tab_Pawel
-from wiktor import Tab_Wiktor
+from wiktor import TabWiktor
 from milosz import Tab_Milosz
 from kamil import Tab_Kamil
-from eksportdanych import Eksport_Danych
 import json
 import re
 from functools import partial
+# TODO: wczytywanie pliku nie działało. bo wczytujemy tylko dane, wiec potrzeba jeszcze funkcji ktora bedzie wpisywala dane do inputow
+# jeszcze u Pawła to zrobić
+#import do csv - ma byc wykresow. Ma tez byc generowanie raportu jak w mechkonstruktorze
 
 
 class MainWindow(QMainWindow):
@@ -30,16 +32,15 @@ class MainWindow(QMainWindow):
         self.pawel.anim_data_updated.connect(self.update_animation_data)
         self.pawel.update_other_tabs.connect(lambda: self.activate_tab(0))
 
-        self.wiktor = Tab_Wiktor(self)
+        self.wiktor = TabWiktor(self)
         self.wiktor.data.anim_data_updated.connect(self.update_animation_data)
         milosz = Tab_Milosz(self)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.wiktor.enable_other.connect(milosz.use_this_changed)
-        milosz.enable_other.connect(self.wiktor.use_this_changed)
+        self.wiktor.this_enabled.connect(milosz.useOtherChanged)
+        milosz.this_enabled.connect(self.wiktor.useOtherChanged)
 
         kamil = Tab_Kamil(self)
-        eksport = Eksport_Danych(self, self.pawel.data.sily)
 
         main_layout = QGridLayout()
         data_layout = QVBoxLayout()
@@ -57,8 +58,8 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(animation_layout,0,0,1,4)
         main_layout.addLayout(data_layout,0,4,1,2)
 
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej", "Eksport"]
-        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil, eksport]
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)
@@ -81,12 +82,28 @@ class MainWindow(QMainWindow):
         zapis.setShortcut("Ctrl+S")
         zapis.triggered.connect(self.save_to_JSON)
 
+        zapis_jako = QAction("Zapisz jako",self)
+        filemenu.addAction(zapis_jako)
+        zapis_jako.triggered.connect(lambda: self.save_to_JSON("save as"))
+
         exit_app = QAction("Wyjście",self)
         filemenu.addAction(exit_app)
         exit_app.triggered.connect(self.closeApp)
 
-        #EDIT MENU :
-        editmenu = menu.addMenu("&Edycja")
+        #EKSPORTY :
+        eksport_menu = menu.addMenu("&Eksport")
+
+        raport = QAction("Generuj raport", self)
+        eksport_menu.addAction(raport)
+        raport.triggered.connect(self.generateRaport)
+
+        eksport_csv = QAction("Eksport wykresów", self)
+        eksport_menu.addAction(eksport_csv)
+        eksport_csv.triggered.connect(self.generateCSV)
+
+        eksport_dxf = QAction("Eksport do DXF", self)
+        eksport_menu.addAction(eksport_dxf)
+        eksport_dxf.triggered.connect(self.generateDXF)
 
         #PRZECHPDZENIE MIĘDZY SEKCJAMI MENU :
         sectionmenu = menu.addMenu("&Sekcja")
@@ -110,9 +127,9 @@ class MainWindow(QMainWindow):
 
     def activate_tab(self, index):
         previous = self.stacklayout.currentIndex()
-        new_data = self.stacked_widgets[previous].send_data()
+        new_data = self.stacked_widgets[previous].sendData()
         for tab_widget in self.stacked_widgets:
-            tab_widget.receive_data(new_data)
+            tab_widget.receiveData(new_data)
 
         self.stacklayout.setCurrentIndex(index)
     
@@ -125,8 +142,20 @@ class MainWindow(QMainWindow):
             data.update({'wiktor': dane.get("wiktor")})
         self.animation_view.update_animation_data(data)
 
+    def generateRaport(self):
+        ...
+
+    def generateCSV(self):
+        # TODO: poprawic zeby nie nadpisywac tylko robic nowe importy, przejrzec co jest w folderze, albo filedialog zrobic
+        with open("test.csv", "w") as csv_file:
+            for tab_widget in self.stacked_widgets:
+                csv_file.write(tab_widget.csvData())
+
+    def generateDXF(self):
+        ...
+
     def load_JSON(self):
-        '''Wczytuje dane z pliku .json, wywołuje metodę load_data() każdej z zakładek, podając im słownik jej danych.
+        '''Wczytuje dane z pliku .json, wywołuje metodę loadData() każdej z zakładek, podając im słownik jej danych.
         Może być None, każdy musi z osobna sprawdzić przed odczytywaniem pojedynczych pozycji.'''
         data = None
         file_path = None
@@ -150,10 +179,10 @@ class MainWindow(QMainWindow):
         
         self.loaded_file = file_path
         for key, tab in zip(self.tab_titles, self.stacked_widgets):
-            tab.load_data(data.get(key))
+            tab.loadData(data.get(key))
         
-    def save_to_JSON(self):
-        '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę save_data(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
+    def save_to_JSON(self, mode="save"):
+        '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę saveData(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
         których klucze są takie same, jak self.tab_titles.
         Wywołuje activate_tab(), żeby upewnić się, że przekazane są między nami dane, i wykonane obliczenia przed zapisem.
 
@@ -169,11 +198,11 @@ class MainWindow(QMainWindow):
 
         self.activate_tab(0)
         self.activate_tab(1)
-        data = { key: tab.save_data() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
-        if self.loaded_file is not None:
+        data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
+        if self.loaded_file is not None and mode != "save as":
             save_ess(self.loaded_file, data)
             return
-
+        
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.AnyFile)
         file_dialog.setWindowTitle("Zapis")
