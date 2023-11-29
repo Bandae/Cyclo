@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
 
-        self.animation_view = Animation_View(self, self.pawel.data.dane)
+        self.animation_view = Animation_View(self, self.pawel.data.dane_all)
         animation_layout.addWidget(self.animation_view)
         self.animation_view.animacja.animation_tick.connect(self.on_animation_tick)
 
@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
     
     def on_animation_tick(self, kat):
         self.wiktor.data.inputs_modified(kat, self.wiktor.use_this_check.isChecked())
+        self.pawel.data.obliczenia_sil(kat)
     
     def update_animation_data(self, dane):
         data = {'pawel': dane.get("pawel")}

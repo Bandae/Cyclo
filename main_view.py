@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
 from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath
 from PySide2.QtCore import QPoint, QSize, Qt, Signal
+from pawlowe.wykresy import Wykresy
 import math
 import time
 import threading
@@ -160,6 +161,7 @@ class Animacja(QWidget):
 
         self.setMinimumSize(640,640)
         self.data=data
+        print(int(self.data["z"]))
         self.data_wiktor = None
         self.kat_=0
         self.kat_dorotacji = 0
@@ -181,30 +183,30 @@ class Animacja(QWidget):
         painter = QPainter(pixmap)
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
-        self.data[0]=int(self.data[0])
+        self.data["z"]=int(self.data["z"])
         painter.translate(320,320)
         # painter.rotate(90)
 
         #skalowanie rysunku :
-        scala = (self.data[1] * (self.data[0] + 1) * math.cos(0)) - (self.data[2] * self.data[1] * (math.cos((self.data[0] + 1) * 0))) - ((self.data[3] * ((math.cos(0) - (self.data[2] * math.cos((self.data[0] + 1) * 0))) / (math.sqrt(1 - (2 * self.data[2] * math.cos(self.data[0] * 0)) + (self.data[2] * self.data[2]))))))
+        scala = (self.data["ro"] * (self.data["z"] + 1) * math.cos(0)) - (self.data["lam"] * self.data["ro"] * (math.cos((self.data["z"] + 1) * 0))) - ((self.data["g"] * ((math.cos(0) - (self.data["lam"] * math.cos((self.data["z"] + 1) * 0))) / (math.sqrt(1 - (2 * self.data["lam"] * math.cos(self.data["z"] * 0)) + (self.data["lam"] * self.data["lam"]))))))
         scala = (220/scala)
 
-        przesuniecie_x = self.data[13]*math.cos(self.kat_* 0.0175)
-        przesuniecie_y = self.data[13]*math.sin(self.kat_* 0.0175)
+        przesuniecie_x = self.data["e"]*math.cos(self.kat_* 0.0175)
+        przesuniecie_y = self.data["e"]*math.sin(self.kat_* 0.0175)
 
-        przesuniecie_x2 = self.data[13]*math.cos((self.kat_+180)* 0.0175)
-        przesuniecie_y2 = self.data[13]*math.sin((self.kat_+180)* 0.0175)
+        przesuniecie_x2 = self.data["e"]*math.cos((self.kat_+180)* 0.0175)
+        przesuniecie_y2 = self.data["e"]*math.sin((self.kat_+180)* 0.0175)
         kat_dorotacji2 = -((360/(self.data[0]+1))*((self.kat_+180)/360))
 
         # Rysowanie pierscienia okalającego :
         painter.setBrush(QBrush(self.GRAY_DARK, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2), -(((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))/2, ((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)),((self.data[11] * scala * 2) + (self.data[3] * 4 * scala)))
+        painter.drawEllipse((-(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2), -(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2, ((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)),((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))
         painter.setBrush(QBrush(self.WHITE, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data[11] * scala * 2)))/ 2),-(((self.data[11] * scala * 2))) / 2,((self.data[11] * scala * 2)),((self.data[11] * scala * 2)))
+        painter.drawEllipse((-(((self.data["Rg"] * scala * 2)))/ 2),-(((self.data["Rg"] * scala * 2))) / 2,((self.data["Rg"] * scala * 2)),((self.data["Rg"] * scala * 2)))
 
         # rysowanie zarysu :
-        zarys1 = tworz_zarys_kola(self.data[0], self.data[1], self.data[2], self.data[3], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor)
-        zarys2 = tworz_zarys_kola(self.data[0], self.data[1], self.data[2], self.data[3], scala, (przesuniecie_x2, przesuniecie_y2), self.data_wiktor)
+        zarys1 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor)
+        zarys2 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x2, przesuniecie_y2), self.data_wiktor)
 
         painter.setBrush(QBrush(self.METAL_LIGHT, Qt.SolidPattern))
         painter.rotate(self.kat_dorotacji)
@@ -218,13 +220,13 @@ class Animacja(QWidget):
 
         #Rysowanie rolek :
         painter.setBrush(QBrush(self.METAL_DARK, Qt.SolidPattern))
-        liczba_rolek = int(self.data[0])+1
+        liczba_rolek = int(self.data["z"])+1
         self.skok_kata = 360/liczba_rolek
 
         for i in range(liczba_rolek):
-            x = self.data[11] * math.cos(i * self.skok_kata * 0.0175) * scala
-            y = self.data[11] * math.sin(i * self.skok_kata * 0.0175) * scala
-            painter.drawEllipse(x-(self.data[12]*scala),y-(self.data[12]*scala),self.data[12]*scala*2,self.data[12]*scala*2)
+            x = self.data["Rg"]*math.cos(i*self.skok_kata* 0.0175)*scala
+            y = self.data["Rg"] * math.sin(i * self.skok_kata * 0.0175) * scala
+            painter.drawEllipse(x-(self.data["g"]*scala),y-(self.data["g"]*scala),self.data["g"]*scala*2,self.data["g"]*scala*2)
 
         #Rysowanie Wałka
 
@@ -253,9 +255,9 @@ class Animacja(QWidget):
         while event.is_set():
             time.sleep(0.04)
             self.kat_ += self.skok_kata
-            self.kat_dorotacji = -((360/(self.data[0]+1))*(self.kat_/360))
+            self.kat_dorotacji = -((360/(self.data["z"]+1))*(self.kat_/360))
             self.rysowanko()
-            if self.kat_ >= 360*(self.data[0]+1):
+            if self.kat_ >= 360*(self.data["z"]+1):
                 self.kat_ = 0
                 self.kat_dorotacji = 0
             self.animation_tick.emit(self.kat_dorotacji)
