@@ -459,7 +459,7 @@ class TabWiktor(AbstractTab):
         help_img = QLabel()
         pixmap = QPixmap("icons//pomoc_mechanizm_I.png").scaledToWidth(650)
         help_img.setPixmap(pixmap)
-        self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
+        self.data.wykresy_data_updated.connect(self.wykresy.updateCharts)
         self.tol_edit.tolerance_data_updated.connect(self.data.tolerance_update)
 
         tab_titles = ["Pomoc", "Wprowadzanie Danych", "Wykresy", "Tolerancje"]
@@ -538,38 +538,53 @@ class TabWiktor(AbstractTab):
         self.data.zew_dane = new_data.get("zew_dane")
         self.data.copyDataToInputs(new_data.get("input_dane"))
 
+    def reportData(self):
+        def table_row(cell1, cell2, cell3):
+            a = "{\\trowd \\trgaph10 \\cellx5000 \\cellx7000 \\cellx8000 \\pard\\intbl "
+            b = "\\cell\\pard\\intbl "
+            return a + str(cell1) + b + str(cell2) + b + str(cell3) + " \\cell\\row}"
+
+        if not self.use_this_check.isChecked():
+            return ''
+        wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.tol_data, self.data.kat_obrotu_kola)
+
+        text = "{\\pard\\qc\\f0\\fs44 Mechanizm wyjściowy ze sworzniami\\line\\par}"
+        text += table_row("Sposób podparcia", self.data.input_dane['podparcie'], "")
+        text += table_row("Liczba otworów", self.data.input_dane['n'], "")
+        text += table_row("Średnica otworu", self.data.obliczone_dane['d_otw'], "mm")
+        text += table_row("Średnica rozmieszczenia otworów", self.data.input_dane['R_wk'], "mm")
+
+        text += "{\\pard\\sb400\\sa100\\fs28 Tuleja: \\par}"
+        text += table_row("Średnica zewnętrzna", self.data.input_dane['d_tul'], "mm")
+        text += table_row("Średnica wewnętrzna", self.data.input_dane['d_sw'], "mm")
+        text += table_row("Długość", self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2'], "mm")
+        text += table_row("Liczba", self.data.input_dane['n'], "")
+        text += table_row("Materiał", self.data.input_dane['mat_tul']['nazwa'], "")
+        text += table_row("E", self.data.input_dane['mat_tul']['E'], "MPa")
+        text += table_row("v", self.data.input_dane['mat_tul']['v'], "")
+
+        text += "{\\pard\\sb400\\sa100\\fs28 Sworzeń: \\par}"
+        text += table_row("Średnica", self.data.input_dane['d_sw'], "mm")
+        text += table_row("Długość", self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2'], "mm")
+        text += table_row("Liczba", self.data.input_dane['n'], "")
+        text += table_row("Materiał", self.data.input_dane['mat_sw']['nazwa'], "")
+        text += table_row("E", self.data.input_dane['mat_sw']['E'], "MPa")
+        text += table_row("v", self.data.input_dane['mat_sw']['v'], "")
+
+        text += table_row("f{\sub kt}", self.data.input_dane['f_kt'], "")
+        text += table_row("f{\sub ts}", self.data.input_dane['f_ts'], "")
+
+        text += table_row("Maksymalny nacisk powierzchniowy", max(wyniki['naciski'][0]), "MPa")
+        text += table_row("Suma strat mocy", sum(wyniki['straty'][0]), "W")
+        text += "\\line"
+        return text
+
     def csvData(self):
         if not self.use_this_check.isChecked():
             return ''
         wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.tol_data, self.data.kat_obrotu_kola)
         title = "Mechanizm wyjściowy ze sworzniami\n"
-        sily_text = [f"{i},{wyniki['sily'][i]}\n" for i in range(1, len(wyniki['sily']) + 1)]
-        naciski_text = [f"{i},{wyniki['naciski'][i]}\n" for i in range(1, len(wyniki['naciski']) + 1)]
-        straty_text = [f"{i},{wyniki['straty'][i]}\n" for i in range(1, len(wyniki['straty']) + 1)]
+        sily_text = [f"{i},{wyniki['sily'][0][i]}\n" for i in range(1, len(wyniki['sily']) + 1)]
+        naciski_text = [f"{i},{wyniki['naciski'][0][i]}\n" for i in range(1, len(wyniki['naciski']) + 1)]
+        straty_text = [f"{i},{wyniki['straty'][0][i]}\n" for i in range(1, len(wyniki['straty']) + 1)]
         return title + "Siły na sworzniach [N]\n".join(sily_text) + "Naciski powierzchniowe na sworzniach [MPa]\n".join(naciski_text) + "Straty mocy na sworzniach [W]\n".join(straty_text) + "\n"
-        # text = "Mechanizm wyjściowy ze sworzniami\n"
-        # text += f"Ilość kół cykloidalnych,{self.data.input_dane['K']}\n"
-        # text += f"Sposób podparcia,{self.data.zew_dane['podparcie']}\n"
-        # text += f"Liczba otworów,{self.data.input_dane['n']}\n"
-        # text += f"Średnica otworu,{self.data.obliczone_dane['d_otw']},mm\n"
-        # text += f"Średnica rozmieszczenia otworów,{self.data.input_dane['R_wk']},mm\n"
-        # text += "Tuleja:\n"
-        # text += f"Średnica zewnętrzna,{self.data.input_dane['d_tul']},mm\n"
-        # text += f"Średnica wewnętrzna,{self.data.input_dane['d_sw']},mm\n"
-        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
-        # text += f"Liczba,{self.data.input_dane['n']}\n"
-        # text += f"Materiał:,{self.data.input_dane['mat_tul']['nazwa']}\n"
-        # text += f"E,{self.data.input_dane['mat_tul']['E']},MPa\n"
-        # text += f"v,{self.data.input_dane['mat_tul']['v']}\n"
-        # text += "Sworzeń:\n"
-        # text += f"Średnica,{self.data.input_dane['d_sw']},mm\n"
-        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
-        # text += f"Liczba,{self.data.input_dane['n']}\n"
-        # text += f"Materiał,{self.data.input_dane['mat_sw']['nazwa']}\n"
-        # text += f"E,{self.data.input_dane['mat_sw']['E']},MPa\n"
-        # text += f"v,{self.data.input_dane['mat_sw']['v']}\n"
-        # text += f"f_kt,{self.data.input_dane['f_kt']}\n"
-        # text += f"f_ts,{self.data.input_dane['f_ts']}\n"
-        # text += f"Maksymalny nacisk powierzchniowy,{max(wyniki['naciski'])},MPa\n"
-        # text += f"Suma strat mocy,{sum(wyniki['straty'])},W\n\n"
-        # return text

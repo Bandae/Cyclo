@@ -101,9 +101,9 @@ class MainWindow(QMainWindow):
         eksport_menu.addAction(eksport_csv)
         eksport_csv.triggered.connect(self.generateCSV)
 
-        eksport_dxf = QAction("Eksport do DXF", self)
-        eksport_menu.addAction(eksport_dxf)
-        eksport_dxf.triggered.connect(self.generateDXF)
+        # eksport_dxf = QAction("Eksport do DXF", self)
+        # eksport_menu.addAction(eksport_dxf)
+        # eksport_dxf.triggered.connect(self.generateDXF)
 
         #PRZECHPDZENIE MIĘDZY SEKCJAMI MENU :
         sectionmenu = menu.addMenu("&Sekcja")
@@ -144,13 +144,25 @@ class MainWindow(QMainWindow):
         self.animation_view.update_animation_data(data)
 
     def generateRaport(self):
-        ...
+        try:
+            with open("test_rtf.rtf", 'w') as f:
+                f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Lato;}}\\f0\\fs24")
+                for tab_widget in self.stacked_widgets:
+                    f.write(tab_widget.reportData())
+                f.write("}")
+            QMessageBox.information(self, 'Raport zapisany', 'Raport został utworzony.')
+        except Exception as e:
+            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia raportu: {str(e)}')
 
     def generateCSV(self):
         # TODO: poprawic zeby nie nadpisywac tylko robic nowe importy, przejrzec co jest w folderze, albo filedialog zrobic
-        with open("test.csv", "w") as csv_file:
-            for tab_widget in self.stacked_widgets:
-                csv_file.write(tab_widget.csvData())
+        try:
+            with open("test.csv", "w") as f:
+                for tab_widget in self.stacked_widgets:
+                    f.write(tab_widget.csvData())
+            QMessageBox.information(self, 'Tabele zapisane', 'Utworzono plik CSV z danymi.')
+        except Exception as e:
+            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia pliku csv: {str(e)}')
 
     def generateDXF(self):
         ...
