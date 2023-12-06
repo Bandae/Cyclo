@@ -31,6 +31,8 @@ class Wykres(QtCharts.QChartView):
         # self.os_y.setTickCount(1)
         self.line_series = QtCharts.QLineSeries()
         self.point_series = QtCharts.QScatterSeries()
+        self.point_series.setColor("#529AB7")
+        self.point_series.setMarkerSize(15)
         self.chart.addSeries(self.line_series)
         self.chart.addSeries(self.point_series)
         self.line_series.attachAxis(self.os_x)

@@ -33,3 +33,4 @@ class QLabelD(QLabel):
         self.setText(str(a))
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setLineWidth(1)
+        self.setWordWrap(True)

@@ -10,6 +10,7 @@ from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
 from math import pi
 
 #TODO: mam przesunięte do tyłu w poziomie punkty wykresów. Pawel też.
+# moze jakos usuwac dane z wykresow jak sa bledy?
 
 class PopupWin(QWidget):
     choice_made = Signal(str)
@@ -47,6 +48,7 @@ class PopupWin(QWidget):
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(dict)
     anim_data_updated = Signal(dict)
+    errors_updated = Signal(dict)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -118,11 +120,6 @@ class DataEdit(QWidget):
         self.label_e2 = QLabelD("Przerwa między kołami")
         self.obl_srednice_labels = [QLabel(), QLabel(), QLabel()]
 
-        self.errors = [
-            QLabelD("Dla obecnych danych, otwory nie zmieszczą się w kole cykloidalnym. Zmniejsz R<sub>wk</sub> lub wróć do edycji zarysu."),
-            QLabelD("Dla obecnych danych, otwory w kole cykloidalnym przecinają się. Zwiększ R<sub>wk</sub>, lub zmniejsz średnicę tuleji."),
-        ]
-
         for widget in self.input_widgets.values():
             if type(widget) == QComboBox:
                 widget.currentIndexChanged.connect(lambda: self.inputs_modified(self.kat_obrotu_kola))
@@ -186,10 +183,6 @@ class DataEdit(QWidget):
         layout1.addWidget(QLabelD("tuleji"), 5, 1)
         layout1.addWidget(self.input_widgets["d_sw"], 6, 0)
         layout1.addWidget(self.input_widgets["d_tul"], 6, 1)
-        for ind, widget in enumerate(self.errors):
-            layout1.addWidget(widget, 8+ind, 0, 1, 3)
-            widget.setStyleSheet("QLabel { color: red; }")
-            widget.hide()
 
         layout_main = QVBoxLayout()
         layout_main.addLayout(layout)
@@ -200,8 +193,6 @@ class DataEdit(QWidget):
         self.kat_obrotu_kola = kat
         if not update or not self.parent().use_this_check.isChecked():
             return
-        for widget in self.errors:
-            widget.hide()
         
         for key, widget in self.input_widgets.items():
             if type(widget) == QComboBox:
@@ -222,11 +213,6 @@ class DataEdit(QWidget):
         self.input_widgets["d_tul"].modify(minimum=wyniki["d_t_obl"], maximum=wyniki["d_o_obl"])
         self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
 
-        self.wykresy_data_updated.emit({
-            "sily": wyniki["sily"],
-            "naciski": wyniki['naciski'],
-            "straty": wyniki['straty'],
-        })
         anim_data = {
             "n": self.input_dane["n"],
             "R_wk": self.input_dane["R_wk"],
@@ -235,13 +221,19 @@ class DataEdit(QWidget):
             "d_otw": self.obliczone_dane["d_otw"],
         }
         if anim_data["R_wk"] + anim_data["d_otw"] / 2 >= self.zew_dane["R_f1"]:
-            self.errors[0].show()
             self.anim_data_updated.emit({"wiktor": None})
+            self.errors_updated.emit({"R_wk duze": True})
         elif sprawdz_przecinanie_otworow(self.input_dane["R_wk"], self.input_dane["n"], self.obliczone_dane["d_otw"]):
-            self.errors[1].show()
             self.anim_data_updated.emit({"wiktor": None})
+            self.errors_updated.emit({"R_wk male": True})
         else:
+            self.errors_updated.emit({"R_wk duze": False, "R_wk male": False})
             self.anim_data_updated.emit({"wiktor": anim_data})
+            self.wykresy_data_updated.emit({
+            "sily": wyniki["sily"],
+            "naciski": wyniki['naciski'],
+            "straty": wyniki['straty'],
+            })
     
     def copyDataToInputs(self, new_input_data):
         for key, widget in self.input_widgets.items():
@@ -472,6 +464,8 @@ class TabWiktor(AbstractTab):
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
 
         self.setLayout(layout)
+        self.data.setEnabled(False)
+        self.tol_edit.setEnabled(False)
     
     def useThisChanged(self, state):
         self.data.setEnabled(state)
