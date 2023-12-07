@@ -10,6 +10,7 @@ from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
 from math import pi
 
 #TODO: mam przesunięte do tyłu w poziomie punkty wykresów. Pawel też.
+# moze jakos usuwac dane z wykresow jak sa bledy?
 
 class PopupWin(QWidget):
     choice_made = Signal(str)
@@ -47,6 +48,7 @@ class PopupWin(QWidget):
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(dict)
     anim_data_updated = Signal(dict)
+    errors_updated = Signal(dict)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -118,11 +120,6 @@ class DataEdit(QWidget):
         self.label_e2 = QLabelD("Przerwa między kołami")
         self.obl_srednice_labels = [QLabel(), QLabel(), QLabel()]
 
-        self.errors = [
-            QLabelD("Dla obecnych danych, otwory nie zmieszczą się w kole cykloidalnym. Zmniejsz R<sub>wk</sub> lub wróć do edycji zarysu."),
-            QLabelD("Dla obecnych danych, otwory w kole cykloidalnym przecinają się. Zwiększ R<sub>wk</sub>, lub zmniejsz średnicę tuleji."),
-        ]
-
         for widget in self.input_widgets.values():
             if type(widget) == QComboBox:
                 widget.currentIndexChanged.connect(lambda: self.inputs_modified(self.kat_obrotu_kola))
@@ -186,10 +183,6 @@ class DataEdit(QWidget):
         layout1.addWidget(QLabelD("tuleji"), 5, 1)
         layout1.addWidget(self.input_widgets["d_sw"], 6, 0)
         layout1.addWidget(self.input_widgets["d_tul"], 6, 1)
-        for ind, widget in enumerate(self.errors):
-            layout1.addWidget(widget, 8+ind, 0, 1, 3)
-            widget.setStyleSheet("QLabel { color: red; }")
-            widget.hide()
 
         layout_main = QVBoxLayout()
         layout_main.addLayout(layout)
@@ -200,8 +193,6 @@ class DataEdit(QWidget):
         self.kat_obrotu_kola = kat
         if not update or not self.parent().use_this_check.isChecked():
             return
-        for widget in self.errors:
-            widget.hide()
         
         for key, widget in self.input_widgets.items():
             if type(widget) == QComboBox:
@@ -222,11 +213,6 @@ class DataEdit(QWidget):
         self.input_widgets["d_tul"].modify(minimum=wyniki["d_t_obl"], maximum=wyniki["d_o_obl"])
         self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
 
-        self.wykresy_data_updated.emit({
-            "sily": wyniki["sily"],
-            "naciski": wyniki['naciski'],
-            "straty": wyniki['straty'],
-        })
         anim_data = {
             "n": self.input_dane["n"],
             "R_wk": self.input_dane["R_wk"],
@@ -235,13 +221,19 @@ class DataEdit(QWidget):
             "d_otw": self.obliczone_dane["d_otw"],
         }
         if anim_data["R_wk"] + anim_data["d_otw"] / 2 >= self.zew_dane["R_f1"]:
-            self.errors[0].show()
             self.anim_data_updated.emit({"wiktor": None})
+            self.errors_updated.emit({"R_wk duze": True})
         elif sprawdz_przecinanie_otworow(self.input_dane["R_wk"], self.input_dane["n"], self.obliczone_dane["d_otw"]):
-            self.errors[1].show()
             self.anim_data_updated.emit({"wiktor": None})
+            self.errors_updated.emit({"R_wk male": True})
         else:
+            self.errors_updated.emit({"R_wk duze": False, "R_wk male": False})
             self.anim_data_updated.emit({"wiktor": anim_data})
+            self.wykresy_data_updated.emit({
+            "sily": wyniki["sily"],
+            "naciski": wyniki['naciski'],
+            "straty": wyniki['straty'],
+            })
     
     def copyDataToInputs(self, new_input_data):
         for key, widget in self.input_widgets.items():
@@ -459,7 +451,7 @@ class TabWiktor(AbstractTab):
         help_img = QLabel()
         pixmap = QPixmap("icons//pomoc_mechanizm_I.png").scaledToWidth(650)
         help_img.setPixmap(pixmap)
-        self.data.wykresy_data_updated.connect(self.wykresy.update_charts)
+        self.data.wykresy_data_updated.connect(self.wykresy.updateCharts)
         self.tol_edit.tolerance_data_updated.connect(self.data.tolerance_update)
 
         tab_titles = ["Pomoc", "Wprowadzanie Danych", "Wykresy", "Tolerancje"]
@@ -472,6 +464,8 @@ class TabWiktor(AbstractTab):
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
 
         self.setLayout(layout)
+        self.data.setEnabled(False)
+        self.tol_edit.setEnabled(False)
     
     def useThisChanged(self, state):
         self.data.setEnabled(state)
@@ -538,38 +532,53 @@ class TabWiktor(AbstractTab):
         self.data.zew_dane = new_data.get("zew_dane")
         self.data.copyDataToInputs(new_data.get("input_dane"))
 
+    def reportData(self):
+        def table_row(cell1, cell2, cell3):
+            a = "{\\trowd \\trgaph10 \\cellx5000 \\cellx7000 \\cellx8000 \\pard\\intbl "
+            b = "\\cell\\pard\\intbl "
+            return a + str(cell1) + b + str(cell2) + b + str(cell3) + " \\cell\\row}"
+
+        if not self.use_this_check.isChecked():
+            return ''
+        wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.tol_data, self.data.kat_obrotu_kola)
+
+        text = "{\\pard\\qc\\f0\\fs44 Mechanizm wyjściowy ze sworzniami\\line\\par}"
+        text += table_row("Sposób podparcia", self.data.input_dane['podparcie'], "")
+        text += table_row("Liczba otworów", self.data.input_dane['n'], "")
+        text += table_row("Średnica otworu", self.data.obliczone_dane['d_otw'], "mm")
+        text += table_row("Średnica rozmieszczenia otworów", self.data.input_dane['R_wk'], "mm")
+
+        text += "{\\pard\\sb400\\sa100\\fs28 Tuleja: \\par}"
+        text += table_row("Średnica zewnętrzna", self.data.input_dane['d_tul'], "mm")
+        text += table_row("Średnica wewnętrzna", self.data.input_dane['d_sw'], "mm")
+        text += table_row("Długość", self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2'], "mm")
+        text += table_row("Liczba", self.data.input_dane['n'], "")
+        text += table_row("Materiał", self.data.input_dane['mat_tul']['nazwa'], "")
+        text += table_row("E", self.data.input_dane['mat_tul']['E'], "MPa")
+        text += table_row("v", self.data.input_dane['mat_tul']['v'], "")
+
+        text += "{\\pard\\sb400\\sa100\\fs28 Sworzeń: \\par}"
+        text += table_row("Średnica", self.data.input_dane['d_sw'], "mm")
+        text += table_row("Długość", self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2'], "mm")
+        text += table_row("Liczba", self.data.input_dane['n'], "")
+        text += table_row("Materiał", self.data.input_dane['mat_sw']['nazwa'], "")
+        text += table_row("E", self.data.input_dane['mat_sw']['E'], "MPa")
+        text += table_row("v", self.data.input_dane['mat_sw']['v'], "")
+
+        text += table_row("f{\sub kt}", self.data.input_dane['f_kt'], "")
+        text += table_row("f{\sub ts}", self.data.input_dane['f_ts'], "")
+
+        text += table_row("Maksymalny nacisk powierzchniowy", max(wyniki['naciski'][0]), "MPa")
+        text += table_row("Suma strat mocy", sum(wyniki['straty'][0]), "W")
+        text += "\\line"
+        return text
+
     def csvData(self):
         if not self.use_this_check.isChecked():
             return ''
         wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.tol_data, self.data.kat_obrotu_kola)
         title = "Mechanizm wyjściowy ze sworzniami\n"
-        sily_text = [f"{i},{wyniki['sily'][i]}\n" for i in range(1, len(wyniki['sily']) + 1)]
-        naciski_text = [f"{i},{wyniki['naciski'][i]}\n" for i in range(1, len(wyniki['naciski']) + 1)]
-        straty_text = [f"{i},{wyniki['straty'][i]}\n" for i in range(1, len(wyniki['straty']) + 1)]
+        sily_text = [f"{i},{wyniki['sily'][0][i]}\n" for i in range(1, len(wyniki['sily']) + 1)]
+        naciski_text = [f"{i},{wyniki['naciski'][0][i]}\n" for i in range(1, len(wyniki['naciski']) + 1)]
+        straty_text = [f"{i},{wyniki['straty'][0][i]}\n" for i in range(1, len(wyniki['straty']) + 1)]
         return title + "Siły na sworzniach [N]\n".join(sily_text) + "Naciski powierzchniowe na sworzniach [MPa]\n".join(naciski_text) + "Straty mocy na sworzniach [W]\n".join(straty_text) + "\n"
-        # text = "Mechanizm wyjściowy ze sworzniami\n"
-        # text += f"Ilość kół cykloidalnych,{self.data.input_dane['K']}\n"
-        # text += f"Sposób podparcia,{self.data.zew_dane['podparcie']}\n"
-        # text += f"Liczba otworów,{self.data.input_dane['n']}\n"
-        # text += f"Średnica otworu,{self.data.obliczone_dane['d_otw']},mm\n"
-        # text += f"Średnica rozmieszczenia otworów,{self.data.input_dane['R_wk']},mm\n"
-        # text += "Tuleja:\n"
-        # text += f"Średnica zewnętrzna,{self.data.input_dane['d_tul']},mm\n"
-        # text += f"Średnica wewnętrzna,{self.data.input_dane['d_sw']},mm\n"
-        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
-        # text += f"Liczba,{self.data.input_dane['n']}\n"
-        # text += f"Materiał:,{self.data.input_dane['mat_tul']['nazwa']}\n"
-        # text += f"E,{self.data.input_dane['mat_tul']['E']},MPa\n"
-        # text += f"v,{self.data.input_dane['mat_tul']['v']}\n"
-        # text += "Sworzeń:\n"
-        # text += f"Średnica,{self.data.input_dane['d_sw']},mm\n"
-        # text += f"Długość,{self.data.input_dane['b'] * 2 + self.data.input_dane['e1'] * 2 + self.data.input_dane['e2']},mm\n"
-        # text += f"Liczba,{self.data.input_dane['n']}\n"
-        # text += f"Materiał,{self.data.input_dane['mat_sw']['nazwa']}\n"
-        # text += f"E,{self.data.input_dane['mat_sw']['E']},MPa\n"
-        # text += f"v,{self.data.input_dane['mat_sw']['v']}\n"
-        # text += f"f_kt,{self.data.input_dane['f_kt']}\n"
-        # text += f"f_ts,{self.data.input_dane['f_ts']}\n"
-        # text += f"Maksymalny nacisk powierzchniowy,{max(wyniki['naciski'])},MPa\n"
-        # text += f"Suma strat mocy,{sum(wyniki['straty'])},W\n\n"
-        # return text
