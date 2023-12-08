@@ -37,3 +37,7 @@ class AbstractTab(QWidget):
     def csvData(self) -> str:
         '''Zwraca dane zakładki konieczne do eksportu, sformatowane już do zapisu w CSV.'''
         return ''
+
+    def reportData(self) -> str:
+        '''Zwraca dane zakładki konieczne do raportu, sformatowane już do zapisu w rtf.'''
+        return ''

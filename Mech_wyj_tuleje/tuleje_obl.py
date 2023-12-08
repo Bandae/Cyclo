@@ -153,7 +153,9 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
 
     F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
     lista_fi_kj = lista_fi_sworzni(n_sworzni, kat)
+    lista_fi_gladka = lista_fi_sworzni(40, kat)
     sily_0 = oblicz_sily(F_max, lista_fi_kj)
+    sily_0_gladkie = oblicz_sily(F_max, lista_fi_gladka)
     M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
     d_smax = oblicz_d_sworzen(M_gmax, k_g)
 
@@ -164,17 +166,21 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
     d_otw_obl = round(d_tul_wybrane + (2 * e), 2)
 
     strzalki = oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2)
+    strzalki_gladkie = oblicz_fs(podparcie, K, sily_0_gladkie, E, b_kola, d_sw, e1, e2)
     sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
+    sily_gladkie = oblicz_sily_odchylka(M_k, lista_fi_gladka, F_max, b_kola, R_wk, e, d_tul, d_otw_obl, strzalki_gladkie, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0_gladkie
     naciski = oblicz_naciski(sily, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
+    naciski_gladkie = oblicz_naciski(sily_gladkie, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
     straty = oblicz_straty(omg_0, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
+    straty_gladkie = oblicz_straty(omg_0, sily_gladkie, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
 
     return {
         "d_s_obl": d_smax,
         "d_t_obl": d_tul_obl,
         "d_o_obl": d_otw_obl,
-        "sily": sily,
-        "naciski": naciski,
-        "straty": straty,
+        "sily": ([round(sila, 2) for sila in sily], [round(sila, 2) for sila in sily_gladkie]),
+        "naciski": ([round(nacisk, 2) for nacisk in naciski], [round(nacisk, 2) for nacisk in naciski_gladkie]),
+        "straty": ([round(strata, 3) for strata in straty], [round(strata, 2) for strata in straty_gladkie]),
     }
 
 # def oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje):

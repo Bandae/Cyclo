@@ -1,16 +1,13 @@
-from PySide2.QtWidgets import QTabWidget, QVBoxLayout
+from PySide2.QtWidgets import QTabWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QGridLayout, QAbstractItemView, QHeaderView
 from PySide2.QtGui import QPainter
 from PySide2.QtCharts import QtCharts
+from PySide2.QtCore import Qt
 
-def punkty_wykresu(wartosci):
-    return [[i, wartosci[i - 1]] for i in range(1, len(wartosci) + 1)]
-    # punkty = []
-    # for i in range(1, len(wartosci) + 1):
-    #     if wartosci[i - 1] < 0:
-    #         punkty.append([i, 0])
-    #     else:
-    #         punkty.append([i, wartosci[i - 1]])
-    # return punkty
+def graph_points(point_values, smooth_values):
+    scatter_points = [[i, point_values[i - 1]] for i in range(1, len(point_values) + 1)]
+    scale = len(point_values) / len(smooth_values)
+    line_points = [[i * scale + 1, smooth_values[i]] for i in range(0, len(smooth_values))]
+    return scatter_points, line_points
 
 
 class Wykres(QtCharts.QChartView):
@@ -21,31 +18,68 @@ class Wykres(QtCharts.QChartView):
         self.chart.setTitle(chart_title)
         self.setRenderHint(QPainter.Antialiasing)
 
-        self.series = QtCharts.QLineSeries()
-        self.chart.addSeries(self.series)
-
         self.os_x = QtCharts.QValueAxis()
-        self.os_y = QtCharts.QValueAxis()
         self.os_x.setTitleText(x_title)
         self.os_x.setLabelFormat('%.0f')
-        self.chart.setAxisX(self.os_x, self.series)
-        
+        self.chart.addAxis(self.os_x, Qt.AlignBottom)
+
+        self.os_y = QtCharts.QValueAxis()
         self.os_y.setTitleText(y_title)
-        # self.os_y.setTickCount(1)
         self.os_y.setLabelFormat('%.2f')
+        self.chart.addAxis(self.os_y, Qt.AlignLeft)
+        
+        # self.os_y.setTickCount(1)
+        self.line_series = QtCharts.QLineSeries()
+        self.point_series = QtCharts.QScatterSeries()
+        self.point_series.setColor("#529AB7")
+        self.point_series.setMarkerSize(15)
+        self.chart.addSeries(self.line_series)
+        self.chart.addSeries(self.point_series)
+        self.line_series.attachAxis(self.os_x)
+        self.line_series.attachAxis(self.os_y)
+        self.point_series.attachAxis(self.os_x)
+        self.point_series.attachAxis(self.os_y)
+        
         self.setChart(self.chart)
-        self.chart.setAxisY(self.os_y, self.series)
     
-    def update_data(self, wartosci):
-        self.series.clear()
-        
-        for wart in wartosci:
-            self.series.append(wart[0], wart[1])
-        
-        self.os_x.setRange(wartosci[0][0], wartosci[len(wartosci)-1][0])
-        self.os_y.setRange(min([i[1] for i in wartosci]), max([i[1] for i in wartosci]))
+    def update_data(self, point_values, smooth_values):
+        self.line_series.clear()
+        self.point_series.clear()
+        for wart in smooth_values:
+            self.line_series.append(wart[0], wart[1])
+        for wart in point_values:
+            self.point_series.append(wart[0], wart[1])
+
+        self.os_x.setRange(point_values[0][0], point_values[len(point_values)-1][0])
+        self.os_y.setRange(min([i[1] for i in smooth_values]), max([i[1] for i in smooth_values]))
         self.chart.update()
-         
+
+
+class Table(QTableWidget):
+    TABLE_TITLES = ["Siły", "Naciski", "Straty"]
+    def __init__(self):
+        super().__init__()
+        self.data = [[0], [0], [0]]
+        self.setHorizontalHeaderLabels((self.TABLE_TITLES[0],))
+        # self.verticalHeader().setVisible(False)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        # self.setRowCount(6)
+        self.setFixedWidth(80)
+        self.setColumnCount(1)
+        self.setColumnWidth(0, 45)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+
+    def updateData(self, new_data, open_tab):
+        self.data = new_data
+        self.changeTable(open_tab)
+
+    def changeTable(self, open_tab):
+        self.setHorizontalHeaderLabels((self.TABLE_TITLES[open_tab],))
+        self.setRowCount(len(self.data[open_tab]))
+        for i, value in enumerate(self.data[open_tab]):
+            self.setItem(i, 0, QTableWidgetItem(str(value)))
+
 
 class ChartTab(QTabWidget):
     def __init__(self):
@@ -54,21 +88,32 @@ class ChartTab(QTabWidget):
         self.wykres_naciskow = Wykres("Naciski powierzchniowe na sworzniach", "numer sworznia", "Wartość Nacisku [MPa]")
         self.wykres_strat = Wykres("Straty mocy na sworzniach", "numer sworznia", "Straty mocy [W]")
 
-        tabs = QTabWidget()
-        tabs.setMovable(True)
-        tabs.setTabPosition(QTabWidget.North)
-        tabs.addTab(self.wykres_sil, "Siły")
-        tabs.addTab(self.wykres_naciskow, "Naciski")
-        tabs.addTab(self.wykres_strat, "Straty")
+        self.table = Table()
 
-        layout = QVBoxLayout()
-        layout.addWidget(tabs)
-        self.setLayout(layout)
+        self.tabs = QTabWidget()
+        self.tabs.setMovable(True)
+        self.tabs.setTabPosition(QTabWidget.North)
+        self.tabs.addTab(self.wykres_sil, "Siły")
+        self.tabs.addTab(self.wykres_naciskow, "Naciski")
+        self.tabs.addTab(self.wykres_strat, "Straty")
+        self.tabs.setMovable(False)
+        self.tabs.currentChanged.connect(self.table.changeTable)
 
-    def update_charts(self, data):
+        table_layout = QVBoxLayout()
+        table_layout.addWidget(self.table)
+        chart_layout = QVBoxLayout()
+        chart_layout.addWidget(self.tabs)
+        grid = QGridLayout()
+        grid.addLayout(table_layout, 0, 0)
+        grid.addLayout(chart_layout, 0, 1)
+        self.setLayout(grid)
+
+    def updateCharts(self, data):
+        self.table.updateData((data["sily"][0], data["naciski"][0], data["straty"][0]), self.tabs.currentIndex())
+
         if data.get("sily") and data["sily"] is not None:
-            self.wykres_sil.update_data(punkty_wykresu(data["sily"]))
+            self.wykres_sil.update_data(*graph_points(data["sily"][0], data["sily"][1]))
         if data.get("naciski") and data["naciski"] is not None:
-            self.wykres_naciskow.update_data(punkty_wykresu(data["naciski"]))
+            self.wykres_naciskow.update_data(*graph_points(data["naciski"][0], data["naciski"][1]))
         if data.get("straty") and data["straty"] is not None:
-            self.wykres_strat.update_data(punkty_wykresu(data["straty"]))
+            self.wykres_strat.update_data(*graph_points(data["straty"][0], data["straty"][1]))
