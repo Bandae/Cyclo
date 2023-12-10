@@ -1,4 +1,9 @@
-from PySide2.QtWidgets import QWidget, QMainWindow
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from mainwindow import MainWindow
+
+from PySide2.QtWidgets import QWidget
 from typing import Union, Dict
 
 # Typ danych przekazywanych miedzy zakladkami
@@ -12,7 +17,7 @@ DaneZapis = Dict[str, Union[int, float, str, dict, list]]
 
 class AbstractTab(QWidget):
     '''Abstrakcyjna klasa do dziedziczenia przez każdą z naszych zakładek.'''
-    def __init__(self, parent: QMainWindow) -> None:
+    def __init__(self, parent: MainWindow) -> None:
         super().__init__(parent)
     
     def sendData(self) -> DaneZakladek:

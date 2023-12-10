@@ -78,7 +78,7 @@ def rysowanie_tuleje(painter, scala, dane_wiktor, kolory):
 class AnimationView(QWidget):
     def __init__(self, parent, dane):
         super().__init__(parent)
-        self.animacja = Animacja(dane)
+        self.animacja = Animacja(self, dane)
         self.start_event = threading.Event()
 
         main_layout = QVBoxLayout()
@@ -144,7 +144,7 @@ class AnimationView(QWidget):
         self.slider.setValue(-value)
 
 
-class Animacja(QWidget):
+class Animacja(QLabel):
     animation_tick = Signal(float)
 
     SLATE = "#283E39"
@@ -155,8 +155,8 @@ class Animacja(QWidget):
     GRAY = "#323434"
     GRAY_DARK = "#92929"
     PASTEL_BLUE = '#ADD8E6'
-    def __init__(self, data):
-        super().__init__()
+    def __init__(self, parent, data):
+        super().__init__(parent)
 
         self.setMinimumSize(640,640)
         self.data = data
@@ -168,13 +168,13 @@ class Animacja(QWidget):
         self.skok_kata = 0
 
         self.layout = QGridLayout()
-        self.label = QLabel(self)
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("background-color: #f0f0f0")
+        # self.label = QLabel(self)
+        self.setAlignment(Qt.AlignCenter)
+        self.setStyleSheet("background-color: #f0f0f0")
 
         self._size = QSize(self.width(), self.height())
-        self.layout.addWidget(self.label)
-        self.setLayout(self.layout)
+        # self.layout.addWidget(self.label)
+        # self.setLayout(self.layout)
         self.rysowanko()
 
     def rysowanko(self):
@@ -207,7 +207,7 @@ class Animacja(QWidget):
         zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor)
 
         painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
-        dodatkowy_obrot = 6
+        dodatkowy_obrot = 3
         # 5, 10, 15, 20 otworow ==> 3
         # inaczej troche nie dziala
 
@@ -247,7 +247,7 @@ class Animacja(QWidget):
         #yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
         #painter.drawPoint(xp,yp)
 
-        self.label.setPixmap(pixmap)
+        self.setPixmap(pixmap)
         painter.end()
 
     def setAngle(self, new_angle, reset=False):
@@ -257,6 +257,7 @@ class Animacja(QWidget):
             self.kat_ = self.kat_ // 360 + new_angle
         self.kat_dorotacji = -((360/(self.data["z"]+1))*(self.kat_/360))
         self.kat_2 = self.kat_ + 180*(self.data["z"]+1)
+        self.kat_dorotacji2 = -((self.kat_2+180)/(self.data["z"]+1))
         self.rysowanko()
 
     def startAnimacji(self, event):

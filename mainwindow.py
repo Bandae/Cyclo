@@ -12,6 +12,8 @@ import re
 import datetime
 from functools import partial
 
+# TODO: moze jedna metode zrobic z tego wszystkiego do generowaniaa raport csv dxf
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -81,16 +83,16 @@ class MainWindow(QMainWindow):
 
         otworz = QAction("Otwórz",self)
         filemenu.addAction(otworz)
-        otworz.triggered.connect(self.load_JSON)
+        otworz.triggered.connect(self.loadJSON)
 
         zapis = QAction("Zapisz",self)
         filemenu.addAction(zapis)
         zapis.setShortcut("Ctrl+S")
-        zapis.triggered.connect(self.save_to_JSON)
+        zapis.triggered.connect(self.saveToJSON)
 
         zapis_jako = QAction("Zapisz jako",self)
         filemenu.addAction(zapis_jako)
-        zapis_jako.triggered.connect(lambda: self.save_to_JSON("save as"))
+        zapis_jako.triggered.connect(lambda: self.saveToJSON("save as"))
 
         #EKSPORTY :
         eksport_menu = menu.addMenu("&Eksport")
@@ -136,7 +138,7 @@ class MainWindow(QMainWindow):
 
         choice = dialog.exec_()
         if choice == 2:
-            self.save_to_JSON()
+            self.saveToJSON()
             self.animation_view.start_event.clear()
             return super().closeEvent(event)
         elif choice == 1:
@@ -154,7 +156,7 @@ class MainWindow(QMainWindow):
         self.stacklayout.setCurrentIndex(index)
     
     def onAnimationTick(self, kat):
-        self.wiktor.data.inputs_modified(kat, self.wiktor.use_this_check.isChecked())
+        self.wiktor.data.inputsModified(kat, self.wiktor.use_this_check.isChecked())
         self.pawel.data.obliczenia_sil(kat)
     
     def updateAnimationData(self, dane):
@@ -194,7 +196,7 @@ class MainWindow(QMainWindow):
     def generateDXF(self):
         ...
 
-    def load_JSON(self):
+    def loadJSON(self):
         '''Wczytuje dane z pliku .json, wywołuje metodę loadData() każdej z zakładek, podając im słownik jej danych.
         Może być None, każdy musi z osobna sprawdzić przed odczytywaniem pojedynczych pozycji.'''
         data = None
@@ -221,12 +223,12 @@ class MainWindow(QMainWindow):
         for key, tab in zip(self.tab_titles, self.stacked_widgets):
             tab.loadData(data.get(key))
         
-    def save_to_JSON(self, mode="save"):
+    def saveToJSON(self, mode="save"):
         '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę saveData(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
         których klucze są takie same, jak self.tab_titles.
         Wywołuje activateTab(), żeby upewnić się, że przekazane są między nami dane, i wykonane obliczenia przed zapisem.
 
-        Użycie tej metody, albo load_JSON(), zapisuje podaną przez użytkownika ścieżkę, i kolejne wywołania tej metody automatycznie zapisują do tego pliku.'''
+        Użycie tej metody, albo loadJSON(), zapisuje podaną przez użytkownika ścieżkę, i kolejne wywołania tej metody automatycznie zapisują do tego pliku.'''
         def save_ess(f_path, dane):
             try:
                 with open(f_path, 'w') as f:

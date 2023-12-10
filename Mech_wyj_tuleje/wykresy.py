@@ -1,4 +1,4 @@
-from PySide2.QtWidgets import QTabWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QGridLayout, QAbstractItemView, QHeaderView
+from PySide2.QtWidgets import QTabWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QGridLayout, QAbstractItemView, QHeaderView, QWidget
 from PySide2.QtGui import QPainter
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt
@@ -57,8 +57,8 @@ class Wykres(QtCharts.QChartView):
 
 class Table(QTableWidget):
     TABLE_TITLES = ["Siły", "Naciski", "Straty"]
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent)
         self.data = [[0], [0], [0]]
         self.setHorizontalHeaderLabels((self.TABLE_TITLES[0],))
         # self.verticalHeader().setVisible(False)
@@ -70,7 +70,7 @@ class Table(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
 
-    def updateData(self, new_data, open_tab):
+    def update(self, new_data, open_tab):
         self.data = new_data
         self.changeTable(open_tab)
 
@@ -81,39 +81,48 @@ class Table(QTableWidget):
             self.setItem(i, 0, QTableWidgetItem(str(value)))
 
 
-class ChartTab(QTabWidget):
-    def __init__(self):
-        super().__init__()
+class ChartTabs(QTabWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
         self.wykres_sil = Wykres("Siły na sworzniach", "numer sworznia", "Siła [N]")
         self.wykres_naciskow = Wykres("Naciski powierzchniowe na sworzniach", "numer sworznia", "Wartość Nacisku [MPa]")
         self.wykres_strat = Wykres("Straty mocy na sworzniach", "numer sworznia", "Straty mocy [W]")
 
-        self.table = Table()
+        self.setTabPosition(QTabWidget.North)
+        self.addTab(self.wykres_sil, "Siły")
+        self.addTab(self.wykres_naciskow, "Naciski")
+        self.addTab(self.wykres_strat, "Straty")
 
-        self.tabs = QTabWidget()
-        self.tabs.setMovable(True)
-        self.tabs.setTabPosition(QTabWidget.North)
-        self.tabs.addTab(self.wykres_sil, "Siły")
-        self.tabs.addTab(self.wykres_naciskow, "Naciski")
-        self.tabs.addTab(self.wykres_strat, "Straty")
-        self.tabs.setMovable(False)
-        self.tabs.currentChanged.connect(self.table.changeTable)
-
-        table_layout = QVBoxLayout()
-        table_layout.addWidget(self.table)
-        chart_layout = QVBoxLayout()
-        chart_layout.addWidget(self.tabs)
-        grid = QGridLayout()
-        grid.addLayout(table_layout, 0, 0)
-        grid.addLayout(chart_layout, 0, 1)
-        self.setLayout(grid)
-
-    def updateCharts(self, data):
-        self.table.updateData((data["sily"][0], data["naciski"][0], data["straty"][0]), self.tabs.currentIndex())
-
+    def update(self, data):
         if data.get("sily") and data["sily"] is not None:
             self.wykres_sil.update_data(*graph_points(data["sily"][0], data["sily"][1]))
         if data.get("naciski") and data["naciski"] is not None:
             self.wykres_naciskow.update_data(*graph_points(data["naciski"][0], data["naciski"][1]))
         if data.get("straty") and data["straty"] is not None:
             self.wykres_strat.update_data(*graph_points(data["straty"][0], data["straty"][1]))
+
+
+class ResultsTab(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.wykres_sil = Wykres("Siły na sworzniach", "numer sworznia", "Siła [N]")
+        self.wykres_naciskow = Wykres("Naciski powierzchniowe na sworzniach", "numer sworznia", "Wartość Nacisku [MPa]")
+        self.wykres_strat = Wykres("Straty mocy na sworzniach", "numer sworznia", "Straty mocy [W]")
+
+        self.table = Table(self)
+
+        self.graphs = ChartTabs(self)
+        self.graphs.currentChanged.connect(self.table.changeTable)
+
+        table_layout = QVBoxLayout()
+        table_layout.addWidget(self.table)
+        chart_layout = QVBoxLayout()
+        chart_layout.addWidget(self.graphs)
+        grid = QGridLayout()
+        grid.addLayout(table_layout, 0, 0)
+        grid.addLayout(chart_layout, 0, 1)
+        self.setLayout(grid)
+
+    def updateResults(self, data):
+        self.table.update((data["sily"][0], data["naciski"][0], data["straty"][0]), self.graphs.currentIndex())
+        self.graphs.update(data)
