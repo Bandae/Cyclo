@@ -25,7 +25,8 @@ class DataEdit(QWidget):
             "Ra1" : 0,      "Rf1": 0,
             "Rw1": 0,       "Ra2": 0,
             "Rf2": 0,       "Rw2": 0,
-            "Rb" : 0,       "Rg" : 0,
+            "Rb" : 0,       "Rb2":0,
+            "Rg" : 0,       "sr":0,
             "e" : 0,        "h" : 0,
             "Mwej" : 500,   "K" : 2,
             "E1" : 2100000, "E2" : 2100000,
@@ -39,16 +40,15 @@ class DataEdit(QWidget):
 
         self.luzy = Tolerancje(self.dane_all)
         self.dane_materialowe = DaneMaterialowe(self.dane_all["z"],self.dane_all)
-
         self.refil_data()
         self.liczba_obciazonych_rolek = 0
         self.przyrost_kata = 360 / (self.dane_all["z"] + 1)
 
         self.spin_z = DoubleSpinBox(self.dane_all["z"],8,68,1)
         self.spin_z.lineEdit().setReadOnly(True)
-        self.spin_ro = DoubleSpinBox(self.dane_all["ro"],3,8,0.05)
+        self.spin_ro = DoubleSpinBox(self.dane_all["ro"],1,8,0.05)
         self.spin_h = DoubleSpinBox(self.dane_all["lam"],0.5,0.99,0.01)
-        self.spin_g = DoubleSpinBox(self.dane_all["g"],5,14,0.02)
+        self.spin_g = DoubleSpinBox(self.dane_all["g"],3,14,0.02)
         self.spin_obc = DoubleSpinBox(self.dane_all["Mwej"], 500, 5000, 10)
         self.spin_l_k = DoubleSpinBox(self.dane_all["K"], 1, 2, 1)
         self.spin_l_k.lineEdit().setReadOnly(True)
@@ -117,15 +117,18 @@ class DataEdit(QWidget):
         self.dane_all["Rf2"] = ro*(z+1+(2*lam))-g
         self.dane_all["Rw2"] = ro*lam*(z+1)
         self.dane_all["Rb"] = ro*z
+        self.dane_all["Rb2"] = z+g+self.dane_all["Rf1"]
         self.dane_all["Rg"] = ro*(z+1)
         self.dane_all["e"] = ro*lam
         self.dane_all["h"] = 2*self.dane_all["e"]
-
+        self.dane_all["sr"] = (2*g)+(2*self.dane_all['Rb2'])
         self.obliczenia_sil()
 
     def refili_labels(self):
         for text, qlabel in self.data_labels.items():
             qlabel.setText(str(round(self.dane_all[text], 2)))
+
+        self.luzy.rysunki.sr.setText(str(self.dane_all['sr']))
 
     def z_changed(self):
         self.dane_all["z"] = self.spin_z.value()
@@ -143,41 +146,76 @@ class DataEdit(QWidget):
         self.obliczenia_sil()
 
     def obliczenia_sil(self,kat_glowny=0):
-        if self.dane_all["z"]%2==0:
-            self.liczba_obciazonych_rolek = int(self.dane_all["z"]/2)
-        else :
-            self.liczba_obciazonych_rolek = int((self.dane_all["z"]+1)/2)-1
-        self.przyrost_kata = 360/(self.dane_all["z"]+1)
-        
-        sily = [None]*self.liczba_obciazonych_rolek
-        alfa = [None] * self.liczba_obciazonych_rolek
+
+        self.liczba_obciazonych_rolek = int(self.dane_all["z"])+1
+
+
+        F_max = (1000*4*(self.dane_all['Mwej']/self.dane_all['K']))/(self.dane_all['Rw1']*(self.dane_all['z']+1))
+
+        al_ki = [None] * self.liczba_obciazonych_rolek
+        al_si = [None] * self.liczba_obciazonych_rolek
+        hi = [None] * self.liczba_obciazonych_rolek
+        Fx = [None] * self.liczba_obciazonych_rolek
+        Fy = [None] * self.liczba_obciazonych_rolek
+        sily = [None] * self.liczba_obciazonych_rolek
         naprezenia = [None] * self.liczba_obciazonych_rolek
         straty_mocy = [None] * self.liczba_obciazonych_rolek
         luzy = [None] * self.liczba_obciazonych_rolek
+        reke = [None] * self.liczba_obciazonych_rolek
+        AIC = [None] * self.liczba_obciazonych_rolek
+
+
+
+
         Mk = self.dane_all["Mwej"]/self.dane_all["K"]
-        for a in range(self.liczba_obciazonych_rolek):
-            i=a+1
-            kat = kat_glowny*self.przyrost_kata
+        for i in range(self.liczba_obciazonych_rolek):
+
+            #NOWE
+
+            #SILY
+            al_ki[i] = (2*math.pi*i)/(self.dane_all['z']+1) + kat_glowny
+            al_si[i] = (math.pi/2)-(math.fabs(math.atan((self.dane_all['Rb2']*math.sin(al_ki[i]))/((self.dane_all['Rw1']+self.dane_all['e'])-(self.dane_all['Rb2']*math.cos(al_ki[i]))))))
+            hi[i] = self.dane_all['Rw1'] * math.cos(al_si[i])
+            Fx[i] = F_max * (hi[i] / self.dane_all['Rw1']) * math.cos(al_si[i])
+            Fy[i] = F_max * (hi[i] / self.dane_all['Rw1']) * math.sin(al_si[i])
+            sily[i] = math.sqrt(math.pow(Fx[i],2)+math.pow(Fy[i],2))
+
+            #NACISKI
+            reke[i] = (self.dane_all['ro'] * (self.dane_all['z'] + 1) * ((1 - 2 * self.dane_all['lam'] * math.cos(self.dane_all['z'] * al_ki[i]) + (self.dane_all['lam']**2))**1.5) / (1 - self.dane_all['lam'] * (self.dane_all['z'] + 2) * math.cos(self.dane_all['z'] * al_ki[i]) + ((self.dane_all['lam'])**2) * (self.dane_all['z'] + 1))) - self.dane_all['g']
+            naprezenia[i] = math.sqrt((sily[i]*math.fabs(self.dane_all['g']+reke[i]))/((self.dane_all['g']*math.fabs(reke[i])*self.dane_all['b'])*(((1-self.dane_all['v1'])/self.dane_all['E1'])+((1-self.dane_all['v2'])/self.dane_all['E2']))*math.pi))
+
+            #STRATY_MOCY
+            AIC[i]= ((self.dane_all['Rw2']**2+(self.dane_all['Ra2']+self.dane_all['g'])**2-2*self.dane_all['Rw2']*(self.dane_all['Ra2']+self.dane_all['g'])*math.cos(reke[i]))**0.5)-self.dane_all['g']
+            straty_mocy[i] = (math.pi*(self.dane_all['nwej']/30))*(self.dane_all['e']/self.dane_all['Rw1'])*(((naprezenia[i]/self.dane_all['g'])+1)*self.dane_all['t1']+(naprezenia[i]/self.dane_all['g'])*self.dane_all['t2'])*sily[i]
+
+            #LUZY MIEDZYZEBNE:
+            x_ze=(self.dane_all['Rw1']+self.dane_all['ro'])*math.sin(al_ki[i])-self.dane_all['e']*math.sin(((self.dane_all['Rw1']+self.dane_all['ro'])/self.dane_all['ro'])*al_ki[i])-(self.dane_all['g']+self.dane_all['l-ze'])*((math.sin(al_ki[i])-self.dane_all['lam']*math.sin((self.dane_all['z']+1)*al_ki[i]))/((1-2*self.dane_all['lam']*math.cos(self.dane_all['z']*al_ki[i])+self.dane_all['lam']**2)**0.5))
+            y_ze=(self.dane_all['Rw1']+self.dane_all['ro'])*math.cos(al_ki[i])-self.dane_all['e']*math.cos(((self.dane_all['Rw1']+self.dane_all['ro'])/self.dane_all['ro'])*al_ki[i])-(self.dane_all['g']+self.dane_all['l-ze'])*((math.cos(al_ki[i])-self.dane_all['lam']*math.cos((self.dane_all['z']+1)*al_ki[i]))/((1-2*self.dane_all['lam']*math.cos(self.dane_all['z']*al_ki[i])+self.dane_all['lam']**2)**0.5))
+            x_ozri=(self.dane_all['Rb2']+self.dane_all['l-rg'])*math.sin(al_ki[i]+self.dane_all['l-ri'])
+            y_ozri=(self.dane_all['Rb2']+self.dane_all['l-rg'])*math.cos(al_ki[i]+self.dane_all['l-ri'])-(self.dane_all['e']+self.dane_all['l-e'])
+            luzy[i]=((((x_ozri-x_ze)**2)+((y_ozri-y_ze)**2))**0.5)-(self.dane_all['g'])
+
+
+            # STARE
+            #kat = kat_glowny*self.przyrost_kata
             #reke=((self.dane_all["ro"]*(self.dane_all["z"]+1)*math.pow((1-(2*self.dane_all["lam"]*math.cos(self.dane_all["z"]*kat*0.0175))+math.pow(self.dane_all["lam"],2)),(3/2)))/(1-(self.dane_all["lam"]*(self.dane_all["z"]+2)*(math.cos(self.dane_all["z"]*kat*0.0175)))+(math.pow(self.dane_all["lam"],2)*(self.dane_all["z"]+1)))-(self.dane_all["g"]))
-            reke = ((self.dane_all["ro"] * (self.dane_all["z"] + 1) * math.pow(
-                (1 - (2 * self.dane_all["lam"] * math.cos(kat * 0.0175)) + math.pow(self.dane_all["lam"], 2)),
-                (3 / 2))) / (1 - (self.dane_all["lam"] * (self.dane_all["z"] + 2) * (math.cos(kat * 0.0175))) + (
-                        math.pow(self.dane_all["lam"], 2) * (self.dane_all["z"] + 1))) - (self.dane_all["g"]))
-            teta=i*self.przyrost_kata
-            x=math.sqrt((math.pow(self.dane_all["Rb"],2))+(math.pow(self.dane_all["Rw1"],2))-(2*self.dane_all["Rb"]*self.dane_all["Rw1"]*math.cos(teta * 0.0175)))
-            beta = math.degrees(math.asin(self.dane_all["Rb"]*math.sin(teta * 0.0175)/x))
-            alfa[a]=90-beta
-            sily[a]=(4*Mk*math.cos(alfa[a] * 0.0175))/(self.dane_all["Rw1"]*(self.dane_all["z"]+1))
+            #reke = ((self.dane_all["ro"] * (self.dane_all["z"] + 1) * math.pow(
+            #    (1 - (2 * self.dane_all["lam"] * math.cos(kat * 0.0175)) + math.pow(self.dane_all["lam"], 2)),
+            #    (3 / 2))) / (1 - (self.dane_all["lam"] * (self.dane_all["z"] + 2) * (math.cos(kat * 0.0175))) + (
+            #            math.pow(self.dane_all["lam"], 2) * (self.dane_all["z"] + 1))) - (self.dane_all["g"]))
+            #teta=i*self.przyrost_kata
+            #x=math.sqrt((math.pow(self.dane_all["Rb"],2))+(math.pow(self.dane_all["Rw1"],2))-(2*self.dane_all["Rb"]*self.dane_all["Rw1"]*math.cos(teta * 0.0175)))
+            #beta = math.degrees(math.asin(self.dane_all["Rb"]*math.sin(teta * 0.0175)/x))
+            #al_ki[i]=90-beta
+            #sily[a]=(4*Mk*math.cos(alfa[a] * 0.0175))/(self.dane_all["Rw1"]*(self.dane_all["z"]+1))
             #naprezenia[a]=math.sqrt((sily[a]*(reke+self.dane_all["g"]))/(self.dane_all["b"]*math.pi*reke*self.dane_all["g"]*(((1-math.pow(self.dane_all["v1"],2))/(self.dane_all["E1"])))+((1-math.pow(self.dane_all["v1"],2))/(self.dane_all["E2"]))))
-            naprezenia[a]=math.sqrt((sily[a]*(reke+self.dane_all["g"]))/((self.dane_all["b"]*3.1415*reke*self.dane_all["g"])*(((1-math.pow(self.dane_all["v1"],2))/(self.dane_all["E1"]))+((1-math.pow(self.dane_all["v2"],2))/(self.dane_all["E2"])))))
+            #naprezenia[a]=math.sqrt((sily[i]*(reke+self.dane_all["g"]))/((self.dane_all["b"]*3.1415*reke*self.dane_all["g"])*(((1-math.pow(self.dane_all["v1"],2))/(self.dane_all["E1"]))+((1-math.pow(self.dane_all["v2"],2))/(self.dane_all["E2"])))))
 
             #Straty Mocy
 
-            AIC = (math.sqrt(math.pow(self.dane_all["Rw2"],2)+math.pow((self.dane_all["Rf1"]+self.dane_all["g"]),2)-2*self.dane_all["g"]*(self.dane_all["Rf1"]+self.dane_all["g"])*math.cos(kat*0.0175)))-self.dane_all["g"]
-            straty_mocy[a]= ((math.pi*self.dane_all["nwej"])/30)*(self.dane_all["Rf2"]/self.dane_all["e"])*(((AIC/self.dane_all["g"])+1)*self.dane_all["t1"]+(AIC/self.dane_all["g"])*self.dane_all["t2"])*sily[a]
-            luzy[a]= 1+kat
-        self.sily=sily
-        self.naprezenia=naprezenia
+            #AIC = (math.sqrt(math.pow(self.dane_all["Rw2"],2)+math.pow((self.dane_all["Rf1"]+self.dane_all["g"]),2)-2*self.dane_all["g"]*(self.dane_all["Rf1"]+self.dane_all["g"])*math.cos(kat*0.0175)))-self.dane_all["g"]
+            #straty_mocy[a]= ((math.pi*self.dane_all["nwej"])/30)*(self.dane_all["Rf2"]/self.dane_all["e"])*(((AIC/self.dane_all["g"])+1)*self.dane_all["t1"]+(AIC/self.dane_all["g"])*self.dane_all["t2"])*sily[i]
+            #luzy[a]= 1+kat
 
         self.wykresy_data_updated.emit(self.dane_all["z"], {
             "sily": sily,
@@ -285,6 +323,9 @@ class DaneMaterialowe(QWidget):
         self.spin_fzarysu = DoubleSpinBox(dane_all["t1"], 0.00001, 0.0001, 0.00001, 5)
         self.spin_frolki = DoubleSpinBox(dane_all["t2"], 0.00001, 0.0001, 0.00001, 5)
 
+        self.spin_fzarysu.setDecimals(5)
+        self.spin_frolki.setDecimals(5)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabelD("DANE MATERIAŁOWE :"))
         layout.addWidget(QLabelD("Moduł Younga koła:"))
@@ -299,10 +340,10 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(self.spin_B)
         layout.addSpacing(80)
         layout.addWidget(QLabelD("DANE KINEMATYCZNE : "))
-        layout.addWidget(QLabelD("Obroty wejsciowe :"))
+        layout.addWidget(QLabelD("Prędkość obrotowa wej :"))
         layout.addWidget(self.spin_nwej)
         self.obliczanie_predkosci_wyjsciowej(dane_all)
-        layout.addWidget(QLabelD("Obroty wyjsciowe :"))
+        layout.addWidget(QLabelD("Prędkość obrotowa wyj :"))
         layout.addWidget(self.spin_nwyj)
         layout.addWidget(QLabelD("Współczynnik tarcia koła :"))
         layout.addWidget(self.spin_fzarysu)
@@ -355,7 +396,7 @@ class Tolerancje(QWidget):
     def __init__(self,dane_all):
         super().__init__()
 
-        self.rysunki = Rysunki_pomocnicze()
+        self.rysunki = Rysunki_pomocnicze(dane_all['sr'])
         main_layout = QVBoxLayout()
 
         layout = QVBoxLayout()
@@ -389,16 +430,16 @@ class Tolerancje(QWidget):
         self.setLayout(main_layout)
 
 class Rysunki_pomocnicze(QWidget):
-    def __init__(self):
+    def __init__(self,sr):
         super().__init__()
 
         layout = QVBoxLayout()
-
+        self.sr = QLabelD(sr)
         layout.addWidget(QLabelD("RYSUNEK 1 :"))
         layout.addWidget(QLabelD("RYSUNEK 2 :"))
         layout.addWidget(QLabelD("RYSUNEK 3 :"))
-        layout.addWidget(QLabelD("RYSUNEK 4 :"))
-        layout.addWidget(QLabelD("RYSUNEK 5 :"))
+        layout.addWidget(QLabelD("ŚREDNICA ZEWNĘTRZNA"))
+        layout.addWidget(self.sr)
 
 
         self.setLayout(layout)

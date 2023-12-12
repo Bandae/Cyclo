@@ -11,7 +11,7 @@ import threading
 # WAZNE TODO: juz wiem. jak sie nie obroci ukladu odniesienia, tylko przesunie, to otwory sie dobrze przechodza
 
 # dopoki nie powroci do glownego programu po event.clear() to nie skonczy wykonywac animacji. Moze byc potrzebne zmuszenei uzytkowanika do zatrzymania animacji zeby cokolwiek zrobic jak sie te bledy nie poprawaia :(
-def tworz_zarys_kola(z, ro, h, g, scala, pozycja_mimosrodu, data_wiktor):
+def tworz_zarys_kola(z, ro, h, g, scala, pozycja_mimosrodu, data_wiktor,ktory):
     zarys = QPainterPath()
     points = QPolygon()
     for j in range(0,1440):
@@ -30,22 +30,34 @@ def tworz_zarys_kola(z, ro, h, g, scala, pozycja_mimosrodu, data_wiktor):
     zarys.addPolygon(points)
     
     if data_wiktor is not None:
-        zarys = wytnij_otwory(zarys, scala, pozycja_mimosrodu, data_wiktor)
+        zarys = wytnij_otwory(zarys, scala, pozycja_mimosrodu, data_wiktor, ktory)
     
     return zarys
 
-def wytnij_otwory(zarys, scala, pozycja_mimosrodu, dane_wiktor):
+def wytnij_otwory(zarys, scala, pozycja_mimosrodu, dane_wiktor, ktory):
     liczba_tuleji = dane_wiktor["n"]
     R_wk = dane_wiktor["R_wk"]
     d_otw = dane_wiktor["d_otw"] * scala
+    d_tul = dane_wiktor['d_tul']*scala
     mimo_x, mimo_y = pozycja_mimosrodu
 
     otwory = QPainterPath()
-    for i in range(liczba_tuleji):
-        fi_kj = (2 * math.pi * (i - 1)) / liczba_tuleji
-        x_okj = (R_wk * math.cos(fi_kj) + mimo_x) * scala - d_otw / 2
-        y_okj = (R_wk * math.sin(fi_kj) + mimo_y) * scala - d_otw / 2
-        otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
+    if ktory==1:
+        for i in range(liczba_tuleji):
+            fi_kj = (2 * math.pi * i) / liczba_tuleji
+            x_okj = (R_wk * math.cos(fi_kj) + mimo_x) * scala - d_otw / 2
+            y_okj = (R_wk * math.sin(fi_kj) + mimo_y) * scala - d_otw / 2
+            otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
+    elif ktory==2:
+        for i in range(liczba_tuleji):
+            fi_kj = (2 * math.pi * i) / liczba_tuleji
+            x_okj = (R_wk * math.cos(fi_kj) - mimo_x) * scala - d_otw / 2
+            y_okj = (R_wk * math.sin(fi_kj) - mimo_y) * scala - d_otw / 2
+            otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
+    else :
+        r=((R_wk*2*scala)+(d_tul*(100/87)))
+        otwory.addEllipse(-(r/2), -(r/2), r, r)
+
     return zarys.subtracted(otwory)
 
 def rysowanie_tuleje(painter, scala, dane_wiktor, kolory):
@@ -160,6 +172,7 @@ class Animacja(QLabel):
     GRAY = "#323434"
     GRAY_DARK = "#92929"
     PASTEL_BLUE = '#ADD8E6'
+    PASTEL_BLUE2 = '#BDE4E6'
     def __init__(self, parent, data):
         super().__init__(parent)
 
@@ -209,18 +222,20 @@ class Animacja(QLabel):
         painter.drawEllipse((-(((self.data["Rg"] * scala * 2)))/ 2),-(((self.data["Rg"] * scala * 2))) / 2,((self.data["Rg"] * scala * 2)),((self.data["Rg"] * scala * 2)))
 
         # rysowanie zarysu :
-        zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor)
+        zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor,1)
+        zarys2 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor,2)
+        zarys3 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor, 3)
 
-        painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
-        dodatkowy_obrot = 3
-        # 5, 10, 15, 20 otworow ==> 3
-        # inaczej troche nie dziala
+        painter.setBrush(QBrush(self.PASTEL_BLUE2, Qt.SolidPattern))
 
-        painter.rotate(self.kat_dorotacji-dodatkowy_obrot*self.skok_kata)
-        painter.drawPath(zarys)
-        painter.rotate(-self.kat_dorotacji+self.kat_dorotacji2+dodatkowy_obrot*self.skok_kata)
+        painter.rotate(self.kat_dorotacji)
         if self.data["K"] == 2:
-            painter.drawPath(zarys)
+            painter.drawPath(zarys3)
+        painter.rotate(-self.kat_dorotacji+self.kat_dorotacji2)
+        if self.data["K"] == 2:
+            painter.drawPath(zarys2)
+        painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
+        painter.drawPath(zarys)
 
         if self.data_wiktor is not None:
             rysowanie_tuleje(painter, scala, self.data_wiktor, {"tuleje": self.METAL_DARK,"sworznie": self.SLATE})
