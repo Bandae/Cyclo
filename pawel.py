@@ -25,7 +25,7 @@ class DataEdit(QWidget):
             "Ra1" : 0,      "Rf1": 0,
             "Rw1": 0,       "Ra2": 0,
             "Rf2": 0,       "Rw2": 0,
-            "Rb" : 0,       "Rb3":0,
+            "Rb" : 0,       "Rb2":0,
             "Rg" : 0,       "sr":0,
             "e" : 0,        "h" : 0,
             "Mwej" : 500,   "K" : 2,
@@ -146,11 +146,9 @@ class DataEdit(QWidget):
         self.obliczenia_sil()
 
     def obliczenia_sil(self,kat_glowny=0):
-        if self.dane_all["z"]%2==0:
-            self.liczba_obciazonych_rolek = int(self.dane_all["z"]/2)+1
-        else :
-            self.liczba_obciazonych_rolek = int((self.dane_all["z"]+1)/2)+1
-        self.przyrost_kata = 360/(self.dane_all["z"]+1)
+
+        self.liczba_obciazonych_rolek = int(self.dane_all["z"])+1
+
 
         F_max = (1000*4*(self.dane_all['Mwej']/self.dane_all['K']))/(self.dane_all['Rw1']*(self.dane_all['z']+1))
 
@@ -175,7 +173,7 @@ class DataEdit(QWidget):
             #NOWE
 
             #SILY
-            al_ki[i] = (2*math.pi*i)/(self.dane_all['z']+1)
+            al_ki[i] = (2*math.pi*i)/(self.dane_all['z']+1) + kat_glowny
             al_si[i] = (math.pi/2)-(math.fabs(math.atan((self.dane_all['Rb2']*math.sin(al_ki[i]))/((self.dane_all['Rw1']+self.dane_all['e'])-(self.dane_all['Rb2']*math.cos(al_ki[i]))))))
             hi[i] = self.dane_all['Rw1'] * math.cos(al_si[i])
             Fx[i] = F_max * (hi[i] / self.dane_all['Rw1']) * math.cos(al_si[i])
@@ -342,10 +340,10 @@ class DaneMaterialowe(QWidget):
         layout.addWidget(self.spin_B)
         layout.addSpacing(80)
         layout.addWidget(QLabelD("DANE KINEMATYCZNE : "))
-        layout.addWidget(QLabelD("Obroty wejsciowe :"))
+        layout.addWidget(QLabelD("Prędkość obrotowa wej :"))
         layout.addWidget(self.spin_nwej)
         self.obliczanie_predkosci_wyjsciowej(dane_all)
-        layout.addWidget(QLabelD("Obroty wyjsciowe :"))
+        layout.addWidget(QLabelD("Prędkość obrotowa wyj :"))
         layout.addWidget(self.spin_nwyj)
         layout.addWidget(QLabelD("Współczynnik tarcia koła :"))
         layout.addWidget(self.spin_fzarysu)
