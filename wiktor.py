@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QComboBox, QStackedLayout, QCheckBox, QButtonGroup
 from PySide2.QtCore import Signal, QSize, Qt
-from PySide2.QtGui import QIcon, QPixmap
+from PySide2.QtGui import QIcon
 from Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
 from Mech_wyj_tuleje.wykresy import ResultsTab
 from functools import partial
@@ -450,14 +450,12 @@ class TabWiktor(AbstractTab):
         self.data = DataEdit(self)
         self.wykresy = ResultsTab(self)
         self.tol_edit = ToleranceEdit(self)
-        help_img = QLabel()
-        pixmap = QPixmap("icons//pomoc_mechanizm_I.png").scaledToWidth(650)
-        help_img.setPixmap(pixmap)
+        
         self.data.wykresy_data_updated.connect(self.wykresy.updateResults)
         self.tol_edit.tolerance_data_updated.connect(self.data.toleranceUpdate)
 
-        tab_titles = ["Pomoc", "Wprowadzanie Danych", "Wykresy", "Tolerancje"]
-        stacked_widgets = [help_img, self.data, self.wykresy, self.tol_edit]
+        tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
+        stacked_widgets = [self.data, self.wykresy, self.tol_edit]
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
             button = QPushButton(title)
@@ -486,7 +484,7 @@ class TabWiktor(AbstractTab):
         M_k = self.data.zew_dane["M"] / self.data.zew_dane["K"]
         R_wt = self.data.input_dane["R_wk"]
         return {
-            "F_wm": 1000 * 4 * M_k/ (pi * R_wt),
+            "F_wm": 1000 * 4 * M_k / (pi * R_wt),
             "r_m": pi * R_wt / 4,
         }
     

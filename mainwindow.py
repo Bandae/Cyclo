@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
-from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt
+from PySide2.QtGui import QIcon, QPixmap
+from PySide2.QtCore import Qt, QSize
 from main_view import AnimationView
 from pawel import Tab_Pawel
 from wiktor import TabWiktor
@@ -66,6 +66,12 @@ class MainWindow(QMainWindow):
         self.wiktor.data.errors_updated.connect(self.error_box.updateErrors)
         self.error_box.resetErrors()
 
+        self.help_button = QPushButton(central_widget)
+        self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
+        self.help_button.setIconSize(QSize(140, 140))
+        self.help_button.resize(150, 150)
+        self.help_button.pressed.connect(self.helpClicked)
+
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
         self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil]
 
@@ -120,6 +126,27 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
     
+    def resizeEvent(self, event) -> None:
+        try:
+            w = self.animation_view.size().width()
+            self.help_button.move(w-150, 20)
+        except AttributeError:
+            # pierwsze ustalenie rozmiaru okna, jeszcze nie ma animation view.
+            pass
+        return super().resizeEvent(event)
+
+    def helpClicked(self):
+        btn_size = self.help_button.size()
+        btn_pos = self.help_button.pos()
+        if btn_size.width() == 150:
+            self.help_button.move(btn_pos.x() - 450, 20)
+            self.help_button.resize(600, 600)
+            self.help_button.setIconSize(QSize(590, 590))
+        else:
+            self.help_button.move(btn_pos.x() + 450, 20)
+            self.help_button.resize(150, 150)
+            self.help_button.setIconSize(QSize(140, 140))
+
     def closeEvent(self, event):
         dialog = QDialog(self, Qt.WindowCloseButtonHint)
         dialog.setWindowTitle("Zapisać zmiany?")
@@ -154,6 +181,13 @@ class MainWindow(QMainWindow):
             tab_widget.receiveData(new_data)
 
         self.stacklayout.setCurrentIndex(index)
+        self.help_button.show()
+        if index == 0:
+            self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
+        elif index == 1:
+            self.help_button.setIcon(QIcon("icons//pomoc_mechanizm_I.bmp"))
+        else:
+            self.help_button.hide()
     
     def onAnimationTick(self, kat):
         self.wiktor.data.inputsModified(kat, self.wiktor.use_this_check.isChecked())
@@ -169,7 +203,7 @@ class MainWindow(QMainWindow):
         if self.error_box.errorsExist():
             QMessageBox.critical(self, 'Błąd', 'Przed generowaniem raportu, pozbądź się błędów.')
             return
-        file_name = "CycloRaport_" + datetime.today().strftime('%d.%m.%Y_%H:%M:%S') + ".rtf"
+        file_name = "CycloRaport_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".rtf"
         try:
             with open(file_name, 'w') as f:
                 f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Lato;}}\\f0\\fs24")
@@ -184,7 +218,7 @@ class MainWindow(QMainWindow):
         if self.error_box.errorsExist():
             QMessageBox.critical(self, 'Błąd', 'Przed generowaniem csv, pozbądź się błędów.')
             return
-        file_name = "CycloWykresy_" + datetime.today().strftime('%d.%m.%Y_%H:%M:%S') + ".csv"
+        file_name = "CycloWykresy_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".csv"
         try:
             with open(file_name, "w") as f:
                 for tab_widget in self.stacked_widgets:

@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
 from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath
-from PySide2.QtCore import QPoint, QSize, Qt, Signal
+from PySide2.QtCore import QPoint, QSize, Qt, Signal, QRect
 import math
 import time
 import threading
@@ -83,24 +83,29 @@ class AnimationView(QWidget):
 
         main_layout = QVBoxLayout()
         animation_controls = QGridLayout()
-        self.start_animation_button = QPushButton("START ANIMACJI")
-        self.restet_animacji = QPushButton("POZYCJA POCZĄTKOWA")
-        self.slider = QSlider(Qt.Horizontal)
-        self.slider.setMaximumWidth(400)
+        bcgrd = QWidget(self)
+        bcgrd.setMaximumHeight(60)
+        self.start_animation_button = QPushButton("START ANIMACJI", bcgrd)
+        self.restet_animacji = QPushButton("POZYCJA POCZĄTKOWA", bcgrd)
+        self.slider = QSlider(Qt.Horizontal, bcgrd)
         self.slider.setMaximum(360)
         self.slider.valueChanged.connect(self.setAngle)
         self.animacja.animation_tick.connect(self.updateSlider)
-        self.angle_label = QLabel()
-        self.start_animation_button.setCheckable(True)
+        self.angle_label = QLabel(bcgrd)
+        self.start_animation_button.setMaximumSize(160, 20)
         self.start_animation_button.clicked.connect(self.startPrzycisk)
+        self.restet_animacji.setMaximumSize(160, 20)
         self.restet_animacji.clicked.connect(self.resetAnimacji)
 
+        bcgrd.setLayout(animation_controls)
         animation_controls.addWidget(self.start_animation_button, 1, 0)
         animation_controls.addWidget(self.restet_animacji, 1, 1)
-        animation_controls.addWidget(self.slider, 0, 0)
-        animation_controls.addWidget(self.angle_label, 0, 1)
+        animation_controls.addWidget(self.slider, 0, 0, 1, 2)
+        animation_controls.addWidget(self.angle_label, 0, 3)
         main_layout.addWidget(self.animacja)
-        main_layout.addLayout(animation_controls)
+        main_layout.addWidget(bcgrd)
+        main_layout.setAlignment(Qt.AlignHCenter)
+        animation_controls.setAlignment(Qt.AlignHCenter)
         main_layout.setContentsMargins(80, 20, 80, 20)
         self.setLayout(main_layout)
 
@@ -158,7 +163,7 @@ class Animacja(QLabel):
     def __init__(self, parent, data):
         super().__init__(parent)
 
-        self.setMinimumSize(640,640)
+        self.setMinimumSize(750,750)
         self.data = data
         self.data_wiktor = None
         self.kat_ = 0
@@ -183,14 +188,14 @@ class Animacja(QLabel):
         painter = QPainter(pixmap)
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
-        painter.translate(320,320)
+        painter.translate(350,350)
 
         self.data["z"]=int(self.data["z"])
         liczba_rolek = self.data["z"]+1
         self.skok_kata = 360/liczba_rolek
 
         #skalowanie rysunku :
-        paint_area = 600
+        paint_area = 700
         max_size = (self.data["Rg"] * 2) + (self.data["g"] * 4)
         scala = paint_area / max_size
 
