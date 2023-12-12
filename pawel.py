@@ -313,7 +313,7 @@ class Tab_Pawel(AbstractTab):
 
         text = "{\\pard\\qc\\f0\\fs44 Dane Zarysu : \\line\\par}"
         text += table_row("Srednica zewnętrzna", round(self.data.dane_all['sr'],2), "mm")
-        text += table_row("Liczba ząbów", round(self.data.dane_all['z'],2), "")
+        text += table_row("Liczba ząbów", round(self.data.dane_all['z']), "")
         text += table_row("Promień koła obtaczającego", round(self.data.dane_all['ro'],2), "mm")
         text += table_row("Promień Krzywizny", round(self.data.dane_all['lam'],2), "mm")
         text += table_row("Promień rolki",round( self.data.dane_all['g'],2), "mm")
@@ -346,11 +346,11 @@ class Tab_Pawel(AbstractTab):
         text += table_row("Współczynnik tarcia 2", round(self.data.dane_all['t2'],2), "")
 
         text += "{\\pard\\qc\\f0\\fs44 Tolerancje : \\line\\par}"
-        text += table_row("Tolerancja l-ze", round(self.data.dane_all['l-ze'],2), "mm")
-        text += table_row("Tolerancja l-rg", round(self.data.dane_all['l-rg'],2), "mm")
-        text += table_row("Tolerancja l-ri", round(self.data.dane_all['l-ri'],2), "mm")
-        text += table_row("Tolerancja l-rr", round(self.data.dane_all['l-rr'],2), "mm")
-        text += table_row("Tolerancja l-e", round(self.data.dane_all['l-e'],2), "mm")
+        text += table_row("Tolerancja l-ze", round(self.data.dane_all['l-ze'],5), "mm")
+        text += table_row("Tolerancja l-rg", round(self.data.dane_all['l-rg'],5), "mm")
+        text += table_row("Tolerancja l-ri", round(self.data.dane_all['l-ri'],5), "mm")
+        text += table_row("Tolerancja l-rr", round(self.data.dane_all['l-rr'],5), "mm")
+        text += table_row("Tolerancja l-e", round(self.data.dane_all['l-e'],5), "mm")
 
         return text
 
