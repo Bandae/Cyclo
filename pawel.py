@@ -305,6 +305,55 @@ class Tab_Pawel(AbstractTab):
         self.data.dane_all = dane
         self.data.dane_materialowe.zmiana_danych(dane)
 
+    def reportData(self):
+        def table_row(cell1, cell2, cell3):
+            a = "{\\trowd \\trgaph10 \\cellx5000 \\cellx7000 \\cellx8000 \\pard\\intbl "
+            b = "\\cell\\pard\\intbl "
+            return a + str(cell1) + b + str(cell2) + b + str(cell3) + " \\cell\\row}"
+
+        text = "{\\pard\\qc\\f0\\fs44 Dane Zarysu : \\line\\par}"
+        text += table_row("Srednica zewnętrzna", round(self.data.dane_all['sr'],2), "mm")
+        text += table_row("Liczba ząbów", round(self.data.dane_all['z'],2), "")
+        text += table_row("Promień koła obtaczającego", round(self.data.dane_all['ro'],2), "mm")
+        text += table_row("Promień Krzywizny", round(self.data.dane_all['lam'],2), "mm")
+        text += table_row("Promień rolki",round( self.data.dane_all['g'],2), "mm")
+        text += table_row("Promień koła wierzchołkowego Ra1", round(self.data.dane_all['Ra1'],2), "mm")
+        text += table_row("Promień koła stóp Rf1", round(self.data.dane_all['Rf1'],2), "mm")
+        text += table_row("Promień koła tocznego Rw1", round(self.data.dane_all['Rw1'],2), "mm")
+        text += table_row("Promień koła wierzchołkowego Ra2", round(self.data.dane_all['Ra2'],2), "mm")
+        text += table_row("Promień koła stóp Rf2", round(self.data.dane_all['Rf2'],2), "mm")
+        text += table_row("Promień koła tocznego Rw2", round(self.data.dane_all['Rw2'],2), "mm")
+        text += table_row("Promień koła zasadniczego Rb1", round(self.data.dane_all['Rb'],2), "mm")
+        text += table_row("Promień koła zasadniczego Rb2", round(self.data.dane_all['Rb2'],2), "mm")
+        text += table_row("Promień rozmieszczenia rolki Rg", round(self.data.dane_all['Rg'],2), "mm")
+        text += table_row("Mimośród", round(self.data.dane_all['e'],2), "mm")
+        text += table_row("Wysokość zęba", round(self.data.dane_all['h'],2), "mm")
+        text += table_row("Promień rolki", round(self.data.dane_all['K'],2), "mm")
+        text += table_row("Szerokość kół", round(self.data.dane_all['b'],2), "mm")
+
+        text += "{\\pard\\qc\\f0\\fs44 Dane Materiałowe : \\line\\par}"
+
+        text += table_row("Moduł Yonga 1", round(self.data.dane_all['E1'],2), "")
+        text += table_row("Moduł Yonga 2", round(self.data.dane_all['E2'],2), "")
+        text += table_row("Współczynnik poissona 1", round(self.data.dane_all['v1'],2), "")
+        text += table_row("Współczynnik poissona 2", round(self.data.dane_all['v2'],2), "")
+
+        text += "{\\pard\\qc\\f0\\fs44 Dane Kinematyczne : \\line\\par}"
+        text += table_row("Moment wyjsciowy", round(self.data.dane_all['Mwej'],2), "Nm")
+        text += table_row("Obroty na wejściu", round(self.data.dane_all['nwej'],2), "n/min")
+        text += table_row("Obroty na wyjsciu", round(self.data.dane_all['nwyj'],2), "n/min")
+        text += table_row("Współczynnik tarcia 1", round(self.data.dane_all['t1'],2), "")
+        text += table_row("Współczynnik tarcia 2", round(self.data.dane_all['t2'],2), "")
+
+        text += "{\\pard\\qc\\f0\\fs44 Tolerancje : \\line\\par}"
+        text += table_row("Tolerancja l-ze", round(self.data.dane_all['l-ze'],2), "mm")
+        text += table_row("Tolerancja l-rg", round(self.data.dane_all['l-rg'],2), "mm")
+        text += table_row("Tolerancja l-ri", round(self.data.dane_all['l-ri'],2), "mm")
+        text += table_row("Tolerancja l-rr", round(self.data.dane_all['l-rr'],2), "mm")
+        text += table_row("Tolerancja l-e", round(self.data.dane_all['l-e'],2), "mm")
+
+        return text
+
 
 class DaneMaterialowe(QWidget):
     def __init__(self, liczba_z,dane_all):
@@ -443,3 +492,4 @@ class Rysunki_pomocnicze(QWidget):
 
 
         self.setLayout(layout)
+
