@@ -4,12 +4,13 @@ if TYPE_CHECKING:
     from mainwindow import MainWindow
 
 from PySide2.QtWidgets import QWidget
+from PySide2.QtCore import Signal
 from typing import Union, Dict
 
 # Typ danych przekazywanych miedzy zakladkami
 # {
-#     "pawel": {"nazwa_danej": dana, "nazwa_danej": dana, ...},
-#     "wiktor": {...},
+#     "GearTab": {"nazwa_danej": dana, "nazwa_danej": dana, ...},
+#     "PinOutTab": {...},
 #     ...
 # }
 DaneZakladek = Dict[str, Dict[str, Union[int, float, str, dict, list]]]
@@ -17,6 +18,10 @@ DaneZapis = Dict[str, Union[int, float, str, dict, list]]
 
 class AbstractTab(QWidget):
     '''Abstrakcyjna klasa do dziedziczenia przez każdą z naszych zakładek.'''
+
+    dataChanged = Signal(dict)
+    # sygnal wysyłany, kiedy zmienią się dane potrzebne dla innych zakładek
+
     def __init__(self, parent: MainWindow) -> None:
         super().__init__(parent)
     

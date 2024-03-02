@@ -1,16 +1,19 @@
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
-from PySide2.QtGui import QIcon, QPixmap
-from PySide2.QtCore import Qt, QSize
-from main_view import AnimationView
-from pawel import Tab_Pawel
-from wiktor import TabWiktor
-from milosz import Tab_Milosz
-from kamil import Tab_Kamil
-from error_widget import ErrorWidget
+from functools import partial
+import datetime
 import json
 import re
-import datetime
-from functools import partial
+
+from PySide2.QtCore import Qt, QSize
+from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
+
+from base_data_widget import BaseDataWidget
+from error_widget import ErrorWidget
+from kamil import Tab_Kamil
+from main_view import AnimationView
+from milosz import Tab_Milosz
+from pawel import Tab_Pawel
+from wiktor import TabWiktor
 
 # TODO: moze jedna metode zrobic z tego wszystkiego do generowaniaa raport csv dxf
 
@@ -32,19 +35,19 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
 
         self.pawel = Tab_Pawel(central_widget)
-        self.pawel.animDataUpdated.connect(self.updateAnimationData)
-        self.pawel.update_other_tabs.connect(lambda: self.activateTab(0))
+        self.pawel.data.animDataUpdated.connect(self.updateAnimationData)
 
         self.wiktor = TabWiktor(central_widget)
         self.wiktor.data.animDataUpdated.connect(self.updateAnimationData)
+        self.pawel.data.dane_materialowe.wheelMatChanged.connect(self.wiktor.data.material_frame.changeWheelMat)
 
         milosz = Tab_Milosz(central_widget)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.wiktor.this_enabled.connect(milosz.useOtherChanged)
+        self.wiktor.thisEnabled.connect(milosz.useOtherChanged)
         milosz.this_enabled.connect(self.wiktor.useOtherChanged)
 
-        kamil = Tab_Kamil(self)
+        kamil = Tab_Kamil(central_widget)
 
         main_layout = QGridLayout()
         data_layout = QVBoxLayout()
@@ -52,7 +55,7 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
 
-        self.animation_view = AnimationView(central_widget, self.pawel.data.dane_all)
+        self.animation_view = AnimationView(central_widget, self.pawel.data.dane_all.copy())
         animation_layout.addWidget(self.animation_view)
         self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
 
@@ -63,7 +66,8 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(data_layout,0,7,1,3)
         self.error_box = ErrorWidget(central_widget)
         self.error_box.show()
-        self.wiktor.data.errors_updated.connect(self.error_box.updateErrors)
+        self.wiktor.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
+        self.pawel.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
         self.help_button = QPushButton(central_widget)
@@ -74,6 +78,9 @@ class MainWindow(QMainWindow):
         self.help_label.move(10, 10)
         self.help_button.pressed.connect(self.helpClicked)
 
+        self.base_data = BaseDataWidget(central_widget)
+        self.base_data.dataChanged.connect(self.exchangeData)
+
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
         self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil]
 
@@ -81,13 +88,12 @@ class MainWindow(QMainWindow):
             button = QPushButton(title)
             button_layout.addWidget(button)
             self.stacklayout.addWidget(widget)
+            widget.dataChanged.connect(self.exchangeData)
             button.pressed.connect(partial(self.activateTab, index))
         
         #Menu główne:
         menu = self.menuBar()
-
-        #FILE MENU :
-        filemenu =menu.addMenu("&Plik")
+        filemenu = menu.addMenu("&Plik")
 
         otworz = QAction("Otwórz",self)
         filemenu.addAction(otworz)
@@ -117,7 +123,7 @@ class MainWindow(QMainWindow):
         # eksport_menu.addAction(eksport_dxf)
         # eksport_dxf.triggered.connect(self.generateDXF)
 
-        #PRZECHPDZENIE MIĘDZY SEKCJAMI MENU :
+        #PRZECHODZENIE MIĘDZY SEKCJAMI MENU :
         sectionmenu = menu.addMenu("&Sekcja")
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
@@ -130,8 +136,9 @@ class MainWindow(QMainWindow):
     
     def resizeEvent(self, event) -> None:
         try:
-            w = self.animation_view.size().width()
+            w, h = self.animation_view.size().toTuple()
             self.help_button.move(w-150, 20)
+            self.base_data.move(w-200, h-120)
         except AttributeError:
             # pierwsze ustalenie rozmiaru okna, jeszcze nie ma animation view.
             pass
@@ -179,11 +186,6 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def activateTab(self, index):
-        previous = self.stacklayout.currentIndex()
-        new_data = self.stacked_widgets[previous].sendData()
-        for tab_widget in self.stacked_widgets:
-            tab_widget.receiveData(new_data)
-
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
         if index == 0:
@@ -192,6 +194,10 @@ class MainWindow(QMainWindow):
             self.help_button.setIcon(QIcon("icons//pomoc_mechanizm_I.bmp"))
         else:
             self.help_button.hide()
+    
+    def exchangeData(self, passed_data):
+        for tab_widget in self.stacked_widgets:
+            tab_widget.receiveData(passed_data)
     
     def onAnimationTick(self, kat):
         self.wiktor.data.inputsModified(kat)
@@ -206,7 +212,9 @@ class MainWindow(QMainWindow):
         file_name = "CycloRaport_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".rtf"
         try:
             with open(file_name, 'w') as f:
-                f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Lato;}}\\f0\\fs24")
+                f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs20")
+                f.write("{\\pard\\qc\\b Raport \\line\\par}")
+                f.write(self.base_data.reportData())
                 for tab_widget in self.stacked_widgets:
                     f.write(tab_widget.reportData())
                 f.write("}")
@@ -254,6 +262,7 @@ class MainWindow(QMainWindow):
             return
         
         self.loaded_file = file_path
+        self.base_data.loadData(data.get("base"))
         for key, tab in zip(self.tab_titles, self.stacked_widgets):
             tab.loadData(data.get(key))
         
@@ -275,6 +284,7 @@ class MainWindow(QMainWindow):
         self.activateTab(0)
         self.activateTab(1)
         data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
+        data.update({"base": self.base_data.saveData()})
         if self.loaded_file is not None and mode != "save as":
             save_ess(self.loaded_file, data)
             return

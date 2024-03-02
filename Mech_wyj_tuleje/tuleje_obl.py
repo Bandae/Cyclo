@@ -77,12 +77,7 @@ def oblicz_d_sworzen(M_gmax, k_g):
     return round((32 * M_gmax / (math.pi * k_g * 10**6))**(1/3) * 1000, 2)
 
 def oblicz_sily(F_max, lista_fi_kj):
-    # F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
     return [F_max * math.sin(fi_kj) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
-    # for i in range(1, n_sworzni + 1):
-        # F_j = M_k * (R_wk * math.sin(obl_fi_kj(i)) / sum(
-        #     [R_wk**2 * math.sin(obl_fi_kj(j))**2 for j in range(1, n_sworzni + 1)]
-        # ))
 
 def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t, tolerancje):
     R_otw = d_otw / 2 if tolerancje is None else d_otw / 2 + tolerancje["T_o"]
@@ -91,11 +86,11 @@ def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t, tolerancje):
     stala = (R_otw - R_tul) / (b_kola * math.pi * R_tul * R_otw * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)))
     return [math.sqrt(F_j * stala) for F_j in sily]
 
-def oblicz_luzy_odchylka(R_wk, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje):
+def oblicz_luzy_odchylka(R_wt, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje):
     odch_R_otwj = (d_otw/2) + tolerancje["T_o"]
     odch_R_tzj = (d_tul/2) + tolerancje["T_t"]
-    odch_R_wk = R_wk + tolerancje["T_Rk"]
-    odch_R_wt = R_wk + tolerancje["T_Rt"]
+    odch_R_wk = R_wt + tolerancje["T_Rk"]
+    odch_R_wt = R_wt + tolerancje["T_Rt"]
     odch_e = mimosrod + tolerancje["T_e"]
 
     def oblicz_luz(fi_kj):
@@ -110,12 +105,12 @@ def oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v
     c = (4.9 * 10**-3) * math.sqrt((F_max / b_kola) * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)) * (R_otw * R_tul / (R_otw - R_tul)))
     return (F_max / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) * ((1 / 3) + math.log((4 * R_otw) / c))) + ((1 - v_t**2) / E_t) * ((1 / 3) + math.log((4 * R_tul) / c))
 
-def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, mimosrod, d_tul, d_otw, strzalki, tolerancje, E_k, v_k, E_t, v_t):
+def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, mimosrod, d_tul, d_otw, strzalki, tolerancje, E_k, v_k, E_t, v_t):
     del_max = oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t)
     delty = [del_max * math.sin(fi) for fi in lista_fi_kj]
-    luzy = oblicz_luzy_odchylka(R_wk, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje)
+    luzy = oblicz_luzy_odchylka(R_wt, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje)
 
-    list_h_j = [R_wk * math.sin(fi) for fi in lista_fi_kj]
+    list_h_j = [R_wt * math.sin(fi) for fi in lista_fi_kj]
     min_beta_obr = min([luz / h_j for luz, h_j in zip(luzy, list_h_j) if h_j > 0])
     temp = [(f_j + del_j - (luz_j - h_j * min_beta_obr)) * h_j for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
     suma = sum([temp_j if temp_j > 0 else 0 for temp_j in temp])
@@ -130,14 +125,14 @@ def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     stala = omg_0 * (odch_e / R_w1) * ((R_w1 + odch_e) / (odch_R_tul - odch_R_sw)) * (f_kt + f_ts)
     return [F_j * stala for F_j in sily]
 
-def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
-    M_k = dane_zew["M"] / dane_zew["K"]
-    E, k_g = dane["mat_sw"]["E"], dane["mat_sw"]["k_g"]
-    E_k, v_k = dane_zew["E_kola"], dane_zew["v_kola"]
-    E_t, v_t = dane["mat_tul"]["E"], dane["mat_tul"]["v"]
-    b_kola = dane["b"]
+def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
+    M_k = dane_zew["M_wyj"] / dane_zew["K"]
+    E, k_g = material_data["pin"]["E"], material_data["pin"]["Re"] / material_data["pin_sft_coef"]
+    E_k, v_k = material_data["wheel"]["E"], material_data["wheel"]["v"]
+    E_t, v_t = material_data["sleeve"]["E"], material_data["sleeve"]["v"]
+    b_kola = dane_zew["B"]
     n_sworzni = dane["n"]
-    R_wk = dane["R_wk"]
+    R_wt = dane["R_wt"]
     e1, e2 = dane["e1"], dane["e2"]
     podparcie = dane["podparcie"]
     d_tul, d_sw = dane["d_tul"], dane["d_sw"]
@@ -151,7 +146,7 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
     elif tolerancje.get("tolerances") is not None:
         mode = "deviations"
 
-    F_max = 1000 * ((4 * M_k) / (R_wk * n_sworzni)) # N
+    F_max = 1000 * ((4 * M_k) / (R_wt * n_sworzni)) # N
     lista_fi_kj = lista_fi_sworzni(n_sworzni, kat)
     lista_fi_gladka = lista_fi_sworzni(40, kat)
     sily_0 = oblicz_sily(F_max, lista_fi_kj)
@@ -167,8 +162,9 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
 
     strzalki = oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2)
     strzalki_gladkie = oblicz_fs(podparcie, K, sily_0_gladkie, E, b_kola, d_sw, e1, e2)
-    sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wk, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
-    sily_gladkie = oblicz_sily_odchylka(M_k, lista_fi_gladka, F_max, b_kola, R_wk, e, d_tul, d_otw_obl, strzalki_gladkie, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0_gladkie
+    sily = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0
+    sily_gladkie = oblicz_sily_odchylka(M_k, lista_fi_gladka, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki_gladkie, tolerancje["tolerances"], E_k, v_k, E_t, v_t) if mode == "deviations" else sily_0_gladkie
+    p_max = oblicz_naciski((F_max,), d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])[0]
     naciski = oblicz_naciski(sily, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
     naciski_gladkie = oblicz_naciski(sily_gladkie, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
     straty = oblicz_straty(omg_0, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
@@ -178,6 +174,8 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, tolerancje, kat):
         "d_s_obl": d_smax,
         "d_t_obl": d_tul_obl,
         "d_o_obl": d_otw_obl,
+        "F_max": round(F_max, 1),
+        "p_max": round(p_max, 2),
         "sily": ([round(sila, 2) for sila in sily], [round(sila, 2) for sila in sily_gladkie]),
         "naciski": ([round(nacisk, 2) for nacisk in naciski], [round(nacisk, 2) for nacisk in naciski_gladkie]),
         "straty": ([round(strata, 3) for strata in straty], [round(strata, 2) for strata in straty_gladkie]),

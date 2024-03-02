@@ -268,20 +268,23 @@ class Animacja(QLabel):
             self.kat_ += self.skok_kata
             self.kat_2 += self.skok_kata
             self.rysowanko()
-            self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
             if self.data is None:
                 return
+            self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
             if self.kat_ >= 360*(self.data["z"]+1):
                 self.kat_ = 0
                 self.kat_2 = 180*(self.data["z"]+1)
 
     def updateAnimationData(self, data):
-        old_z = self.data["z"]
+        old_z = self.data["z"] if self.data is not None else None
         if data.get("GearTab") == False:
             self.data = None
+            self.rysowanko()
             return
         elif data.get("GearTab") is not None:
             self.data = data["GearTab"]
+        elif self.data is None:
+            return
         
         if data.get("PinOutTab") == False:
             self.data_wiktor = None
