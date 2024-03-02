@@ -4,7 +4,7 @@ from pawlowe.wykresy import Wykresy
 import math
 from functools import partial
 from abstract_tab import AbstractTab
-from common_widgets import DoubleSpinBox, QLabelD
+from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox
 
 #TODO: pawel i wiktor tab, a takze nasze wykresy są tak podobne schematycznie, że może da rade z nich zrobić jakąś wspólną klase abstrakcyjną do dziedziczenia
 #TODO: podajesz kopie wartosci liczby zebow a nie odniesienie. wiec sie nie zmienia wcale n wyj jak sie zmieni liczbe zebow. wykorzystalem juz istniejace update_animation_data zeby to naprawic, mozna zmienic jeszcze
@@ -44,7 +44,7 @@ class DataEdit(QWidget):
         self.liczba_obciazonych_rolek = 0
         self.przyrost_kata = 360 / (self.dane_all["z"] + 1)
 
-        self.spin_z = DoubleSpinBox(self.dane_all["z"],8,68,1)
+        self.spin_z = IntSpinBox(self.dane_all["z"],8,68,1)
         self.spin_z.lineEdit().setReadOnly(True)
         self.spin_ro = DoubleSpinBox(self.dane_all["ro"],1,8,0.05)
         self.spin_h = DoubleSpinBox(self.dane_all["lam"],0.5,0.99,0.01)
@@ -145,9 +145,9 @@ class DataEdit(QWidget):
         self.refili_labels()
         self.obliczenia_sil()
 
-    def obliczenia_sil(self,kat_glowny=0):
+    def obliczenia_sil(self):
 
-        self.liczba_obciazonych_rolek = int(self.dane_all["z"])+1
+        self.liczba_obciazonych_rolek = self.dane_all["z"]+1
 
 
         F_max = (1000*4*(self.dane_all['Mwej']/self.dane_all['K']))/(self.dane_all['Rw1']*(self.dane_all['z']+1))
@@ -173,7 +173,7 @@ class DataEdit(QWidget):
             #NOWE
 
             #SILY
-            al_ki[i] = (2*math.pi*i)/(self.dane_all['z']+1) + kat_glowny
+            al_ki[i] = (2*math.pi*i)/(self.dane_all['z']+1)
             al_si[i] = (math.pi/2)-(math.fabs(math.atan((self.dane_all['Rb2']*math.sin(al_ki[i]))/((self.dane_all['Rw1']+self.dane_all['e'])-(self.dane_all['Rb2']*math.cos(al_ki[i]))))))
             hi[i] = self.dane_all['Rw1'] * math.cos(al_si[i])
             Fx[i] = F_max * (hi[i] / self.dane_all['Rw1']) * math.cos(al_si[i])
@@ -237,7 +237,7 @@ class DataEdit(QWidget):
 
 
 class Tab_Pawel(AbstractTab):
-    anim_data_updated = Signal(dict)
+    animDataUpdated = Signal(dict)
     update_other_tabs = Signal()
 
     def __init__(self, parent):
@@ -272,7 +272,7 @@ class Tab_Pawel(AbstractTab):
     def update_animation_data(self):
         self.data.dane_materialowe.z = int(self.data.spin_z.value())
         self.data.dane_materialowe.obliczanie_predkosci_wyjsciowej(self.data.dane_all)
-        self.anim_data_updated.emit({"pawel": self.data.dane_all})
+        self.animDataUpdated.emit({"GearTab": self.data.dane_all.copy()})
         self.update_other_tabs.emit()
 
     def sendData(self):

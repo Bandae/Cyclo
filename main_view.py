@@ -1,68 +1,49 @@
-from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
-from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath
-from PySide2.QtCore import QPoint, QSize, Qt, Signal, QRect
 import math
-import time
 import threading
-
-# TODO: możliwe że wywala program czasem przy aktualizacji danych które są używane przez animację. Może Przerwać ją, wczytać, zacząć znowu
-# moze ustawic ścieżki do rysowania, i zmieniac je tylko jak sa zmienione dane.
-# jest też opcja że to kwestia sprzętowa, na lapku mi wywalało, na kompie nie widzę problemu w sumie
-# WAZNE TODO: juz wiem. jak sie nie obroci ukladu odniesienia, tylko przesunie, to otwory sie dobrze przechodza
-
-# dopoki nie powroci do glownego programu po event.clear() to nie skonczy wykonywac animacji. Moze byc potrzebne zmuszenei uzytkowanika do zatrzymania animacji zeby cokolwiek zrobic jak sie te bledy nie poprawaia :(
-def tworz_zarys_kola(z, ro, h, g, scala, pozycja_mimosrodu, data_wiktor,ktory):
+import time
+from PySide2.QtCore import QPoint, QSize, Qt, Signal
+from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath
+from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
+# teraz kat_dorotacji to kat obrotu elementu wyjsciowego chyba? I suwak też poprawnie, w obie strony, elementu wyjściowego.
+# nie wiem jak to zrobilem, a może tak było od początku, ale się wydaje wszystko dobrze 🤷
+# TODO: nie wiem czy nie psuje sie dla konkretnych parzystości/nie sworzni/rolek w momencie resetu.
+# TODO: Pawła wysyłanie danych do animacji jest zdaje się tylko odnośnikiem. Więc w zasadzie jest współdzielona pamięć. to może powodować błędy i jak wywala czasem
+        # teraz jest płytką kopią. Tam są same wartości liczbowe więc powinno starczyć.
+# TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self.kat_ może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
+# reset animacji to naprawia od razu, ale nie jej start. jest to kwestia kumulacji błędów, bo jak lece od 24 do 10 to sie zepsuje, ale jak zresetuje na 11 i zejde do 10 to już nie.
+# narazie ustawiam reset jeśli było zmienione przełożenie/liczba zębów. Inny pomysł mam, żeby zmienić self.kat_ do najbliższego podzielnego przez skok kąta, to powinno działać
+# tak w sumie to chyba tylko 2-gie kolo tak sie dziejes, czyli seld.kat_2, ale probowalem to ustawic jakos i nie dzialalo
+# chwilowo zrobilem taki sygnał zeby reset był dobrze
+def tworz_zarys_kola(z, ro, h, g, scala):
     zarys = QPainterPath()
     points = QPolygon()
-    for j in range(0,1440):
-        i=j/4
-        #wzory bednarczyka
-        # y = (ro * z + ro) * math.cos(i * 0.0175) - ro * h * math.cos(((ro * z + ro) / ro) * i * 0.0175) - g * ((math.cos(i * 0.0175) - h * math.cos((z + 1) * i * 0.0175)) / ((1 - 2 * h * math.cos(z * i * 0.0175) + h**2) ** 0.5)) + pozycja_mimosrodu[1]
-        # x = (ro * z + ro) * math.sin(i * 0.0175) - ro * h * math.sin(((ro * z + ro) / ro) * i * 0.0175) - g * ((math.sin(i * 0.0175) - h * math.sin((z + 1) * i * 0.0175)) / ((1 - 2 * h * math.cos(z * i * 0.0175) + h**2) ** 0.5)) + pozycja_mimosrodu[0]
-        # wzory Pawla
-        x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h)))))) + pozycja_mimosrodu[0]
-        y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h)))))) + pozycja_mimosrodu[1]
-        x = x * scala
-        y = y * scala
-        # new_x = ((x - pozycja_mimosrodu[0]) * math.cos(kat_obrotu) + (y - pozycja_mimosrodu[1]) * math.sin(kat_obrotu)) * scala + pozycja_mimosrodu[0] * scala
-        # new_y = (-(x - pozycja_mimosrodu[0]) * math.sin(kat_obrotu) + (y - pozycja_mimosrodu[1]) * math.cos(kat_obrotu)) * scala + pozycja_mimosrodu[1] * scala
-        points.insert(j, QPoint(x, y))
+    for j in range(0,720):
+        i=j/2
+        x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
+        y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
+        points.insert(j, QPoint(x*scala, y*scala))
     zarys.addPolygon(points)
-    
-    if data_wiktor is not None:
-        zarys = wytnij_otwory(zarys, scala, pozycja_mimosrodu, data_wiktor, ktory)
     
     return zarys
 
-def wytnij_otwory(zarys, scala, pozycja_mimosrodu, dane_wiktor, ktory):
+def wytnij_otwory(zarys, scala, dane_wiktor, obrot_poczatkowy):
     liczba_tuleji = dane_wiktor["n"]
-    R_wk = dane_wiktor["R_wk"]
+    R_wt = dane_wiktor["R_wt"]
     d_otw = dane_wiktor["d_otw"] * scala
-    d_tul = dane_wiktor['d_tul']*scala
-    mimo_x, mimo_y = pozycja_mimosrodu
 
     otwory = QPainterPath()
-    if ktory==1:
-        for i in range(liczba_tuleji):
-            fi_kj = (2 * math.pi * i) / liczba_tuleji
-            x_okj = (R_wk * math.cos(fi_kj) + mimo_x) * scala - d_otw / 2
-            y_okj = (R_wk * math.sin(fi_kj) + mimo_y) * scala - d_otw / 2
-            otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
-    elif ktory==2:
-        for i in range(liczba_tuleji):
-            fi_kj = (2 * math.pi * i) / liczba_tuleji
-            x_okj = (R_wk * math.cos(fi_kj) - mimo_x) * scala - d_otw / 2
-            y_okj = (R_wk * math.sin(fi_kj) - mimo_y) * scala - d_otw / 2
-            otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
-    else :
-        r=((R_wk*2*scala)+(d_tul*(100/87)))
-        otwory.addEllipse(-(r/2), -(r/2), r, r)
+    
+    for i in range(liczba_tuleji):
+        fi_kj = (2 * math.pi * i) / liczba_tuleji
+        x_okj = (R_wt * math.cos(fi_kj-obrot_poczatkowy*0.0175)) * scala - d_otw / 2
+        y_okj = (R_wt * math.sin(fi_kj-obrot_poczatkowy*0.0175)) * scala - d_otw / 2
+        otwory.addEllipse(x_okj, y_okj, d_otw, d_otw)
 
     return zarys.subtracted(otwory)
 
 def rysowanie_tuleje(painter, scala, dane_wiktor, kolory):
     liczba_tuleji = dane_wiktor["n"]
-    R_wk = dane_wiktor["R_wk"]
+    R_wt = dane_wiktor["R_wt"]
     d_sw = dane_wiktor["d_sw"] * scala
     d_tul = dane_wiktor["d_tul"] * scala
 
@@ -70,17 +51,12 @@ def rysowanie_tuleje(painter, scala, dane_wiktor, kolory):
     sworznie = QPainterPath()
 
     for i in range(liczba_tuleji):
-        fi_kj = (2 * math.pi * (i - 1)) / liczba_tuleji
+        fi_kj = (2 * math.pi * i) / liczba_tuleji
+        x_okj = (R_wt * math.cos(fi_kj)) * scala
+        y_okj = (R_wt * math.sin(fi_kj)) * scala
 
-        # rysowanie tuleji
-        x_okj = (R_wk * math.cos(fi_kj)) * scala - d_tul / 2
-        y_okj = (R_wk * math.sin(fi_kj)) * scala - d_tul / 2
-        tuleje.addEllipse(x_okj, y_okj, d_tul, d_tul)
-
-        # rysowanie sworzni
-        x_okj = (R_wk * math.cos(fi_kj)) * scala - d_sw / 2
-        y_okj = (R_wk * math.sin(fi_kj)) * scala - d_sw / 2
-        sworznie.addEllipse(x_okj, y_okj, d_sw, d_sw)
+        tuleje.addEllipse(x_okj - d_tul / 2, y_okj - d_tul / 2, d_tul, d_tul)
+        sworznie.addEllipse(x_okj - d_sw / 2, y_okj - d_sw / 2, d_sw, d_sw)
     painter.setBrush(QBrush(kolory["tuleje"], Qt.SolidPattern))
     painter.drawPath(tuleje)
     painter.setBrush(QBrush(kolory["sworznie"], Qt.SolidPattern))
@@ -96,24 +72,26 @@ class AnimationView(QWidget):
         main_layout = QVBoxLayout()
         animation_controls = QGridLayout()
         bcgrd = QWidget(self)
-        bcgrd.setMaximumHeight(60)
+        bcgrd.setStyleSheet("QPushButton { padding: 4px; min-height: 15px;}")
+        bcgrd.setMaximumHeight(80)
         self.start_animation_button = QPushButton("START ANIMACJI", bcgrd)
         self.restet_animacji = QPushButton("POZYCJA POCZĄTKOWA", bcgrd)
         self.slider = QSlider(Qt.Horizontal, bcgrd)
         self.slider.setMaximum(360)
         self.slider.valueChanged.connect(self.setAngle)
         self.animacja.animation_tick.connect(self.updateSlider)
+        self.animacja.reset.connect(self.resetAnimacji)
         self.angle_label = QLabel(bcgrd)
         self.start_animation_button.setMaximumSize(160, 20)
         self.start_animation_button.clicked.connect(self.startPrzycisk)
         self.restet_animacji.setMaximumSize(160, 20)
         self.restet_animacji.clicked.connect(self.resetAnimacji)
 
-        bcgrd.setLayout(animation_controls)
         animation_controls.addWidget(self.start_animation_button, 1, 0)
         animation_controls.addWidget(self.restet_animacji, 1, 1)
         animation_controls.addWidget(self.slider, 0, 0, 1, 2)
         animation_controls.addWidget(self.angle_label, 0, 3)
+        bcgrd.setLayout(animation_controls)
         main_layout.addWidget(self.animacja)
         main_layout.addWidget(bcgrd)
         main_layout.setAlignment(Qt.AlignHCenter)
@@ -131,15 +109,6 @@ class AnimationView(QWidget):
             self.start_animation_button.setText("START ANIMACJI")
             self.start_event.clear()
             time.sleep(0.1)
-    
-    def updateAnimationData(self, data):
-        if data.get('pawel'):
-            self.animacja.data = data['pawel']
-        if data.get('wiktor', False) == False:
-            self.animacja.data_wiktor = None
-        elif data.get('wiktor'):
-            self.animacja.data_wiktor = data['wiktor']
-        self.animacja.rysowanko()
 
     def resetAnimacji(self):
         self.start_animation_button.setText("START ANIMACJI")
@@ -163,10 +132,10 @@ class AnimationView(QWidget):
 
 class Animacja(QLabel):
     animation_tick = Signal(float)
+    reset = Signal()
 
-    SLATE = "#283E39"
-    METAL_LIGHT = "#529AB7"
-    METAL_DARK = "#12242B"
+    BRONZE = "#B08D57"
+    STEEL = "#CED2D7"
     WHITE = "#FFFFFF"
     GRAY_LIGHT = "#B4B4B4"
     GRAY = "#323434"
@@ -181,77 +150,89 @@ class Animacja(QLabel):
         self.data_wiktor = None
         self.kat_ = 0
         self.kat_2 = 180*(self.data["z"]+1)
-        self.kat_dorotacji = 0
-        self.kat_dorotacji2 = -((self.kat_2+180)/(self.data["z"]+1))
         self.skok_kata = 0
 
         self.layout = QGridLayout()
-        # self.label = QLabel(self)
         self.setAlignment(Qt.AlignCenter)
-        self.setStyleSheet("background-color: #f0f0f0")
 
         self._size = QSize(self.width(), self.height())
-        # self.layout.addWidget(self.label)
-        # self.setLayout(self.layout)
+        # self.pixmap = QPixmap(self._size)
+        # da sie tu zrobic pixmap i tylko czyscic przy rysowaniu, ale painter problemy czasem wywala ze jest juz jeden aktywny...
+        # czy to znaczy, ze nie nadąża rysować, zanim minie klatka animacji?
+        # self.pixmap.fill(QColor(0, 0, 0, 0))
+        # self.setPixmap(self.pixmap)
+        self.updateAnimationData({})
         self.rysowanko()
 
     def rysowanko(self):
         pixmap = QPixmap(self._size)
         pixmap.fill("#f0f0f0")
+        if self.data is None:
+            self.setPixmap(pixmap)
+            return
         painter = QPainter(pixmap)
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
         painter.translate(350,350)
 
-        self.data["z"]=int(self.data["z"])
         liczba_rolek = self.data["z"]+1
         self.skok_kata = 360/liczba_rolek
 
-        #skalowanie rysunku :
-        paint_area = 700
-        max_size = (self.data["Rg"] * 2) + (self.data["g"] * 4)
-        scala = paint_area / max_size
+        kat_dorotacji = -(self.kat_/liczba_rolek)
+        if liczba_rolek % 2 == 0:
+            kat_dorotacji2 = -((self.kat_+180*liczba_rolek)/liczba_rolek)
+        else:
+            kat_dorotacji2 = -((self.kat_2+180)/liczba_rolek)
 
-        przesuniecie_x = self.data["e"]*math.cos(self.kat_* 0.0175)
-        przesuniecie_y = self.data["e"]*math.sin(self.kat_* 0.0175)
+        przesuniecie_x = self.data["e"] * math.cos(self.kat_ * 0.0175) * self.scala
+        przesuniecie_y = self.data["e"] * math.sin(self.kat_ * 0.0175) * self.scala
 
         # Rysowanie pierscienia okalającego :
         painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2), -(((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))/2, ((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)),((self.data["Rg"] * scala * 2) + (self.data["g"] * 4 * scala)))
+        painter.drawEllipse((-(((self.data["Rg"] * self.scala * 2) + (self.data["g"] * 4 * self.scala)))/2), -(((self.data["Rg"] * self.scala * 2) + (self.data["g"] * 4 * self.scala)))/2, ((self.data["Rg"] * self.scala * 2) + (self.data["g"] * 4 * self.scala)),((self.data["Rg"] * self.scala * 2) + (self.data["g"] * 4 * self.scala)))
         painter.setBrush(QBrush(self.WHITE, Qt.SolidPattern))
-        painter.drawEllipse((-(((self.data["Rg"] * scala * 2)))/ 2),-(((self.data["Rg"] * scala * 2))) / 2,((self.data["Rg"] * scala * 2)),((self.data["Rg"] * scala * 2)))
+        painter.drawEllipse((-(((self.data["Rg"] * self.scala * 2)))/ 2),-(((self.data["Rg"] * self.scala * 2))) / 2,((self.data["Rg"] * self.scala * 2)),((self.data["Rg"] * self.scala * 2)))
 
-        # rysowanie zarysu :
-        zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor,1)
-        zarys2 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor,2)
-        zarys3 = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], scala, (przesuniecie_x, przesuniecie_y), self.data_wiktor, 3)
-
-        painter.setBrush(QBrush(self.PASTEL_BLUE2, Qt.SolidPattern))
-
-        painter.rotate(self.kat_dorotacji)
-        if self.data["K"] == 2:
-            painter.drawPath(zarys3)
-        painter.rotate(-self.kat_dorotacji+self.kat_dorotacji2)
-        if self.data["K"] == 2:
-            painter.drawPath(zarys2)
-        painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
-        painter.drawPath(zarys)
-
+        painter.rotate(kat_dorotacji)
         if self.data_wiktor is not None:
-            rysowanie_tuleje(painter, scala, self.data_wiktor, {"tuleje": self.METAL_DARK,"sworznie": self.SLATE})
-        painter.rotate(-self.kat_dorotacji2)
+            rysowanie_tuleje(painter, self.scala, self.data_wiktor, {"tuleje": self.BRONZE,"sworznie": self.STEEL})
+        
+        if self.data["K"] == 2:
+            painter.translate(przesuniecie_x, przesuniecie_y)
+            painter.setBrush(QBrush(self.PASTEL_BLUE2, Qt.SolidPattern))
+            if self.data_wiktor is None:
+                painter.drawPath(self.zarys)
+            else:
+                zarys_otw = wytnij_otwory(self.zarys, self.scala, self.data_wiktor, 0)
+                painter.drawPath(zarys_otw)
+            painter.translate(-przesuniecie_x, -przesuniecie_y)
+        
+        painter.rotate(-kat_dorotacji+kat_dorotacji2)
+        painter.translate(przesuniecie_x, przesuniecie_y)
+        painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
+        if self.data_wiktor is None:
+            painter.drawPath(self.zarys)
+        elif liczba_rolek % 2 != 0:
+            # ta dziwna liczba to poczatkawa wartość kat_dorotacji2
+            zarys_otw = wytnij_otwory(self.zarys, self.scala, self.data_wiktor, -((180*liczba_rolek+180)/liczba_rolek))
+            painter.drawPath(zarys_otw)
+        else:
+            zarys_otw = wytnij_otwory(self.zarys, self.scala, self.data_wiktor, -180)
+            painter.drawPath(zarys_otw)
+        painter.translate(-przesuniecie_x, -przesuniecie_y)
+        painter.rotate(-kat_dorotacji2)
 
         #Rysowanie rolek :
         painter.setBrush(QBrush(self.GRAY_LIGHT, Qt.SolidPattern))
         for i in range(liczba_rolek):
-            x = self.data["Rg"] * math.cos(i * self.skok_kata * 0.0175) * scala
-            y = self.data["Rg"] * math.sin(i * self.skok_kata * 0.0175) * scala
-            painter.drawEllipse(x-(self.data["g"]*scala),y-(self.data["g"]*scala),self.data["g"]*scala*2,self.data["g"]*scala*2)
+            x = self.data["Rg"] * math.cos(i * self.skok_kata * 0.0175) * self.scala
+            y = self.data["Rg"] * math.sin(i * self.skok_kata * 0.0175) * self.scala
+            painter.drawEllipse(x-(self.data["g"]*self.scala),y-(self.data["g"]*self.scala),self.data["g"]*self.scala*2,self.data["g"]*self.scala*2)
 
         #Rysowanie Wałka
 
         #painter.setBrush(QBrush(Qt.yellow))
-        #painter.drawEllipse(-(10*scala),-(10*scala),20*scala,20*scala)
+        #painter.drawEllipse(-(10*self.scala),-(10*self.scala),20*self.scala,20*self.scala)
 
         # Rysowanie punktu mimośrodu
         # pen2 = QPen(Qt.red, 3)
@@ -259,37 +240,60 @@ class Animacja(QLabel):
         # painter.drawPoint(0, 0)
 
         # if self.data_wiktor is not None:
-        #     pr = self.data_wiktor["R_wk"] * scala
+        #     pr = self.data_wiktor["R_wt"] * self.scala
         #     painter.drawArc(-pr, -pr, pr*2, pr*2, 0, 16 * 360)
 
         #Rysowanie punktu "C"
-        #xp = self.data[8]*math.cos(self.kat_dorotacji* 0.0175)
-        #yp = self.data[8]*math.sin(self.kat_dorotacji* 0.0175)
+        #xp = self.data[8]*math.cos(kat_dorotacji* 0.0175)
+        #yp = self.data[8]*math.sin(kat_dorotacji* 0.0175)
         #painter.drawPoint(xp,yp)
 
-        self.setPixmap(pixmap)
         painter.end()
+        self.setPixmap(pixmap)
 
     def setAngle(self, new_angle, reset=False):
         if reset:
             self.kat_ = 0
         else:
-            self.kat_ = self.kat_ // 360 + new_angle
-        self.kat_dorotacji = -((360/(self.data["z"]+1))*(self.kat_/360))
+            self.kat_ = new_angle*(self.data["z"]+1)
+            # dla ustawiania obrotu kola
+            # self.kat_ = self.kat_ // 360 + new_angle
         self.kat_2 = self.kat_ + 180*(self.data["z"]+1)
-        self.kat_dorotacji2 = -((self.kat_2+180)/(self.data["z"]+1))
         self.rysowanko()
+        self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
 
     def startAnimacji(self, event):
         while event.is_set():
             time.sleep(0.04)
             self.kat_ += self.skok_kata
             self.kat_2 += self.skok_kata
-            self.kat_dorotacji = -(self.kat_/(self.data["z"]+1))
-            self.kat_dorotacji2 = -((self.kat_2+180)/(self.data["z"]+1))
             self.rysowanko()
+            self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
+            if self.data is None:
+                return
             if self.kat_ >= 360*(self.data["z"]+1):
                 self.kat_ = 0
                 self.kat_2 = 180*(self.data["z"]+1)
-                self.kat_dorotacji = 0
-            self.animation_tick.emit(self.kat_dorotacji)
+
+    def updateAnimationData(self, data):
+        old_z = self.data["z"]
+        if data.get("GearTab") == False:
+            self.data = None
+            return
+        elif data.get("GearTab") is not None:
+            self.data = data["GearTab"]
+        
+        if data.get("PinOutTab") == False:
+            self.data_wiktor = None
+        elif data.get("PinOutTab") is not None:
+            self.data_wiktor = data["PinOutTab"]
+        
+        paint_area = 700
+        max_size = (self.data["Rg"] * 2) + (self.data["g"] * 4)
+        self.scala = paint_area / max_size
+
+        self.zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], self.scala)
+        if self.data["z"] != old_z:
+            self.reset.emit()
+            # self.setAngle(0, True)
+        self.rysowanko()

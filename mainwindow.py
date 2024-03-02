@@ -32,11 +32,11 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
 
         self.pawel = Tab_Pawel(central_widget)
-        self.pawel.anim_data_updated.connect(self.updateAnimationData)
+        self.pawel.animDataUpdated.connect(self.updateAnimationData)
         self.pawel.update_other_tabs.connect(lambda: self.activateTab(0))
 
         self.wiktor = TabWiktor(central_widget)
-        self.wiktor.data.anim_data_updated.connect(self.updateAnimationData)
+        self.wiktor.data.animDataUpdated.connect(self.updateAnimationData)
 
         milosz = Tab_Milosz(central_widget)
 
@@ -70,6 +70,8 @@ class MainWindow(QMainWindow):
         self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
         self.help_button.setIconSize(QSize(140, 140))
         self.help_button.resize(150, 150)
+        self.help_label = QLabel("Otwórz obrazek pomocniczy", self.help_button)
+        self.help_label.move(10, 10)
         self.help_button.pressed.connect(self.helpClicked)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
@@ -142,10 +144,12 @@ class MainWindow(QMainWindow):
             self.help_button.move(btn_pos.x() - 450, 20)
             self.help_button.resize(600, 600)
             self.help_button.setIconSize(QSize(590, 590))
+            self.help_label.hide()
         else:
             self.help_button.move(btn_pos.x() + 450, 20)
             self.help_button.resize(150, 150)
             self.help_button.setIconSize(QSize(140, 140))
+            self.help_label.show()
 
     def closeEvent(self, event):
         dialog = QDialog(self, Qt.WindowCloseButtonHint)
@@ -190,14 +194,10 @@ class MainWindow(QMainWindow):
             self.help_button.hide()
     
     def onAnimationTick(self, kat):
-        self.wiktor.data.inputsModified(kat, self.wiktor.use_this_check.isChecked())
-        self.pawel.data.obliczenia_sil(kat)
+        self.wiktor.data.inputsModified(kat)
     
     def updateAnimationData(self, dane):
-        data = {'pawel': dane.get("pawel")}
-        if dane.get("wiktor"):
-            data.update({'wiktor': dane.get("wiktor")})
-        self.animation_view.updateAnimationData(data)
+        self.animation_view.animacja.updateAnimationData(dane)
 
     def generateRaport(self):
         if self.error_box.errorsExist():

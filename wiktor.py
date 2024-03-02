@@ -47,7 +47,7 @@ class PopupWin(QWidget):
 
 class DataEdit(QWidget):
     wykresy_data_updated = Signal(dict)
-    anim_data_updated = Signal(dict)
+    animDataUpdated = Signal(dict)
     errors_updated = Signal(dict)
 
     def __init__(self, parent):
@@ -191,9 +191,9 @@ class DataEdit(QWidget):
         layout_main.addLayout(layout1)
         self.setLayout(layout_main)
 
-    def inputsModified(self, kat, update=True):
+    def inputsModified(self, kat):
         self.kat_obrotu_kola = kat
-        if not update or not self.parent().use_this_check.isChecked():
+        if not self.parent().use_this_check.isChecked():
             return
         
         for key, widget in self.input_widgets.items():
@@ -217,20 +217,20 @@ class DataEdit(QWidget):
 
         anim_data = {
             "n": self.input_dane["n"],
-            "R_wk": self.input_dane["R_wk"],
+            "R_wt": self.input_dane["R_wk"],
             "d_sw": self.input_dane["d_sw"],
             "d_tul": self.input_dane["d_tul"],
             "d_otw": self.obliczone_dane["d_otw"],
         }
-        if anim_data["R_wk"] + anim_data["d_otw"] / 2 >= self.zew_dane["R_f1"]:
-            self.anim_data_updated.emit({"wiktor": None})
+        if anim_data["R_wt"] + anim_data["d_otw"] / 2 >= self.zew_dane["R_f1"]:
+            self.animDataUpdated.emit({"PinOutTab": False})
             self.errors_updated.emit({"R_wk duze": True})
         elif sprawdz_przecinanie_otworow(self.input_dane["R_wk"], self.input_dane["n"], self.obliczone_dane["d_otw"]):
-            self.anim_data_updated.emit({"wiktor": None})
+            self.animDataUpdated.emit({"PinOutTab": False})
             self.errors_updated.emit({"R_wk male": True})
         else:
             self.errors_updated.emit({"R_wk duze": False, "R_wk male": False})
-            self.anim_data_updated.emit({"wiktor": anim_data})
+            self.animDataUpdated.emit({"PinOutTab": anim_data})
             self.wykresy_data_updated.emit({
                 "sily": wyniki["sily"],
                 "naciski": wyniki['naciski'],
@@ -475,7 +475,7 @@ class TabWiktor(AbstractTab):
             self.data.inputsModified(self.data.kat_obrotu_kola)
         else:
             self.this_enabled.emit(False)
-            self.data.anim_data_updated.emit({"wiktor": None})
+            self.data.animDataUpdated.emit({"PinOutTab": False})
 
     def useOtherChanged(self, state):
         self.use_this_check.setEnabled(not state)
