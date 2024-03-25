@@ -3,13 +3,12 @@ import math
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QHBoxLayout, QStackedLayout
 from abstract_tab import AbstractTab
-from common_widgets import IntSpinBox, DoubleSpinBox, QLabelD
+from common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContainer
 from pawlowe.widgets import DaneMaterialowe, ResultsFrame
 from pawlowe.wykresy import Wykresy
 from pawlowe.gear_calc import calculate_gear, get_lam_min, get_ro_min, gear_error_check
 
 #TODO: pawel i wiktor tab, a takze nasze wykresy są tak podobne schematycznie, że może da rade z nich zrobić jakąś wspólną klase abstrakcyjną do dziedziczenia
-#TODO: zmiana koncepcji. Od teraz każda zakładka musi emitowac wewnątrz sendData, a nie tylko zwracac. Należy samemu znaleźć wszystkie miejsce gdzie zmieniane są ważne dane i tam wywołać sendData.
 #TODO: nie podoba mi się obliczanie p_max, jako po prostu największego nacisku z wszystkich. U wiktora jest p_max wiekszy niz na sworzniu czasem, bo sworzen zmienia p jak sie obraca.
 
 
@@ -44,9 +43,8 @@ class DataEdit(QWidget):
 
         self.luzy = Tolerancje(self.dane_all)
         self.dane_materialowe = DaneMaterialowe(self.dane_all["nwyj"])
-        self.dane_materialowe.changed.connect(self.obliczenia_sil)
+        self.dane_materialowe.changed.connect(self.recalculate)
         self.results_frame = ResultsFrame(self)
-        self.przyrost_kata = 360 / (self.dane_all["z"] + 1)
 
         self.label_z = QLabelD(str(self.dane_all["z"]))
         self.spin_ro = DoubleSpinBox(self.dane_all["ro"],1,8,0.05)
@@ -54,51 +52,108 @@ class DataEdit(QWidget):
         self.spin_g = DoubleSpinBox(self.dane_all["g"],3,14,0.02)
         self.spin_l_k = IntSpinBox(self.dane_all["K"], 1, 2, 1)
 
-        self.spin_ro.valueChanged.connect(self.z_changed)
-        self.spin_lam.valueChanged.connect(self.z_changed)
-        self.spin_g.valueChanged.connect(self.z_changed)
-        self.spin_l_k.valueChanged.connect(self.z_changed)
-
-        layout = QGridLayout()
-        layout.addWidget(QLabelD("DANE WEJSCIOWE :"), 0, 0, 1, 3)
-        layout.addWidget(QLabelD("Liczba Kół [K]"), 1, 0, 1, 2)
-        layout.addWidget(self.spin_l_k, 1, 2, 1, 1)
-        layout.addWidget(QLabelD("Liczba Zębów [z]"), 3, 0, 1, 2)
-        layout.addWidget(self.label_z, 3, 2, 1, 1)
-        layout.addWidget(QLabelD("Promień [ρ]"), 4, 0, 1, 2)
-        layout.addWidget(self.spin_ro, 4, 2, 1, 1)
-        layout.addWidget(QLabelD("Wsp. wysokości zęba [λ]"), 5, 0, 1, 2)
-        layout.addWidget(self.spin_lam, 5, 2, 1, 1)
-        layout.addWidget(QLabelD("Promień rolek [g]"), 6, 0, 1, 2)
-        layout.addWidget(self.spin_g, 6, 2, 1, 1)
+        self.spin_ro.valueChanged.connect(self.inputsModified)
+        self.spin_lam.valueChanged.connect(self.inputsModified)
+        self.spin_g.valueChanged.connect(self.inputsModified)
+        self.spin_l_k.valueChanged.connect(self.inputsModified)
 
         self.data_labels = {
-            "Ra1": QLabelD(str(round(self.dane_all["Ra1"], 2))),
-            "Rf1": QLabelD(str(round(self.dane_all["Rf1"], 2))),
-            "Rw1": QLabelD(str(round(self.dane_all["Rw1"], 2))),
-            "Ra2": QLabelD(str(round(self.dane_all["Ra2"], 2))),
-            "Rf2": QLabelD(str(round(self.dane_all["Rf2"], 2))),
-            "Rw2": QLabelD(str(round(self.dane_all["Rw2"], 2))),
-            "Rb": QLabelD(str(round(self.dane_all["Rb"], 2))),
-            "Rg": QLabelD(str(round(self.dane_all["Rg"], 2))),
-            # "g": QLabelD(str(round(self.dane_all["g"], 2))),
-            "e": QLabelD(str(round(self.dane_all["e"], 2))),
-            "h": QLabelD(str(round(self.dane_all["h"], 2)))
+            "Ra1": QLabelD(str(self.dane_all["Ra1"]) + " mm"),
+            "Rf1": QLabelD(str(self.dane_all["Rf1"]) + " mm"),
+            "Rw1": QLabelD(str(self.dane_all["Rw1"]) + " mm"),
+            "Ra2": QLabelD(str(self.dane_all["Ra2"]) + " mm"),
+            "Rf2": QLabelD(str(self.dane_all["Rf2"]) + " mm"),
+            "Rw2": QLabelD(str(self.dane_all["Rw2"]) + " mm"),
+            # "Rb": QLabelD(str(self.dane_all["Rb"]) + " mm"),
+            "Rg": QLabelD(str(self.dane_all["Rg"]) + " mm"),
+            # "g": QLabelD(str(self.dane_all["g"]) + " mm"),
+            "e": QLabelD(str(self.dane_all["e"]) + " mm"),
+            "h": QLabelD(str(self.dane_all["h"]) + " mm"),
         }
 
+        self.label_descriptions = {
+            "Ra1": "Promień koła wierzchołkowego",
+            "Rf1": "Promień koła stóp",
+            "Rw1": "Promień koła tocznego",
+            "Ra2": "Promień koła wierzchołkowego",
+            "Rf2": "Promień koła stóp",
+            "Rw2": "Promień koła tocznego",
+            "Rg": "Promień rozmieszczenia rolek",
+            "e": "Mimośród",
+            "h": "Wysokość zęba",
+        }
+
+        layout = QGridLayout()
+        self.setupSmallLayout(layout)
+        self.setLayout(layout)
+        self.refillData()
+    
+    def setupLayout(self, layout):
+        layout.addWidget(QLabelD("DANE WEJSCIOWE:"), 0, 0, 1, 3)
+        layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 2)
+        layout.addWidget(self.spin_l_k, 1, 2, 1, 1)
+        layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 2)
+        layout.addWidget(self.label_z, 3, 2, 1, 1)
+        layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 2)
+        layout.addWidget(self.spin_ro, 4, 2, 1, 1)
+        layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 5, 0, 1, 2)
+        layout.addWidget(self.spin_lam, 5, 2, 1, 1)
+        layout.addWidget(QLabelD("Promień rolek - g [mm]"), 6, 0, 1, 2)
+        layout.addWidget(self.spin_g, 6, 2, 1, 1)
+
         # layout.addWidget(QLabelD("DANE : "),0,0,1,2)
+        layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 7, 0, 1, 3)
         for index, (text, qlabel) in enumerate(self.data_labels.items(), start=1):
-            layout.addWidget(QLabelD(text), 7+index, 0, 1, 2)
-            layout.addWidget(qlabel, 7+index, 2, 1, 1)
+            # rozdzielenie na dwie czesci, zeby podpisac co sie tyczy jakiego koła.
+            if "1" in text:
+                name_label = QLabelD(text)
+                name_label.setToolTip(self.label_descriptions[text])
+                layout.addWidget(name_label, 7+index, 0, 1, 2)
+                layout.addWidget(qlabel, 7+index, 2, 1, 1)
+        
+        layout.addWidget(QLabelD("Koło współpracujące:"), 11, 0, 1, 3)
+        roller_labels = {text: qlabel for text, qlabel in self.data_labels.items() if "1" not in text}
+        for index, (text, qlabel) in enumerate(roller_labels.items(), start=1):
+            name_label = QLabelD(text)
+            name_label.setToolTip(self.label_descriptions[text])
+            layout.addWidget(name_label, 11+index, 0, 1, 2)
+            layout.addWidget(qlabel, 11+index, 2, 1, 1)
 
         layout.addWidget(self.dane_materialowe, 0, 3, 10, 5)
         # layout.addWidget(self.luzy, 0, 6, 10, 3)
         layout.addWidget(self.results_frame, 11, 5, 7, 4)
-        self.setLayout(layout)
+    
+    def setupSmallLayout(self, layout):
+        layout.addWidget(QLabelD("DANE WEJSCIOWE:"), 0, 0, 1, 6)
+        layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 4)
+        layout.addWidget(self.spin_l_k, 1, 4, 1, 2)
+        layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 4)
+        layout.addWidget(self.label_z, 3, 4, 1, 2)
+        layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 4)
+        layout.addWidget(self.spin_ro, 4, 4, 1, 2)
+        layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 5, 0, 1, 4)
+        layout.addWidget(self.spin_lam, 5, 4, 1, 2)
+        layout.addWidget(QLabelD("Promień rolek - g [mm]"), 6, 0, 1, 4)
+        layout.addWidget(self.spin_g, 6, 4, 1, 2)
 
-        self.refil_data()
+        layout.addWidget(self.dane_materialowe, 7, 0, 10, 6)
 
-    def refil_data(self):
+        layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 18, 0, 1, 6)
+        for index, (text, qlabel) in enumerate(self.data_labels.items(), start=1):
+            # rozdzielenie na dwie czesci, zeby podpisac co sie tyczy jakiego koła.
+            if "1" in text:
+                layout.addWidget(QLabelD(self.label_descriptions[text]), 18+index, 0, 1, 4)
+                layout.addWidget(qlabel, 18+index, 4, 1, 2)
+        
+        layout.addWidget(QLabelD("Koło współpracujące:"), 22, 0, 1, 6)
+        roller_labels = {text: qlabel for text, qlabel in self.data_labels.items() if "1" not in text}
+        for index, (text, qlabel) in enumerate(roller_labels.items(), start=1):
+            layout.addWidget(QLabelD(self.label_descriptions[text]), 22+index, 0, 1, 4)
+            layout.addWidget(qlabel, 22+index, 4, 1, 2)
+
+        layout.addWidget(self.results_frame, 29, 0, 6, 6)
+
+    def refillData(self):
         z=self.dane_all["z"]
         ro=self.dane_all["ro"]
         lam=self.dane_all["lam"]
@@ -116,15 +171,9 @@ class DataEdit(QWidget):
         self.dane_all["Rb2"] = self.dane_all["e"]+g+self.dane_all["Rf1"]
         self.dane_all["h"] = 2*self.dane_all["e"]
         self.dane_all["sr"] = round((2*g)+(2*self.dane_all["Rb2"]), 2)
-        self.obliczenia_sil()
+        self.recalculate()
 
-    def refili_labels(self):
-        for text, qlabel in self.data_labels.items():
-            qlabel.setText(str(round(self.dane_all[text], 2)))
-
-        self.luzy.rysunki.sr.setText(str(self.dane_all["sr"]) + " mm")
-
-    def z_changed(self):
+    def inputsModified(self):
         self.dane_all["ro"] = self.spin_ro.value()
         self.dane_all["lam"] = self.spin_lam.value()
         self.dane_all["g"] = self.spin_g.value()
@@ -133,7 +182,7 @@ class DataEdit(QWidget):
         ro_min = get_ro_min(self.dane_all["z"], self.dane_all["lam"], self.dane_all["g"])
         self.spin_ro.setMinimum(ro_min + 0.01)
 
-        self.refil_data()
+        self.refillData()
     
     def baseDataChanged(self, new_data):
         if new_data is None:
@@ -152,11 +201,11 @@ class DataEdit(QWidget):
         self.spin_ro.setMinimum(ro_min + 0.01)
 
         self.dane_all["nwyj"] = round(self.outside_data["n_wej"] / self.dane_all["z"], 2)
-        self.dane_materialowe.n_out_label.setText(str(self.dane_all["nwyj"]) + "obr/min")
+        self.dane_materialowe.n_out_label.setText(str(self.dane_all["nwyj"]) + " obr/min")
 
-        self.refil_data()
+        self.refillData()
 
-    def obliczenia_sil(self):
+    def recalculate(self):
         material_data = self.dane_materialowe.getData()
         results = calculate_gear(self.dane_all, material_data, self.outside_data)
 
@@ -167,7 +216,7 @@ class DataEdit(QWidget):
             # "luz_miedzyzebny": results["luzy"],
         })
 
-        self.results_frame.update({"F_max": results["F_max"], "p_max": results["p_max"], "N_Ck-ri": round(sum(results['straty']), 3)}, material_data["p_dop"])
+        self.results_frame.update(results, material_data["p_dop"])
         errors = gear_error_check(self.dane_all["z"], self.dane_all["lam"], self.dane_all["g"], self.dane_all["e"], self.dane_all["Rg"], self.dane_all["ro"])
         if results["p_max"] > material_data["p_dop"]:
             self.errorsUpdated.emit({"naciski przekroczone": True})
@@ -180,7 +229,9 @@ class DataEdit(QWidget):
         else:
             self.animDataUpdated.emit({"GearTab": self.dane_all.copy()})
         
-        self.refili_labels()
+        for text, qlabel in self.data_labels.items():
+            qlabel.setText(str(round(self.dane_all[text], 2)) + " mm")
+        self.luzy.rysunki.sr.setText(str(self.dane_all["sr"]) + " mm")
         self.shouldSendData.emit()
 
     def copyDataToInputs(self, new_input_data):
@@ -189,11 +240,11 @@ class DataEdit(QWidget):
         self.spin_g.setValue(new_input_data["g"])
         self.spin_l_k.setValue(new_input_data["K"])
 
-        self.z_changed()
+        self.inputsModified()
         self.dane_all = new_input_data
 
 
-class Tab_Pawel(AbstractTab):
+class GearTab(AbstractTab):
     wheel_mat_updated = Signal(dict)
 
     def __init__(self, parent):
@@ -209,8 +260,9 @@ class Tab_Pawel(AbstractTab):
         self.data.shouldSendData.connect(self.sendData)
         self.data.chartDataUpdated.connect(self.wykresy.update_charts)
 
+        scrollable_tab = ResponsiveContainer(self, self.data, self.data.setupSmallLayout, self.data.setupLayout, 480, 1300)
         tab_titles = ["Wprowadzanie Danych", "Wykresy"]
-        stacked_widgets = [self.data, self.wykresy]
+        stacked_widgets = [scrollable_tab, self.wykresy]
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
             button = QPushButton(title)
@@ -218,7 +270,7 @@ class Tab_Pawel(AbstractTab):
             stacklayout.addWidget(widget)
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
         
-        self.data.z_changed()
+        self.data.inputsModified()
         self.setLayout(layout)
 
     def sendData(self):
@@ -238,7 +290,7 @@ class Tab_Pawel(AbstractTab):
         self.data.baseDataChanged(base_data)
     
     def saveData(self):
-        self.data.z_changed()
+        self.data.inputsModified()
         return {
             "dane_all": self.data.dane_all,
             "material_data": self.data.dane_materialowe.getData(),

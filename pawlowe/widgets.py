@@ -9,27 +9,36 @@ class ResultsFrame(QFrame):
         layout = QGridLayout()
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
 
-        data_label_names = ["F_max", "p_max", "N_Ck-ri"]
+        data_label_names = ["F_max", "p_max", "F_wzx", "F_wzy", "F_wz", "N_Ck-ri"]
         self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
         self.pressure_correct_label = QLabelD("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
 
-        fmax_label = QLabelD("F<sub>max</sub>", style=False)
-        layout.addWidget(fmax_label, 0, 0, 1, 2)
-        layout.addWidget(self.data_labels["F_max"], 0, 2)
-        pmax_label = QLabelD("p<sub>max</sub>", style=False)
-        layout.addWidget(pmax_label, 1, 0, 1, 2)
-        layout.addWidget(self.data_labels["p_max"], 1, 2)
-        layout.addWidget(self.pressure_correct_label, 2, 0, 1, 3)
-        ncmr_label = QLabelD("N<sub>Ck-ri</sub>", style=False)
-        layout.addWidget(ncmr_label, 3, 0, 1, 2)
-        layout.addWidget(self.data_labels["N_Ck-ri"], 3, 2)
+        layout.addWidget(QLabelD("Max. siła międzyzębna:", style=False), 0, 0, 1, 3)
+        layout.addWidget(QLabelD("F<sub>max</sub>", style=False), 1, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_max"], 1, 2)
+        layout.addWidget(QLabelD("Max. naciski międzyzębne:", style=False), 2, 0, 1, 3)
+        layout.addWidget(QLabelD("p<sub>max</sub>", style=False), 3, 0, 1, 2)
+        layout.addWidget(self.data_labels["p_max"], 3, 2)
+        layout.addWidget(self.pressure_correct_label, 4, 0, 1, 3)
+
+        layout.addWidget(QLabelD("Wypadkowa siła międzyzębna:", style=False), 5, 0, 1, 3)
+        layout.addWidget(QLabelD("F<sub>wzx</sub>", style=False), 6, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_wzx"], 6, 2)
+        layout.addWidget(QLabelD("F<sub>wzy</sub>", style=False), 7, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_wzy"], 7, 2)
+        layout.addWidget(QLabelD("F<sub>wz</sub>", style=False), 8, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_wz"], 8, 2)
+        layout.addWidget(QLabelD("Całkowite straty mocy mechanicznej:", style=False), 9, 0, 1, 3)
+        layout.addWidget(QLabelD("N<sub>Ck-ri</sub>", style=False), 10, 0, 1, 2)
+        layout.addWidget(self.data_labels["N_Ck-ri"], 10, 2)
 
         self.setLayout(layout)
     
     def update(self, new_data, p_dop):
-        data_units = [" N", " MPa", " W"]
-        for index, (key, new_value) in enumerate(new_data.items()):
-            self.data_labels[key].setText(str(new_value) + data_units[index])
+        data_units = [" N", " MPa", " N", " N", " N", " W"]
+        for index, (key, label) in enumerate(self.data_labels.items()):
+            label.setText(str(new_data[key]) + data_units[index])
+            # self.data_labels[key].setText(str(new_value) + data_units[index])
         if new_data["p_max"] < p_dop:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
         else:
@@ -72,12 +81,12 @@ class DaneMaterialowe(QFrame):
         self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
 
         self.data_inputs = {
-            "b_wheel": DoubleSpinBox(self.other_data["b_wheel"], 10, 100, 2),
+            "b_wheel": DoubleSpinBox(self.other_data["b_wheel"], 10, 100, 0.5),
             "f_kr": DoubleSpinBox(self.other_data["f_kr"], 0.00001, 0.0001, 0.00001, 5),
             "f_ro": DoubleSpinBox(self.other_data["f_ro"], 0.00001, 0.0001, 0.00001, 5),
         }
         self.p_dop_label = QLabelD(style=False)
-        self.n_out_label = QLabelD(nwej, style=False)
+        self.n_out_label = QLabelD(str(nwej) + " obr/min", style=False)
         for widget in self.data_inputs.values():
             widget.valueChanged.connect(self.update)
         self.mat_inputs["wheel_mat"].currentIndexChanged.connect(lambda: self.update(sendSignal=True))
@@ -98,32 +107,32 @@ class DaneMaterialowe(QFrame):
 
     def setupLayout(self):
         layout = QGridLayout()
-        layout.addWidget(QLabelD("DANE MATERIAŁOWE :", style=False), 0, 0, 1, 6)
+        layout.addWidget(QLabelD("DANE MATERIAŁOWE", style=False), 0, 0, 1, 6)
         layout.addWidget(QLabelD("Koło", style=False), 1, 0, 1, 2)
         layout.addWidget(self.mat_inputs["wheel_mat"], 1, 2, 1, 2)
         layout.addWidget(self.mat_inputs["wheel_treat"], 1, 4, 1, 2)
-        layout.addWidget(self.data_labels["wh_E"], 2, 0, 1, 3)
-        layout.addWidget(self.data_labels["wh_v"], 2, 3, 1, 3)
+        layout.addWidget(self.data_labels["wh_E"], 2, 0, 1, 4)
+        layout.addWidget(self.data_labels["wh_v"], 2, 4, 1, 2)
 
         layout.addWidget(QLabelD("Rolka", style=False), 3, 0, 1, 2)
         layout.addWidget(self.mat_inputs["roller_mat"], 3, 2, 1, 2)
         layout.addWidget(self.mat_inputs["roller_treat"], 3, 4, 1, 2)
-        layout.addWidget(self.data_labels["roll_E"], 4, 0, 1, 3)
-        layout.addWidget(self.data_labels["roll_v"], 4, 3, 1, 3)
+        layout.addWidget(self.data_labels["roll_E"], 4, 0, 1, 4)
+        layout.addWidget(self.data_labels["roll_v"], 4, 4, 1, 2)
 
         layout.addWidget(QLabelD("Dopuszczalny nacisk między kołem a rolką", style=False), 5, 0, 1, 4)
         layout.addWidget(self.p_dop_label, 5, 4, 1, 2)
 
-        layout.addWidget(QLabelD("Szerokość koła:", style=False), 6, 0, 1, 3)
-        layout.addWidget(self.data_inputs["b_wheel"], 6, 3, 1, 2)
+        layout.addWidget(QLabelD("Szerokość koła [mm]:", style=False), 6, 0, 1, 4)
+        layout.addWidget(self.data_inputs["b_wheel"], 6, 4, 1, 2)
 
-        layout.addWidget(QLabelD("DANE KINEMATYCZNE : ", style=False), 7, 0, 1, 5)
-        layout.addWidget(QLabelD("Prędkość obrotowa wyj :", style=False), 8, 0, 1, 3)
-        layout.addWidget(self.n_out_label, 8, 3, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia koło - rolka:", style=False), 9, 0, 1, 3)
-        layout.addWidget(self.data_inputs["f_kr"], 9, 3, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia rolka - obudowa:", style=False), 10, 0, 1, 3)
-        layout.addWidget(self.data_inputs["f_ro"], 10, 3, 1, 2)
+        layout.addWidget(QLabelD("DANE KINEMATYCZNE", style=False), 7, 0, 1, 5)
+        layout.addWidget(QLabelD("Prędkość obrotowa wyj:", style=False), 8, 0, 1, 4)
+        layout.addWidget(self.n_out_label, 8, 4, 1, 2)
+        layout.addWidget(QLabelD("Współczynnik tarcia koło - rolka [m]:", style=False), 9, 0, 1, 4)
+        layout.addWidget(self.data_inputs["f_kr"], 9, 4, 1, 2)
+        layout.addWidget(QLabelD("Współczynnik tarcia rolka - obudowa [m]:", style=False), 10, 0, 1, 4)
+        layout.addWidget(self.data_inputs["f_ro"], 10, 4, 1, 2)
 
         self.setLayout(layout)
 
@@ -161,9 +170,9 @@ class DaneMaterialowe(QFrame):
         
         p_dop = self.getAllowedPressure()
         self.p_dop_label.setText(str(p_dop) + " MPa")
-        self.data_labels["wh_E"].setText("E: " + str(wh_mat["E"]))
+        self.data_labels["wh_E"].setText("E: " + str(wh_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(wh_mat["v"]))
-        self.data_labels["roll_E"].setText("E: " + str(roll_mat["E"]))
+        self.data_labels["roll_E"].setText("E: " + str(roll_mat["E"]) + " MPa")
         self.data_labels["roll_v"].setText("v: " + str(roll_mat["v"]))
 
         if sendSignal:

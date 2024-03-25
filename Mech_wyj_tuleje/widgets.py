@@ -43,7 +43,6 @@ class ResultsFrame(QFrame):
 
 
 class MaterialsFrame(QFrame):
-    #TODO: load data i getData sprawdzic
     def __init__(self, parent):
         super().__init__(parent)
         layout = QGridLayout()
@@ -81,7 +80,7 @@ class MaterialsFrame(QFrame):
         layout.addWidget(QLabelD("Dane materiałowe", style=False), 0, 0, 1, 6)
         layout.addWidget(QLabelD("Sworzeń", style=False), 1, 0, 1, 2)
         layout.addWidget(self.data_inputs["sw_mat"], 1, 2, 1, 2)
-        layout.addWidget(self.data_labels["pin_re"], 2, 0, 1, 2)
+        layout.addWidget(self.data_labels["pin_re"], 2, 0, 1, 3)
         coef_label = QLabelD('k', style=False)
         coef_label.setToolTip('Współczynnik bezpieczeńswa zginania sworznia')
         layout.addWidget(coef_label, 2, 4)
@@ -90,14 +89,14 @@ class MaterialsFrame(QFrame):
         layout.addWidget(QLabelD("Tuleja", style=False), 3, 0, 1, 2)
         layout.addWidget(self.data_inputs["tul_mat"], 3, 2, 1, 2)
         layout.addWidget(self.data_inputs["tul_treat"], 3, 4, 1, 2)
-        layout.addWidget(self.data_labels["tul_E"], 5, 0, 1, 2)
-        layout.addWidget(self.data_labels["tul_v"], 5, 2, 1, 2)
+        layout.addWidget(self.data_labels["tul_E"], 5, 0, 1, 3)
+        layout.addWidget(self.data_labels["tul_v"], 5, 4, 1, 2)
 
         layout.addWidget(QLabelD("Koło", style=False), 6, 0, 1, 2)
         layout.addWidget(self.data_labels["wh_name"], 6, 2, 1, 2)
         layout.addWidget(self.data_labels["wh_treat"], 6, 4, 1, 2)
-        layout.addWidget(self.data_labels["wh_E"], 7, 0, 1, 2)
-        layout.addWidget(self.data_labels["wh_v"], 7, 2, 1, 2)
+        layout.addWidget(self.data_labels["wh_E"], 7, 0, 1, 3)
+        layout.addWidget(self.data_labels["wh_v"], 7, 4, 1, 2)
 
         layout.addWidget(QLabelD("Dopuszczalny nacisk między kołem a tuleją", style=False), 8, 0, 1, 3)
         layout.addWidget(self.data_labels["p_dop"], 8, 4, 1, 2)
@@ -140,7 +139,7 @@ class MaterialsFrame(QFrame):
         self.current_mats["wheel_treat"] = new_treat
         self.data_labels["wh_name"].setText(str(new_mat["nazwa"]))
         self.data_labels["wh_treat"].setText(new_treat)
-        self.data_labels["wh_E"].setText("E: " + str(new_mat["E"]))
+        self.data_labels["wh_E"].setText("E: " + str(new_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(new_mat["v"]))
         p_dop = self.getAllowedPressure()
         self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
@@ -163,7 +162,7 @@ class MaterialsFrame(QFrame):
         self.data_inputs["tul_treat"].blockSignals(False)
 
         self.data_labels["pin_re"].setText("Re: " + str(sw_mat["Re"]) + " MPa")
-        self.data_labels["tul_E"].setText("E: " + str(tul_mat["E"]))
+        self.data_labels["tul_E"].setText("E: " + str(tul_mat["E"]) + " MPa")
         self.data_labels["tul_v"].setText("v: " + str(tul_mat["v"]))
         p_dop = self.getAllowedPressure()
         self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
@@ -173,7 +172,12 @@ class MaterialsFrame(QFrame):
         self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
 
     def loadData(self, new_material_data):
+        self.coef_input.blockSignals(True)
         self.coef_input.setValue(new_material_data["pin_sft_coef"])
+        self.coef_input.blockSignals(False)
         self.current_mats["wheel"] = new_material_data["wheel"]
         for key in self.data_inputs:
+            self.data_inputs[key].blockSignals(True)
             self.data_inputs[key].setCurrentText(new_material_data[key]["nazwa"])
+            self.data_inputs[key].blockSignals(False)
+        self.update()

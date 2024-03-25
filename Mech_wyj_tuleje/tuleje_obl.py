@@ -77,14 +77,14 @@ def oblicz_d_sworzen(M_gmax, k_g):
     return round((32 * M_gmax / (math.pi * k_g * 10**6))**(1/3) * 1000, 2)
 
 def oblicz_sily(F_max, lista_fi_kj):
-    return [F_max * math.sin(fi_kj) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
+    return [round(F_max * math.sin(fi_kj), 1) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
 
 def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t, tolerancje):
     R_otw = d_otw / 2 if tolerancje is None else d_otw / 2 + tolerancje["T_o"]
     R_tul = d_tul / 2 if tolerancje is None else d_tul / 2 + tolerancje["T_t"]
 
     stala = (R_otw - R_tul) / (b_kola * math.pi * R_tul * R_otw * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)))
-    return [math.sqrt(F_j * stala) for F_j in sily]
+    return [round(math.sqrt(F_j * stala), 2) for F_j in sily]
 
 def oblicz_luzy_odchylka(R_wt, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje):
     odch_R_otwj = (d_otw/2) + tolerancje["T_o"]
@@ -115,7 +115,7 @@ def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, mimosrod, d_tul,
     temp = [(f_j + del_j - (luz_j - h_j * min_beta_obr)) * h_j for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
     suma = sum([temp_j if temp_j > 0 else 0 for temp_j in temp])
     sily_temp = [1000 * M_k * (f_j + del_j - (luz_j - h_j * min_beta_obr)) / suma for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
-    return [sila if sila > 0 else 0 for sila in sily_temp]
+    return [round(sila, 1) if sila > 0 else 0 for sila in sily_temp]
 
 def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     odch_e = e if tolerancje is None else e + tolerancje["T_e"]
@@ -123,7 +123,7 @@ def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     odch_R_tul = d_tul / 2 if tolerancje is None else d_tul / 2 + tolerancje["T_t"]
 
     stala = omg_0 * (odch_e / R_w1) * ((R_w1 + odch_e) / (odch_R_tul - odch_R_sw)) * (f_kt + f_ts)
-    return [F_j * stala for F_j in sily]
+    return [round(F_j * stala, 3) for F_j in sily]
 
 def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
     M_k = dane_zew["M_wyj"] / dane_zew["K"]
@@ -154,7 +154,6 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
     M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
     d_smax = oblicz_d_sworzen(M_gmax, k_g)
 
-
     d_sw_wybrane = d_smax if d_sw <= d_smax or d_sw >= d_smax + 10 else d_sw
     d_tul_obl = round(d_sw_wybrane * dane["wsp_k"], 2)
     d_tul_wybrane = d_tul_obl if d_tul <= d_tul_obl or d_tul >= d_tul_obl + 10 else d_tul
@@ -175,49 +174,8 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
         "d_t_obl": d_tul_obl,
         "d_o_obl": d_otw_obl,
         "F_max": round(F_max, 1),
-        "p_max": round(p_max, 2),
-        "sily": ([round(sila, 2) for sila in sily], [round(sila, 2) for sila in sily_gladkie]),
-        "naciski": ([round(nacisk, 2) for nacisk in naciski], [round(nacisk, 2) for nacisk in naciski_gladkie]),
-        "straty": ([round(strata, 3) for strata in straty], [round(strata, 2) for strata in straty_gladkie]),
+        "p_max": p_max,
+        "sily": (sily, sily_gladkie),
+        "naciski": (naciski, naciski_gladkie),
+        "straty": (straty, straty_gladkie),
     }
-
-# def oblicz_luzy(n_sworzni, R_wk, mimosrod, d_tul, d_otw, tolerancje):
-#     '''
-#     Tolerancje:
-#     T_o: promienia otworu
-#     T_t: promienia zew tuleji
-#     T_s: promienia zew tuleji
-#     T_Rk: promienia rozmieszczenia otworów
-#     T_Rt: promienia rozmieszczenia tuleji
-#     T_fi_k: kątowego rozmieszczenia otworów w kole cykloidalnym
-#     T_fi_t: kątowego rozmieszczenia tulei w elemencie wyjściowym
-#     T_e: wykonania mimośrodu
-
-#     Oblicza wszystkie możliwości przechodząc po polach tolerancji krokiem 0.001mm. Zwraca dla każdego otworu min i max wartosc
-#     '''
-#     def obl_fi_kj(i):
-#         return (2 * math.pi * (i - 1)) / n_sworzni
-
-#     tol_R_otwj = [(d_otw/2) + i for i in range(tolerancje["T_o"][0], tolerancje["T_o"][1] + 0.001, 0.001)]
-#     tol_R_tzj = [(d_tul/2) + i for i in range(tolerancje["T_t"][0], tolerancje["T_t"][1] + 0.001, 0.001)]
-#     tol_R_wk = [R_wk + i for i in range(tolerancje["T_Rk"][0], tolerancje["T_Rk"][1] + 0.001, 0.001)]
-#     tol_R_wt = [R_wk + i for i in range(tolerancje["T_Rt"][0], tolerancje["T_Rt"][1] + 0.001, 0.001)]
-#     pole_tol_fi_kj = range(tolerancje["T_fi_k"][0], tolerancje["T_fi_k"][1] + 0.001, 0.001)
-#     pole_tol_fi_tj = range(tolerancje["T_fi_t"][0], tolerancje["T_fi_t"][1] + 0.001, 0.001)
-#     tol_e = [mimosrod + i for i in range(tolerancje["T_e"][0], tolerancje["T_e"][1] + 0.001, 0.001)]
-
-#     def oblicz_luz(fi_kj):
-#         tol_fi_kj = [fi_kj + i for i in pole_tol_fi_kj]
-#         tol_fi_tj = [fi_kj + i for i in pole_tol_fi_tj]
-#         tol_y_okj = [round(R * math.cos(fi), 3) for R in tol_R_wk for fi in tol_fi_kj]
-#         tol_y_otj = [round(R * math.cos(fi), 3) for R in tol_R_wt for fi in tol_fi_tj]
-#         tol_y_oktj = [y_otj - e for y_otj in tol_y_otj for e in tol_e]
-#         luz_el1 =  [abs(y_oktj - R_tzj) for y_oktj in tol_y_oktj for R_tzj in tol_R_tzj]
-#         luz_el2 =  [abs(y_okj - R_otwj) for y_okj in tol_y_okj for R_otwj in tol_R_otwj]
-#         luz = [lu_1 - lu_2 for lu_1 in luz_el1 for lu_2 in luz_el2]
-#         return [min(luz), max(luz)]
-
-#     luzy = [oblicz_luz(obl_fi_kj(ind)) for ind in range(1, n_sworzni + 1)]
-
-# def oblicz_sily_z_luzami():
-#     ...

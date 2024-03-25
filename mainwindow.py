@@ -12,8 +12,8 @@ from error_widget import ErrorWidget
 from kamil import Tab_Kamil
 from main_view import AnimationView
 from milosz import Tab_Milosz
-from pawel import Tab_Pawel
-from wiktor import TabWiktor
+from pawel import GearTab
+from wiktor import PinOutTab
 
 # TODO: moze jedna metode zrobic z tego wszystkiego do generowaniaa raport csv dxf
 
@@ -34,18 +34,18 @@ class MainWindow(QMainWindow):
         self.loaded_file = None
         central_widget = QWidget()
 
-        self.pawel = Tab_Pawel(central_widget)
-        self.pawel.data.animDataUpdated.connect(self.updateAnimationData)
+        self.gear_tab = GearTab(central_widget)
+        self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
 
-        self.wiktor = TabWiktor(central_widget)
-        self.wiktor.data.animDataUpdated.connect(self.updateAnimationData)
-        self.pawel.data.dane_materialowe.wheelMatChanged.connect(self.wiktor.data.material_frame.changeWheelMat)
+        self.pin_out_tab = PinOutTab(central_widget)
+        self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
+        self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
         milosz = Tab_Milosz(central_widget)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.wiktor.thisEnabled.connect(milosz.useOtherChanged)
-        milosz.this_enabled.connect(self.wiktor.useOtherChanged)
+        self.pin_out_tab.thisEnabled.connect(milosz.useOtherChanged)
+        milosz.this_enabled.connect(self.pin_out_tab.useOtherChanged)
 
         kamil = Tab_Kamil(central_widget)
 
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
 
-        self.animation_view = AnimationView(central_widget, self.pawel.data.dane_all.copy())
+        self.animation_view = AnimationView(central_widget, self.gear_tab.data.dane_all.copy())
         animation_layout.addWidget(self.animation_view)
         self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
 
@@ -66,8 +66,8 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(data_layout,0,7,1,3)
         self.error_box = ErrorWidget(central_widget)
         self.error_box.show()
-        self.wiktor.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
-        self.pawel.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
+        self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
+        self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
         self.help_button = QPushButton(central_widget)
@@ -82,7 +82,7 @@ class MainWindow(QMainWindow):
         self.base_data.dataChanged.connect(self.exchangeData)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.stacked_widgets = [self.pawel, self.wiktor, milosz, kamil]
+        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, milosz, kamil]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
             tab_widget.receiveData(passed_data)
     
     def onAnimationTick(self, kat):
-        self.wiktor.data.inputsModified(kat)
+        self.pin_out_tab.data.recalculate(kat)
     
     def updateAnimationData(self, dane):
         self.animation_view.animacja.updateAnimationData(dane)

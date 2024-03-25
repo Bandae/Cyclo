@@ -2,18 +2,17 @@ import math
 import threading
 import time
 from PySide2.QtCore import QPoint, QSize, Qt, Signal
-from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath
+from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath, QResizeEvent
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
-# teraz kat_dorotacji to kat obrotu elementu wyjsciowego chyba? I suwak też poprawnie, w obie strony, elementu wyjściowego.
-# nie wiem jak to zrobilem, a może tak było od początku, ale się wydaje wszystko dobrze 🤷
+
 # TODO: nie wiem czy nie psuje sie dla konkretnych parzystości/nie sworzni/rolek w momencie resetu.
-# TODO: Pawła wysyłanie danych do animacji jest zdaje się tylko odnośnikiem. Więc w zasadzie jest współdzielona pamięć. to może powodować błędy i jak wywala czasem
-        # teraz jest płytką kopią. Tam są same wartości liczbowe więc powinno starczyć.
 # TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self.kat_ może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
 # reset animacji to naprawia od razu, ale nie jej start. jest to kwestia kumulacji błędów, bo jak lece od 24 do 10 to sie zepsuje, ale jak zresetuje na 11 i zejde do 10 to już nie.
 # narazie ustawiam reset jeśli było zmienione przełożenie/liczba zębów. Inny pomysł mam, żeby zmienić self.kat_ do najbliższego podzielnego przez skok kąta, to powinno działać
 # tak w sumie to chyba tylko 2-gie kolo tak sie dziejes, czyli seld.kat_2, ale probowalem to ustawic jakos i nie dzialalo
 # chwilowo zrobilem taki sygnał zeby reset był dobrze
+
+#TODO: powiększenie na maksa okna z paska powoduje jakieś zepsucie tych resizeEvent.
 def tworz_zarys_kola(z, ro, h, g, scala):
     zarys = QPainterPath()
     points = QPolygon()
@@ -99,6 +98,11 @@ class AnimationView(QWidget):
         main_layout.setContentsMargins(80, 20, 80, 20)
         self.setLayout(main_layout)
 
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        self.animacja.setFixedSize(event.size())
+        self.animacja.updatePaintArea(min(event.size().toTuple()) - 75)
+        return super().resizeEvent(event)
+
     def startPrzycisk(self):
         if self.start_animation_button.text() == "START ANIMACJI":
             self.start_animation_button.setText("STOP ANIMACJI")
@@ -151,11 +155,11 @@ class Animacja(QLabel):
         self.kat_ = 0
         self.kat_2 = 180*(self.data["z"]+1)
         self.skok_kata = 0
+        self.paint_area = 700
 
         self.layout = QGridLayout()
         self.setAlignment(Qt.AlignCenter)
-
-        self._size = QSize(self.width(), self.height())
+        # self._size = QSize(self.width(), self.height())
         # self.pixmap = QPixmap(self._size)
         # da sie tu zrobic pixmap i tylko czyscic przy rysowaniu, ale painter problemy czasem wywala ze jest juz jeden aktywny...
         # czy to znaczy, ze nie nadąża rysować, zanim minie klatka animacji?
@@ -165,7 +169,7 @@ class Animacja(QLabel):
         self.rysowanko()
 
     def rysowanko(self):
-        pixmap = QPixmap(self._size)
+        pixmap = QPixmap(self.size())
         pixmap.fill("#f0f0f0")
         if self.data is None:
             self.setPixmap(pixmap)
@@ -173,7 +177,7 @@ class Animacja(QLabel):
         painter = QPainter(pixmap)
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
-        painter.translate(350,350)
+        painter.translate(self.paint_area/2, self.paint_area/2)
 
         liczba_rolek = self.data["z"]+1
         self.skok_kata = 360/liczba_rolek
@@ -275,6 +279,14 @@ class Animacja(QLabel):
                 self.kat_ = 0
                 self.kat_2 = 180*(self.data["z"]+1)
 
+    def updatePaintArea(self, paint_area):
+        self.paint_area = paint_area
+        if self.data is None:
+            return
+
+        self.updateAnimationData({})
+        self.rysowanko()
+
     def updateAnimationData(self, data):
         old_z = self.data["z"] if self.data is not None else None
         if data.get("GearTab") == False:
@@ -291,9 +303,8 @@ class Animacja(QLabel):
         elif data.get("PinOutTab") is not None:
             self.data_wiktor = data["PinOutTab"]
         
-        paint_area = 700
         max_size = (self.data["Rg"] * 2) + (self.data["g"] * 4)
-        self.scala = paint_area / max_size
+        self.scala = self.paint_area / max_size
 
         self.zarys = tworz_zarys_kola(self.data["z"], self.data["ro"], self.data["lam"], self.data["g"], self.scala)
         if self.data["z"] != old_z:
