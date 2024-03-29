@@ -10,7 +10,7 @@ class BaseDataWidget(QFrame):
         super().__init__(parent)
         layout = QGridLayout()
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
-        self.resize(200, 120)
+        self.setFixedSize(200, 170)
 
         self.input_data = {
             "M_wyj": 500,
@@ -25,13 +25,13 @@ class BaseDataWidget(QFrame):
 
         top_label = QLabelD("Dane wejściowe", style=False)
         top_label.setMaximumHeight(20)
-        layout.addWidget(top_label, 0, 0)
-        layout.addWidget(QLabelD("Moment wyj.", style=False), 1, 0)
-        layout.addWidget(self.input_widgets["M_wyj"], 1, 1)
-        layout.addWidget(QLabelD("Prędkość obr. wej.", style=False), 2, 0)
-        layout.addWidget(self.input_widgets["n_wej"], 2, 1)
-        layout.addWidget(QLabelD("Przełożenie", style=False), 3, 0)
-        layout.addWidget(self.input_widgets["i"], 3, 1)
+        layout.addWidget(top_label, 0, 0, 1, 5)
+        layout.addWidget(QLabelD("Moment wyjściowy [Nm]", style=False), 1, 0, 1, 4)
+        layout.addWidget(self.input_widgets["M_wyj"], 1, 4)
+        layout.addWidget(QLabelD("Prędkość obr. wejściowa [obr/min]", style=False), 2, 0, 1, 4)
+        layout.addWidget(self.input_widgets["n_wej"], 2, 4)
+        layout.addWidget(QLabelD("Przełożenie", style=False), 3, 0, 1, 4)
+        layout.addWidget(self.input_widgets["i"], 3, 4)
 
         for widget in self.input_widgets.values():
             widget.valueChanged.connect(self.inputsModified)

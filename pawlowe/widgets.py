@@ -169,7 +169,7 @@ class DaneMaterialowe(QFrame):
             self.other_data[key] = self.data_inputs[key].value()
         
         p_dop = self.getAllowedPressure()
-        self.p_dop_label.setText(str(p_dop) + " MPa")
+        self.p_dop_label.setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
         self.data_labels["wh_E"].setText("E: " + str(wh_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(wh_mat["v"]))
         self.data_labels["roll_E"].setText("E: " + str(roll_mat["E"]) + " MPa")
@@ -181,7 +181,7 @@ class DaneMaterialowe(QFrame):
 
     def updateTreat(self, sendSignal=False):
         p_dop = self.getAllowedPressure()
-        self.p_dop_label.setText(str(p_dop) + " MPa")
+        self.p_dop_label.setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
 
         if sendSignal:
             self.wheelMatChanged.emit(self.materials[self.mat_inputs["wheel_mat"].currentText()], self.mat_inputs["wheel_treat"].currentText())

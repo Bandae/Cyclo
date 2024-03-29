@@ -1,7 +1,8 @@
+from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QGridLayout, QComboBox, QFrame
 from common_widgets import QLabelD, DoubleSpinBox
 
-# TODO: Dodać jednostke do E
+
 class ResultsFrame(QFrame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -12,23 +13,23 @@ class ResultsFrame(QFrame):
         self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
         self.pressure_correct_label = QLabelD("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
 
-        fmax_label = QLabelD("F<sub>max</sub>", style=False)
-        layout.addWidget(fmax_label, 0, 0, 1, 2)
-        layout.addWidget(self.data_labels["F_max"], 0, 2)
-        pmax_label = QLabelD("p<sub>max</sub>", style=False)
-        layout.addWidget(pmax_label, 1, 0, 1, 2)
-        layout.addWidget(self.data_labels["p_max"], 1, 2)
-        layout.addWidget(self.pressure_correct_label, 2, 0, 1, 3)
+        layout.addWidget(QLabelD("Max. siła działająca na sworzeń:", style=False), 0, 0, 1, 3)
+        layout.addWidget(QLabelD("F<sub>max</sub>", style=False), 1, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_max"], 1, 2)
+        layout.addWidget(QLabelD("Max. naciski między kołem a tuleją:", style=False), 2, 0, 1, 3)
+        layout.addWidget(QLabelD("p<sub>max</sub>", style=False), 3, 0, 1, 2)
+        layout.addWidget(self.data_labels["p_max"], 3, 2)
+        layout.addWidget(self.pressure_correct_label, 4, 0, 1, 3)
 
-        fwmr_label = QLabelD("F<sub>wmr</sub>", style=False)
-        layout.addWidget(fwmr_label, 3, 0, 1, 2)
-        layout.addWidget(self.data_labels["F_wmr"], 3, 2)
-        rmr_label = QLabelD("r<sub>mr</sub>", style=False)
-        layout.addWidget(rmr_label, 4, 0, 1, 2)
-        layout.addWidget(self.data_labels["r_mr"], 4, 2)
-        ncmr_label = QLabelD("N<sub>Cmr</sub>", style=False)
-        layout.addWidget(ncmr_label, 5, 0, 1, 2)
-        layout.addWidget(self.data_labels["N_cmr"], 5, 2)
+        layout.addWidget(QLabelD("Wypadkowa siła działająca na sworznie:", style=False), 5, 0, 1, 3)
+        layout.addWidget(QLabelD("F<sub>wmr</sub>", style=False), 6, 0, 1, 2)
+        layout.addWidget(self.data_labels["F_wmr"], 6, 2)
+        layout.addWidget(QLabelD("Ramię działania siły wypadkowej:", style=False), 7, 0, 1, 3)
+        layout.addWidget(QLabelD("r<sub>mr</sub>", style=False), 8, 0, 1, 2)
+        layout.addWidget(self.data_labels["r_mr"], 8, 2)
+        layout.addWidget(QLabelD("Całkowite straty mocy mechanicznej:", style=False), 9, 0, 1, 3)
+        layout.addWidget(QLabelD("N<sub>Cmr</sub>", style=False), 10, 0, 1, 2)
+        layout.addWidget(self.data_labels["N_cmr"], 10, 2)
 
         self.setLayout(layout)
     
@@ -43,6 +44,8 @@ class ResultsFrame(QFrame):
 
 
 class MaterialsFrame(QFrame):
+    updated = Signal()
+
     def __init__(self, parent):
         super().__init__(parent)
         layout = QGridLayout()
@@ -64,6 +67,7 @@ class MaterialsFrame(QFrame):
             "40HN": {"nazwa": "40HN", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1600, "use": "sleeve"},
         }
         self.pin_sft_coef = 2
+        self.allowed_pressure = 450
         self.current_mats = {"pin": self.materials["15HN"], "sleeve": self.materials["C45"], "wheel": self.materials["C30"], "wheel_treat": "normalizowanie"}
         self.data_inputs = {"sw_mat": QComboBox(), "tul_mat": QComboBox(), "tul_treat": QComboBox()}
         self.data_inputs["sw_mat"].addItems([mat["nazwa"] for mat in self.materials.values() if mat["use"] == "pin" or mat["use"] == "both"])
@@ -131,7 +135,7 @@ class MaterialsFrame(QFrame):
     
     def getData(self):
         copy = self.current_mats.copy()
-        copy.update({"p_dop": int(self.data_labels["p_dop"].text().replace(" MPa", "")), "pin_sft_coef": self.pin_sft_coef})
+        copy.update({"p_dop": self.allowed_pressure, "pin_sft_coef": self.pin_sft_coef})
         return copy
 
     def changeWheelMat(self, new_mat, new_treat):
@@ -142,7 +146,9 @@ class MaterialsFrame(QFrame):
         self.data_labels["wh_E"].setText("E: " + str(new_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(new_mat["v"]))
         p_dop = self.getAllowedPressure()
-        self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
+        self.allowed_pressure = p_dop
+        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
+        self.updated.emit()
 
     def update(self):
         sw_mat = self.materials[self.data_inputs["sw_mat"].currentText()]
@@ -165,11 +171,15 @@ class MaterialsFrame(QFrame):
         self.data_labels["tul_E"].setText("E: " + str(tul_mat["E"]) + " MPa")
         self.data_labels["tul_v"].setText("v: " + str(tul_mat["v"]))
         p_dop = self.getAllowedPressure()
-        self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
+        self.allowed_pressure = p_dop
+        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
+        self.updated.emit()
     
     def updateTreat(self):
         p_dop = self.getAllowedPressure()
-        self.data_labels["p_dop"].setText(str(p_dop) + " MPa")
+        self.allowed_pressure = p_dop
+        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
+        self.updated.emit()
 
     def loadData(self, new_material_data):
         self.coef_input.blockSignals(True)

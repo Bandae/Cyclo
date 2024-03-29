@@ -99,8 +99,9 @@ class AnimationView(QWidget):
         self.setLayout(main_layout)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        self.animacja.setFixedSize(event.size())
-        self.animacja.updatePaintArea(min(event.size().toTuple()) - 75)
+        new_size = min(event.size().width(), 1000), event.size().height()
+        self.animacja.setFixedSize(*new_size)
+        self.animacja.updatePaintArea(min(new_size) - 75)
         return super().resizeEvent(event)
 
     def startPrzycisk(self):
@@ -158,7 +159,7 @@ class Animacja(QLabel):
         self.paint_area = 700
 
         self.layout = QGridLayout()
-        self.setAlignment(Qt.AlignCenter)
+        # self.setAlignment(Qt.AlignLeft)
         # self._size = QSize(self.width(), self.height())
         # self.pixmap = QPixmap(self._size)
         # da sie tu zrobic pixmap i tylko czyscic przy rysowaniu, ale painter problemy czasem wywala ze jest juz jeden aktywny...

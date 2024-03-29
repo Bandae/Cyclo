@@ -87,14 +87,21 @@ class ResponsiveContainer(QScrollArea):
             self.fn_above(self.main_widget.layout())
             showWidgets(self.main_widget.layout())
         
-        old_width = arg__1.oldSize().width()
+        # old_width = arg__1.oldSize().width()
         new_width = arg__1.size().width()
         new_height = arg__1.size().height()
         self.main_widget.setFixedWidth(new_width)
-        if new_width > self.break_point and old_width < self.break_point:
+        # OPCJA Z MNIEJSZA ILOSCIA ZMIAN. Problem był taki, że przy otwartym jednym module, zmiana, otwarty drugi modul to sie nie zmienial
+        # if new_width > self.break_point and old_width < self.break_point:
+        #     self.main_widget.setFixedHeight(new_height)
+        #     setBigScreen()
+        # elif new_width < self.break_point and old_width > self.break_point:
+        #     self.main_widget.setFixedHeight(self.ver_space)
+        #     setSmallScreen()
+        if new_width > self.break_point:
             self.main_widget.setFixedHeight(new_height)
             setBigScreen()
-        elif new_width < self.break_point and old_width > self.break_point:
+        elif new_width < self.break_point:
             self.main_widget.setFixedHeight(self.ver_space)
             setSmallScreen()
         return super().resizeEvent(arg__1)

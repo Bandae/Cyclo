@@ -43,7 +43,6 @@ class DataEdit(QWidget):
 
         self.luzy = Tolerancje(self.dane_all)
         self.dane_materialowe = DaneMaterialowe(self.dane_all["nwyj"])
-        self.dane_materialowe.changed.connect(self.recalculate)
         self.results_frame = ResultsFrame(self)
 
         self.label_z = QLabelD(str(self.dane_all["z"]))
@@ -52,10 +51,15 @@ class DataEdit(QWidget):
         self.spin_g = DoubleSpinBox(self.dane_all["g"],3,14,0.02)
         self.spin_l_k = IntSpinBox(self.dane_all["K"], 1, 2, 1)
 
-        self.spin_ro.valueChanged.connect(self.inputsModified)
-        self.spin_lam.valueChanged.connect(self.inputsModified)
-        self.spin_g.valueChanged.connect(self.inputsModified)
-        self.spin_l_k.valueChanged.connect(self.inputsModified)
+        self.accept_button = QPushButton("Oblicz")
+        self.accept_button.clicked.connect(self.inputsModified)
+        self.accept_button.clicked.connect(lambda: self.accept_button.setEnabled(False))
+
+        self.dane_materialowe.changed.connect(lambda: self.accept_button.setEnabled(True))
+        self.spin_ro.valueChanged.connect(lambda: self.accept_button.setEnabled(True))
+        self.spin_lam.valueChanged.connect(lambda: self.accept_button.setEnabled(True))
+        self.spin_g.valueChanged.connect(lambda: self.accept_button.setEnabled(True))
+        self.spin_l_k.valueChanged.connect(lambda: self.accept_button.setEnabled(True))
 
         self.data_labels = {
             "Ra1": QLabelD(str(self.dane_all["Ra1"]) + " mm"),
@@ -92,14 +96,14 @@ class DataEdit(QWidget):
         layout.addWidget(QLabelD("DANE WEJSCIOWE:"), 0, 0, 1, 3)
         layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 2)
         layout.addWidget(self.spin_l_k, 1, 2, 1, 1)
-        layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 2)
-        layout.addWidget(self.label_z, 3, 2, 1, 1)
-        layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 2)
-        layout.addWidget(self.spin_ro, 4, 2, 1, 1)
-        layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 5, 0, 1, 2)
-        layout.addWidget(self.spin_lam, 5, 2, 1, 1)
-        layout.addWidget(QLabelD("Promień rolek - g [mm]"), 6, 0, 1, 2)
-        layout.addWidget(self.spin_g, 6, 2, 1, 1)
+        layout.addWidget(QLabelD("Liczba Zębów - z"), 2, 0, 1, 2)
+        layout.addWidget(self.label_z, 2, 2, 1, 1)
+        layout.addWidget(QLabelD("Promień - ρ [mm]"), 3, 0, 1, 2)
+        layout.addWidget(self.spin_ro, 3, 2, 1, 1)
+        layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 4, 0, 1, 2)
+        layout.addWidget(self.spin_lam, 4, 2, 1, 1)
+        layout.addWidget(QLabelD("Promień rolek - g [mm]"), 5, 0, 1, 2)
+        layout.addWidget(self.spin_g, 5, 2, 1, 1)
 
         # layout.addWidget(QLabelD("DANE : "),0,0,1,2)
         layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 7, 0, 1, 3)
@@ -119,7 +123,8 @@ class DataEdit(QWidget):
             layout.addWidget(name_label, 11+index, 0, 1, 2)
             layout.addWidget(qlabel, 11+index, 2, 1, 1)
 
-        layout.addWidget(self.dane_materialowe, 0, 3, 10, 5)
+        layout.addWidget(self.dane_materialowe, 0, 3, 10, 6)
+        layout.addWidget(self.accept_button, 10, 5, 1, 2)
         # layout.addWidget(self.luzy, 0, 6, 10, 3)
         layout.addWidget(self.results_frame, 11, 5, 7, 4)
     
@@ -137,6 +142,7 @@ class DataEdit(QWidget):
         layout.addWidget(self.spin_g, 6, 4, 1, 2)
 
         layout.addWidget(self.dane_materialowe, 7, 0, 10, 6)
+        layout.addWidget(self.accept_button, 17, 0, 1, 6)
 
         layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 18, 0, 1, 6)
         for index, (text, qlabel) in enumerate(self.data_labels.items(), start=1):

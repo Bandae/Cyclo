@@ -101,6 +101,8 @@ class DataEdit(QWidget):
                 self.input_widgets[key].valueChanged.connect(self.inputsModified)
             else:
                 self.input_widgets[key].valueChanged.connect(lambda: self.accept_button.setEnabled(True))
+        self.material_frame.updated.connect(lambda: self.accept_button.setEnabled(True))
+        
         layout = QGridLayout()
         self.setupSmallLayout(layout)
         self.setLayout(layout)

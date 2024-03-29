@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
         try:
             w, h = self.animation_view.size().toTuple()
             self.help_button.move(w-150, 20)
-            self.base_data.move(w-200, h-120)
+            self.base_data.move(w-200, h-170)
         except AttributeError:
             # pierwsze ustalenie rozmiaru okna, jeszcze nie ma animation view.
             pass
