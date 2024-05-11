@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QTabWidget, QVBoxLayout, QTableWidget, QTableWidge
 from PySide2.QtGui import QPainter
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt
-
+# TODO: zrobic tolerance graph points lepiej. nie musze chyba tego robic tylko inna metode 
 def graph_points(point_values, smooth_values):
     scatter_points = [[i, point_values[i - 1]] for i in range(1, len(point_values) + 1)]
     scale = len(point_values) / len(smooth_values)
@@ -30,7 +30,7 @@ class Wykres(QtCharts.QChartView):
         
         # self.os_y.setTickCount(1)
         self.line_series = QtCharts.QLineSeries()
-        self.point_series = QtCharts.QScatterSeries()
+        self.point_series = QtCharts.QScatterSeries(name="wartość średnia")
         self.point_series.setColor("#529AB7")
         self.point_series.setMarkerSize(15)
         self.chart.addSeries(self.line_series)
@@ -39,19 +39,48 @@ class Wykres(QtCharts.QChartView):
         self.line_series.attachAxis(self.os_y)
         self.point_series.attachAxis(self.os_x)
         self.point_series.attachAxis(self.os_y)
+
+        self.tol_series_low = QtCharts.QLineSeries(name="minimalna wartość")
+        self.tol_series_high = QtCharts.QLineSeries(name="maksymalna wartość")
+        self.chart.addSeries(self.tol_series_low)
+        self.chart.addSeries(self.tol_series_high)
+        self.tol_series_low.attachAxis(self.os_x)
+        self.tol_series_low.attachAxis(self.os_y)
+        self.tol_series_high.attachAxis(self.os_x)
+        self.tol_series_high.attachAxis(self.os_y)
         
         self.setChart(self.chart)
     
-    def update_data(self, point_values, smooth_values):
+    def update_data_tolerance(self, value_lists):
+        self.chart.legend().show()
         self.line_series.clear()
         self.point_series.clear()
+        self.tol_series_high.clear()
+        self.tol_series_low.clear()
+        for i, wart in enumerate(value_lists[0], 1):
+            self.line_series.append(i, wart)
+        for i, wart in enumerate(value_lists[1], 1):
+            self.tol_series_low.append(i, wart)
+        for i, wart in enumerate(value_lists[2], 1):
+            self.tol_series_high.append(i, wart)
+        
+        self.os_x.setRange(1, len(value_lists[0]))
+        self.os_y.setRange(0, max([i for i in value_lists[2]]))
+        self.chart.update()
+
+    def update_data(self, point_values, smooth_values):
+        self.chart.legend().hide()
+        self.line_series.clear()
+        self.point_series.clear()
+        self.tol_series_high.clear()
+        self.tol_series_low.clear()
         for wart in smooth_values:
             self.line_series.append(wart[0], wart[1])
         for wart in point_values:
             self.point_series.append(wart[0], wart[1])
 
-        self.os_x.setRange(point_values[0][0], point_values[len(point_values)-1][0])
-        self.os_y.setRange(min([i[1] for i in smooth_values]), max([i[1] for i in smooth_values]))
+        self.os_x.setRange(point_values[0][0], point_values[-1][0])
+        self.os_y.setRange(0, max([i[1] for i in smooth_values]))
         self.chart.update()
 
 
@@ -94,6 +123,15 @@ class ChartTabs(QTabWidget):
         self.addTab(self.wykres_strat, "Straty")
 
     def update(self, data):
+        if data["mode"] == "tolerances":
+            if data.get("sily") and data["sily"] is not None:
+                self.wykres_sil.update_data_tolerance(data["sily"])
+            if data.get("naciski") and data["naciski"] is not None:
+                self.wykres_naciskow.update_data_tolerance(data["naciski"])
+            if data.get("straty") and data["straty"] is not None:
+                self.wykres_strat.update_data_tolerance(data["straty"])
+            return
+
         if data.get("sily") and data["sily"] is not None:
             self.wykres_sil.update_data(*graph_points(data["sily"][0], data["sily"][1]))
         if data.get("naciski") and data["naciski"] is not None:

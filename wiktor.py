@@ -272,6 +272,7 @@ class DataEdit(QWidget):
                 "sily": wyniki["sily"],
                 "naciski": wyniki['naciski'],
                 "straty": wyniki['straty'],
+                "mode": wyniki['mode'],
             })
 
         self.obliczone_dane["F_wmr"] = round(1000 * 4 * (self.zew_dane["M_wyj"] / self.zew_dane["K"]) / (pi * self.input_dane["R_wt"]), 1)

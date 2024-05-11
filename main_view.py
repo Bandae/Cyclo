@@ -275,7 +275,7 @@ class Animacja(QLabel):
             self.rysowanko()
             if self.data is None:
                 return
-            self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
+            # self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
             if self.kat_ >= 360*(self.data["z"]+1):
                 self.kat_ = 0
                 self.kat_2 = 180*(self.data["z"]+1)

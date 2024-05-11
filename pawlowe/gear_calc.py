@@ -87,7 +87,7 @@ def calculate_gear(gear_data, material_data, out_data):
         "sily": sily,
         "naciski": naprezenia,
         "straty": straty_mocy,
-        "N_Ck-ri": round(sum(sily), 3)
+        "N_Ck-ri": round(sum(straty_mocy), 3)
         # "luzy": luzy,
     }
 
