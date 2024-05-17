@@ -11,6 +11,7 @@ class DoubleSpinBox(QDoubleSpinBox):
         # self.lineEdit().setReadOnly(False)
         self.setSingleStep(step)
         self.setDecimals(decimal_places)
+        # self.setStyleSheet("border-style: solid; border-color: red; border-width: 3px;")
     
     def modify(self, value=None, minimum=None, maximum=None):
         if minimum is not None:
@@ -98,6 +99,7 @@ class ResponsiveContainer(QScrollArea):
         # elif new_width < self.break_point and old_width > self.break_point:
         #     self.main_widget.setFixedHeight(self.ver_space)
         #     setSmallScreen()
+        
         if new_width > self.break_point:
             self.main_widget.setFixedHeight(new_height)
             setBigScreen()

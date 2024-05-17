@@ -7,12 +7,13 @@ class ToleranceInput(QWidget):
     def __init__(self, parent, label_text, tooltip_text):
         super().__init__(parent)
         self.tol = [0, 0, 0]
+        self.precision = 3
 
         self.label = QLabelD(label_text)
         self.label.setToolTip(tooltip_text)
-        self.low_input = DoubleSpinBox(self.tol[0], -0.05, 0.05, 0.001, 3)
-        self.high_input = DoubleSpinBox(self.tol[1], -0.05, 0.05, 0.001, 3)
-        self.deviation_input = DoubleSpinBox(self.tol[2], -0.05, 0.05, 0.001, 3)
+        self.low_input = DoubleSpinBox(self.tol[0], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
+        self.high_input = DoubleSpinBox(self.tol[1], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
+        self.deviation_input = DoubleSpinBox(self.tol[2], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
 
         self.low_input.valueChanged.connect(self.modifiedLow)
         self.high_input.valueChanged.connect(self.modifiedHigh)
@@ -33,17 +34,37 @@ class ToleranceInput(QWidget):
         self.deviation_input.setEnabled(arg__1)
 
     def modifiedLow(self):
-        self.tol[0] = round(self.low_input.value(), 3)
-        self.high_input.modify(minimum=self.tol[0])
-        # self.low_input.modify(maximum=self.tol[1])
+        self.tol[0] = round(self.low_input.value(), self.precision)
+        if self.tol[0] == 0:
+            self.high_input.modify(minimum=0)
+        else:
+            self.high_input.modify(minimum=self.tol[0] + 1 * 10**-self.precision)
     
     def modifiedHigh(self):
-        self.tol[1] = round(self.high_input.value(), 3)
-        self.low_input.modify(maximum=self.tol[1])
-        # self.high_input.modify(minimum=self.tol[0])
+        self.tol[1] = round(self.high_input.value(), self.precision)
+        if self.tol[1] == 0:
+            self.low_input.modify(maximum=0)
+        else:
+            self.low_input.modify(maximum=self.tol[1] - 1 * 10**-self.precision)
     
     def modifiedDeviation(self):
-        self.tol[2] = round(self.deviation_input.value(), 3)
+        self.tol[2] = round(self.deviation_input.value(), self.precision)
+    
+    def resetTolerances(self):
+        self.low_input.blockSignals(True)
+        self.high_input.blockSignals(True)
+        self.low_input.modify(maximum=0)
+        self.high_input.modify(minimum=0)
+        self.low_input.setValue(0)
+        self.high_input.setValue(0)
+        self.tol[0] = 0
+        self.tol[1] = 0
+        self.low_input.blockSignals(False)
+        self.high_input.blockSignals(False)
+    
+    def resetDeviations(self):
+        self.deviation_input.setValue(0)
+        self.tol[2] = 0
     
     def changeMode(self, mode):
         if mode == "deviations":
@@ -63,16 +84,18 @@ class ToleranceEdit(QWidget):
         super().__init__(parent)
 
         self.fields = {
-            "T_o": ToleranceInput(self, "T_o", "Tolerancja wykonania promieni otworów w kole cykloidalnym"),
-            "T_t": ToleranceInput(self, "T_t", "Tolerancja wykonania promieni tuleji"),
-            "T_s": ToleranceInput(self, "T_s", "Tolerancja wykonania promieni sworzni"),
-            "T_Rk": ToleranceInput(self, "T_Rk", "Tolerancja wykonania promienia rozmieszczenia otworów w kole cykloidalnym"),
-            "T_Rt": ToleranceInput(self, "T_Rt", "Tolerancja wykonania promienia rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_fi_k": ToleranceInput(self, "T_fi_k", "Tolerancja wykonania kątowego rozmieszczenia otworów w kole cykloidalnym"),
-            "T_fi_t": ToleranceInput(self, "T_fi_t", "Tolerancja wykonania kątowego rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_e": ToleranceInput(self, "T_e", "Tolerancja wykonania mimośrodu"),
+            "T_o": ToleranceInput(self, "T<sub>o</sub>", "Tolerancja wykonania promieni otworów w kole cykloidalnym"),
+            "T_t": ToleranceInput(self, "T<sub>t</sub>", "Tolerancja wykonania promieni tuleji"),
+            "T_s": ToleranceInput(self, "T<sub>s</sub>", "Tolerancja wykonania promieni sworzni"),
+            "T_Rk": ToleranceInput(self, "T<sub>Rk</sub>", "Tolerancja wykonania promienia rozmieszczenia otworów w kole cykloidalnym"),
+            "T_Rt": ToleranceInput(self, "T<sub>Rt</sub>", "Tolerancja wykonania promienia rozmieszczenia tulei w elemencie wyjściowym"),
+            "T_fi_k": ToleranceInput(self, "T<sub>\u03c6k</sub>", "Tolerancja wykonania kątowego rozmieszczenia otworów w kole cykloidalnym"),
+            "T_fi_t": ToleranceInput(self, "T<sub>\u03c6t</sub>", "Tolerancja wykonania kątowego rozmieszczenia tulei w elemencie wyjściowym"),
+            "T_e": ToleranceInput(self, "T<sub>e</sub>", "Tolerancja wykonania mimośrodu"),
         }
-        self.labels = { key: [QLabelD(key), QLabelD("0"), QLabelD("0"), QLabelD("0")] for key in self.fields }
+        self.labels = { key: [QLabelD(self.fields[key].label.text()), QLabelD("0"), QLabelD("0"), QLabelD("0")] for key in self.fields }
+        for key in self.labels:
+            self.labels[key][0].setToolTip(self.fields[key].toolTip())
         self.tolerancje = { key: widget.tol for key, widget in self.fields.items() }
         self.mode = "deviations"
         self.check = QCheckBox(text="Używaj luzów w obliczeniach")
@@ -82,25 +105,34 @@ class ToleranceEdit(QWidget):
         self.label_bottom = QLabelD("Obecne odchyłki:")
 
         self.tol_check = QCheckBox(text="Wybierz pole tolerancji")
-        #TODO: odblokowac po ustaleniu sposobu obliczen
-        # self.tol_check.setEnabled(False)
         self.dev_check = QCheckBox(text="Wybierz odchyłkę")
         self.check_group = QButtonGroup(self)
         self.check_group.addButton(self.tol_check)
         self.check_group.addButton(self.dev_check)
         self.dev_check.stateChanged.connect(self.modeChanged)
-        self.dev_check.setChecked(True)
         self.tol_check.setEnabled(False)
         self.dev_check.setEnabled(False)
 
-        self.accept_button = QPushButton(text="Ustaw tolerancje")
+        self.accept_button = QPushButton(text="Ustaw odchyłki")
         self.accept_button.clicked.connect(self.dataUpdated)
         self.accept_button.setEnabled(False)
 
+        self.reset_button = QPushButton(text="Wyzeruj odchyłki")
+        def reset_fields():
+            if self.tol_check.isChecked():
+                for field in self.fields.values():
+                    field.resetTolerances()
+            else:
+                for field in self.fields.values():
+                    field.resetDeviations()
+            self.dataUpdated()
+        self.reset_button.clicked.connect(reset_fields)
+        self.reset_button.setEnabled(False)
+
         layout = QGridLayout()
-        layout.addWidget(self.check, 0, 0)
-        layout.addWidget(self.tol_check, 1, 0)
-        layout.addWidget(self.dev_check, 1, 1)
+        layout.addWidget(self.check, 0, 0, 1, 2)
+        layout.addWidget(self.tol_check, 1, 0, 1, 2)
+        layout.addWidget(self.dev_check, 1, 3, 1, 2)
         layout.addWidget(self.label_top, 2, 0, 1, 4)
         for ind, widget in enumerate(self.fields.values()):
             layout.addWidget(widget.label, 3+ind-ind%2, 0 + ind%2 * 4)
@@ -119,14 +151,16 @@ class ToleranceEdit(QWidget):
             layout.addWidget(l4, 12+ind-ind%2, 1 + ind%2 * 4)
             l2.hide()
             l3.hide()
-        layout.addWidget(self.accept_button, 20, 0)
+        layout.addWidget(self.accept_button, 20, 0, 1, 2)
+        layout.addWidget(self.reset_button, 20, 2, 1, 2)
 
         self.setLayout(layout)
+        self.dev_check.setChecked(True)
         
     def onCheck(self, state):
         enable = False if state == 0 else True
         self.accept_button.setEnabled(enable)
-        #TODO: odblokowac po ustaleniu sposobu obliczen
+        self.reset_button.setEnabled(enable)
         self.tol_check.setEnabled(enable)
         self.dev_check.setEnabled(enable)
         self.label_top.setEnabled(enable)
@@ -153,6 +187,8 @@ class ToleranceEdit(QWidget):
         if mode == "deviations":
             self.label_top.setText("Ustaw odchyłkę:")
             self.label_bottom.setText("Obecne odchyłki:")
+            self.accept_button.setText("Ustaw odchyłki")
+            self.reset_button.setText("Wyzeruj odchyłki")
             for (_, l2, l3, l4) in self.labels.values():
                 l2.hide()
                 l3.hide()
@@ -160,6 +196,8 @@ class ToleranceEdit(QWidget):
         elif mode == "tolerances":
             self.label_top.setText("Ustaw pole tolerancji:")
             self.label_bottom.setText("Obecne tolerancje:")
+            self.accept_button.setText("Ustaw tolerancje")
+            self.reset_button.setText("Wyzeruj tolerancje")
             for (_, l2, l3, l4) in self.labels.values():
                 l2.show()
                 l3.show()

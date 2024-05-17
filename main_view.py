@@ -5,13 +5,12 @@ from PySide2.QtCore import QPoint, QSize, Qt, Signal
 from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath, QResizeEvent
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
 
-# TODO: nie wiem czy nie psuje sie dla konkretnych parzystości/nie sworzni/rolek w momencie resetu.
 # TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self.kat_ może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
 # reset animacji to naprawia od razu, ale nie jej start. jest to kwestia kumulacji błędów, bo jak lece od 24 do 10 to sie zepsuje, ale jak zresetuje na 11 i zejde do 10 to już nie.
 # narazie ustawiam reset jeśli było zmienione przełożenie/liczba zębów. Inny pomysł mam, żeby zmienić self.kat_ do najbliższego podzielnego przez skok kąta, to powinno działać
 # tak w sumie to chyba tylko 2-gie kolo tak sie dziejes, czyli seld.kat_2, ale probowalem to ustawic jakos i nie dzialalo
 # chwilowo zrobilem taki sygnał zeby reset był dobrze
-
+#TODO: wywala jak jest włączony sygnał animation tick do zmiany kąta na tym sliderze
 #TODO: powiększenie na maksa okna z paska powoduje jakieś zepsucie tych resizeEvent.
 def tworz_zarys_kola(z, ro, h, g, scala):
     zarys = QPainterPath()

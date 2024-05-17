@@ -1,6 +1,7 @@
 *.json
 *.rtf
 *.csv
+*.dxf
 *.cmd
 *.exe
 main.build

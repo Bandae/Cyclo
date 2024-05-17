@@ -7,6 +7,7 @@ from common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContain
 from pawlowe.widgets import DaneMaterialowe, ResultsFrame
 from pawlowe.wykresy import Wykresy
 from pawlowe.gear_calc import calculate_gear, get_lam_min, get_ro_min, gear_error_check
+from utils import open_pdf
 
 #TODO: pawel i wiktor tab, a takze nasze wykresy są tak podobne schematycznie, że może da rade z nich zrobić jakąś wspólną klase abstrakcyjną do dziedziczenia
 #TODO: nie podoba mi się obliczanie p_max, jako po prostu największego nacisku z wszystkich. U wiktora jest p_max wiekszy niz na sworzniu czasem, bo sworzen zmienia p jak sie obraca.
@@ -265,6 +266,10 @@ class GearTab(AbstractTab):
         self.wykresy = Wykresy()
         self.data.shouldSendData.connect(self.sendData)
         self.data.chartDataUpdated.connect(self.wykresy.update_charts)
+
+        help_pdf_button = QPushButton("Pomoc")
+        button_layout.addWidget(help_pdf_button)
+        help_pdf_button.clicked.connect(lambda: open_pdf("help//zazebienie-help-1.pdf"))
 
         scrollable_tab = ResponsiveContainer(self, self.data, self.data.setupSmallLayout, self.data.setupLayout, 480, 1300)
         tab_titles = ["Wprowadzanie Danych", "Wykresy"]

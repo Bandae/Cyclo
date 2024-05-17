@@ -2,7 +2,8 @@ from PySide2.QtWidgets import QTabWidget, QVBoxLayout, QTableWidget, QTableWidge
 from PySide2.QtGui import QPainter
 from PySide2.QtCharts import QtCharts
 from PySide2.QtCore import Qt
-# TODO: zrobic tolerance graph points lepiej. nie musze chyba tego robic tylko inna metode 
+
+
 def graph_points(point_values, smooth_values):
     scatter_points = [[i, point_values[i - 1]] for i in range(1, len(point_values) + 1)]
     scale = len(point_values) / len(smooth_values)
@@ -14,7 +15,6 @@ class Wykres(QtCharts.QChartView):
     def __init__(self, chart_title, x_title, y_title):
         super().__init__()
         self.chart = QtCharts.QChart()
-        self.chart.legend().hide()
         self.chart.setTitle(chart_title)
         self.setRenderHint(QPainter.Antialiasing)
 
@@ -29,8 +29,8 @@ class Wykres(QtCharts.QChartView):
         self.chart.addAxis(self.os_y, Qt.AlignLeft)
         
         # self.os_y.setTickCount(1)
-        self.line_series = QtCharts.QLineSeries()
-        self.point_series = QtCharts.QScatterSeries(name="wartość średnia")
+        self.line_series = QtCharts.QLineSeries(name="wartość średnia")
+        self.point_series = QtCharts.QScatterSeries()
         self.point_series.setColor("#529AB7")
         self.point_series.setMarkerSize(15)
         self.chart.addSeries(self.line_series)
@@ -49,6 +49,8 @@ class Wykres(QtCharts.QChartView):
         self.tol_series_high.attachAxis(self.os_x)
         self.tol_series_high.attachAxis(self.os_y)
         
+        self.chart.legend().markers(self.point_series)[0].setVisible(False)
+        self.chart.legend().hide()
         self.setChart(self.chart)
     
     def update_data_tolerance(self, value_lists):

@@ -1,6 +1,7 @@
 from functools import partial
 import datetime
 import json
+import math
 import re
 
 from PySide2.QtCore import Qt, QSize
@@ -57,7 +58,7 @@ class MainWindow(QMainWindow):
 
         self.animation_view = AnimationView(central_widget, self.gear_tab.data.dane_all.copy())
         animation_layout.addWidget(self.animation_view)
-        self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
+        # self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
 
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
@@ -70,6 +71,9 @@ class MainWindow(QMainWindow):
         self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
+        self.base_data = BaseDataWidget(central_widget)
+        self.base_data.dataChanged.connect(self.exchangeData)
+
         self.help_button = QPushButton(central_widget)
         self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
         self.help_button.setIconSize(QSize(140, 140))
@@ -77,9 +81,6 @@ class MainWindow(QMainWindow):
         self.help_label = QLabel("Otwórz obrazek pomocniczy", self.help_button)
         self.help_label.move(10, 10)
         self.help_button.pressed.connect(self.helpClicked)
-
-        self.base_data = BaseDataWidget(central_widget)
-        self.base_data.dataChanged.connect(self.exchangeData)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
         self.stacked_widgets = [self.gear_tab, self.pin_out_tab, milosz, kamil]
@@ -119,9 +120,9 @@ class MainWindow(QMainWindow):
         eksport_menu.addAction(eksport_csv)
         eksport_csv.triggered.connect(self.generateCSV)
 
-        # eksport_dxf = QAction("Eksport do DXF", self)
-        # eksport_menu.addAction(eksport_dxf)
-        # eksport_dxf.triggered.connect(self.generateDXF)
+        eksport_dxf = QAction("Eksport do DXF", self)
+        eksport_menu.addAction(eksport_dxf)
+        eksport_dxf.triggered.connect(self.generateDXF)
 
         #PRZECHODZENIE MIĘDZY SEKCJAMI MENU :
         sectionmenu = menu.addMenu("&Sekcja")
@@ -236,7 +237,23 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia pliku csv: {str(e)}')
 
     def generateDXF(self):
-        ...
+        if self.error_box.errorsExist():
+            QMessageBox.critical(self, 'Błąd', 'Przed generowaniem rysunku, pozbądź się błędów.')
+            return
+        file_name = "CycloRysunek_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".dxf"
+        try:
+            with open(file_name, "w") as f:
+                f.write("0\nSECTION\n2\nENTITIES\n0\nLWPOLYLINE\n39\n0.5\n")
+                z, ro = self.gear_tab.data.dane_all["z"], self.gear_tab.data.dane_all["ro"]
+                h, g = self.gear_tab.data.dane_all["lam"], self.gear_tab.data.dane_all["g"]
+                for j in range(0, 720):
+                    i= j / 2
+                    x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
+                    y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
+                    f.write(f"10\n{x}\n20\n{y}\n")
+            QMessageBox.information(self, 'Rysunek zapisany', 'Utworzono rysunek zarysu.')
+        except Exception as e:
+            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia rysunku: {str(e)}')
 
     def loadJSON(self):
         '''Wczytuje dane z pliku .json, wywołuje metodę loadData() każdej z zakładek, podając im słownik jej danych.

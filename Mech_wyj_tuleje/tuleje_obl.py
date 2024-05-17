@@ -2,17 +2,20 @@ import math
 import numpy as np
 from scipy.stats import truncnorm
 # różnica z excelem w odchyłkach jest dlatego, że licze wszystkie sworznie, a w excelu są 6na10, te przenoszące normalnie obciążenie. To ma znaczenie w obliczeniach z odchyłką przy braniu pod uwagę sum wartości z kilku sworzni. To psuje obliczenia gładkie całkiem.
-
+# odchyłki częściowo poprawione, ale połowa sworzni nie jest obliczana, mimo że przenosi obciążenie w niektóych przypadkach.
 SAMPLES = 50
 
-def lista_fi_sworzni(n_sworzni, kat):
-    # n_sworzni = n_sworzni_test / 2
-    # if n_sworzni_test % 2:
-        # n_sworzni = (n_sworzni_test+1) /2
+def lista_fi_sworzni(n_sworzni, kat, mode="standard"):
     def obl_fi_kj(i):
         return (2 * math.pi * (i - 1)) / n_sworzni
     
-    return [obl_fi_kj(i) + kat * 0.01745 for i in range(1, int(n_sworzni) + 1)]
+    n_sworzni_aktywne = n_sworzni
+    if mode == "active_only":
+        n_sworzni_aktywne = n_sworzni / 2
+        if n_sworzni % 2:
+            n_sworzni_aktywne = (n_sworzni+1) / 2
+    
+    return [obl_fi_kj(i) + kat * 0.01745 for i in range(1, int(n_sworzni_aktywne) + 1)]
 
 def oblicz_fs(podparcie, K, sily_0, E, b_kola, d_sw, e1, e2):
     l_1 = b_kola / 2 + e1 # odleglosc do polowy kola pierwszego
@@ -81,8 +84,11 @@ def oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2):
 def oblicz_d_sworzen(M_gmax, k_g):
     return round((32 * M_gmax / (math.pi * k_g * 10**6))**(1/3) * 1000, 2)
 
-def oblicz_sily(F_max, lista_fi_kj):
-    return [round(F_max * math.sin(fi_kj), 1) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
+def oblicz_sily(F_max, lista_fi_kj, n_sworzni):
+    f_list = [round(F_max * math.sin(fi_kj), 1) if F_max * math.sin(fi_kj) > 0 else 0 for fi_kj in lista_fi_kj]
+    for _ in range(n_sworzni - len(lista_fi_kj)):
+        f_list.append(0)
+    return f_list
 
 def oblicz_naciski(sily, d_otw, d_tul, b_kola, v_k, v_t, E_k, E_t, tolerancje):
     R_otw = d_otw / 2 if tolerancje is None else (d_otw + tolerancje["T_o"]) / 2
@@ -110,7 +116,7 @@ def oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v
     c = (4.9 * 10**-3) * math.sqrt((F_max / b_kola) * (((1 - v_k**2) / E_k) + ((1 - v_t**2) / E_t)) * (R_otw * R_tul / (R_otw - R_tul)))
     return (F_max / (math.pi * b_kola)) * (((1 - v_k**2) / E_k) * ((1 / 3) + math.log((4 * R_otw) / c))) + ((1 - v_t**2) / E_t) * ((1 / 3) + math.log((4 * R_tul) / c))
 
-def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, mimosrod, d_tul, d_otw, strzalki, tolerancje, E_k, v_k, E_t, v_t, min_beta=None, temp_sum=None):
+def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, mimosrod, d_tul, d_otw, strzalki, tolerancje, E_k, v_k, E_t, v_t, n_sworzni, min_beta=None, temp_sum=None):
     del_max = oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t)
     delty = [del_max * math.sin(fi) for fi in lista_fi_kj]
     luzy = oblicz_luzy_odchylka(R_wt, mimosrod, d_tul, d_otw, lista_fi_kj, tolerancje)
@@ -122,7 +128,10 @@ def oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, mimosrod, d_tul,
         temp = [(f_j + del_j - (luz_j - h_j * min_beta_obr)) * h_j for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
         suma = sum([temp_j if temp_j > 0 else 0 for temp_j in temp])
     sily_temp = [1000 * M_k * (f_j + del_j - (luz_j - h_j * min_beta_obr)) / suma for f_j, del_j, luz_j, h_j in zip(strzalki, delty, luzy, list_h_j)]
-    return [round(sila, 1) if sila > 0 else 0 for sila in sily_temp], min_beta_obr, suma
+    sily = [round(sila, 1) if sila > 0 else 0 for sila in sily_temp]
+    for _ in range(n_sworzni - len(lista_fi_kj)):
+        sily.append(0)
+    return sily, min_beta_obr, suma
 
 def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     odch_e = e if tolerancje is None else e + tolerancje["T_e"]
@@ -154,8 +163,8 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
         mode = "deviations"
 
     F_max = 1000 * ((4 * M_k) / (R_wt * n_sworzni)) # N
-    lista_fi_kj = lista_fi_sworzni(n_sworzni, kat)
-    sily = oblicz_sily(F_max, lista_fi_kj)
+    lista_fi_kj = lista_fi_sworzni(n_sworzni, kat, mode="active_only")
+    sily = oblicz_sily(F_max, lista_fi_kj, n_sworzni)
     M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
     d_smax = oblicz_d_sworzen(M_gmax, k_g)
 
@@ -188,11 +197,11 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
     p_max = oblicz_naciski((F_max,), d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])[0]
     strzalki = oblicz_fs(podparcie, K, sily, E, b_kola, d_sw, e1, e2)
     lista_fi_gladka = lista_fi_sworzni(40, kat)
-    sily_gladkie = oblicz_sily(F_max, lista_fi_gladka)
+    sily_gladkie = oblicz_sily(F_max, lista_fi_gladka, 40)
     strzalki_gladkie = oblicz_fs(podparcie, K, sily_gladkie, E, b_kola, d_sw, e1, e2)
     if mode == "deviations":
-        sily, min_beta, temp_sum = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t)
-        sily_gladkie = oblicz_sily_odchylka(M_k, lista_fi_gladka, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki_gladkie, tolerancje["tolerances"], E_k, v_k, E_t, v_t, min_beta, temp_sum)[0]
+        sily, min_beta, temp_sum = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki, tolerancje["tolerances"], E_k, v_k, E_t, v_t, n_sworzni)
+        sily_gladkie = oblicz_sily_odchylka(M_k, lista_fi_gladka, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki_gladkie, tolerancje["tolerances"], E_k, v_k, E_t, v_t, n_sworzni, min_beta, temp_sum)[0]
     naciski = oblicz_naciski(sily, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
     naciski_gladkie = oblicz_naciski(sily_gladkie, d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje["tolerances"])
     straty = oblicz_straty(omg_0, sily, e, dane_zew["R_w1"], d_tul_wybrane, d_sw_wybrane, tolerancje["tolerances"], f_kt, f_ts)
