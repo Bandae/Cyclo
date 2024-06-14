@@ -179,9 +179,11 @@ class MainWindow(QMainWindow):
         if choice == 2:
             self.saveToJSON()
             self.animation_view.start_event.clear()
+            self.animation_view.ghost_event.clear()
             return super().closeEvent(event)
         elif choice == 1:
             self.animation_view.start_event.clear()
+            self.animation_view.ghost_event.clear()
             return super().closeEvent(event)
         elif choice == 0:
             event.ignore()
@@ -298,8 +300,6 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
 
-        self.activateTab(0)
-        self.activateTab(1)
         data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
         data.update({"base": self.base_data.saveData()})
         if self.loaded_file is not None and mode != "save as":

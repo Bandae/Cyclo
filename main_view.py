@@ -1,17 +1,16 @@
 import math
 import threading
 import time
-from PySide2.QtCore import QPoint, QSize, Qt, Signal
+from PySide2 import QtCore
+from PySide2.QtCore import QPoint, Qt, Signal
 from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen,QBrush, QPainterPath, QResizeEvent
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
 
+# TODO: możliwe że wystarczy wysłać sygnał z rysowania i połączyć z metodą w głównym wątku z flagą Qt::QueuedConnection zamiast tego Invoker
 # TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self.kat_ może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
 # reset animacji to naprawia od razu, ale nie jej start. jest to kwestia kumulacji błędów, bo jak lece od 24 do 10 to sie zepsuje, ale jak zresetuje na 11 i zejde do 10 to już nie.
 # narazie ustawiam reset jeśli było zmienione przełożenie/liczba zębów. Inny pomysł mam, żeby zmienić self.kat_ do najbliższego podzielnego przez skok kąta, to powinno działać
-# tak w sumie to chyba tylko 2-gie kolo tak sie dziejes, czyli seld.kat_2, ale probowalem to ustawic jakos i nie dzialalo
-# chwilowo zrobilem taki sygnał zeby reset był dobrze
-#TODO: wywala jak jest włączony sygnał animation tick do zmiany kąta na tym sliderze
-#TODO: powiększenie na maksa okna z paska powoduje jakieś zepsucie tych resizeEvent.
+
 def tworz_zarys_kola(z, ro, h, g, scala):
     zarys = QPainterPath()
     points = QPolygon()
@@ -66,6 +65,9 @@ class AnimationView(QWidget):
         super().__init__(parent)
         self.animacja = Animacja(self, dane)
         self.start_event = threading.Event()
+        self.ghost_event = threading.Event()
+        self.ghost_event.set()
+        threading.Thread(target = self.animacja.startAnimacji, args=(self.start_event, self.ghost_event)).start()
 
         main_layout = QVBoxLayout()
         animation_controls = QGridLayout()
@@ -107,12 +109,9 @@ class AnimationView(QWidget):
         if self.start_animation_button.text() == "START ANIMACJI":
             self.start_animation_button.setText("STOP ANIMACJI")
             self.start_event.set()
-            time.sleep(0.04)
-            threading.Thread(target=self.animacja.startAnimacji, args=(self.start_event,)).start()
         else:
             self.start_animation_button.setText("START ANIMACJI")
             self.start_event.clear()
-            time.sleep(0.1)
 
     def resetAnimacji(self):
         self.start_animation_button.setText("START ANIMACJI")
@@ -122,16 +121,18 @@ class AnimationView(QWidget):
         self.animacja.setAngle(0, reset=True)
 
     def setAngle(self, slider_value):
-        if self.start_event.is_set():
-            return
+        # if self.start_event.is_set():
+        #     return
         self.angle_label.setText(str(slider_value) + "\u00B0")
         self.animacja.setAngle(slider_value)
     
     def updateSlider(self, value):
-        if not self.start_event.is_set():
-            return
+        # if not self.start_event.is_set():
+        #     return
         self.angle_label.setText(str(-round(value)) + "\u00B0")
+        self.slider.blockSignals(True)
         self.slider.setValue(-value)
+        self.slider.blockSignals(False)
 
 
 class Animacja(QLabel):
@@ -160,21 +161,19 @@ class Animacja(QLabel):
         self.layout = QGridLayout()
         # self.setAlignment(Qt.AlignLeft)
         # self._size = QSize(self.width(), self.height())
-        # self.pixmap = QPixmap(self._size)
-        # da sie tu zrobic pixmap i tylko czyscic przy rysowaniu, ale painter problemy czasem wywala ze jest juz jeden aktywny...
-        # czy to znaczy, ze nie nadąża rysować, zanim minie klatka animacji?
-        # self.pixmap.fill(QColor(0, 0, 0, 0))
-        # self.setPixmap(self.pixmap)
         self.updateAnimationData({})
         self.rysowanko()
 
     def rysowanko(self):
-        pixmap = QPixmap(self.size())
-        pixmap.fill("#f0f0f0")
+        # TODO: wygląda na to że invoke dziala nawet jak ta metoda jest wywołana z głównego wątku.
+        # jakby co to można podać tu argument mówiący skąd jest wywołana i robić po prostu self.setpixmap
+        pxmap = QPixmap(self.size())
+        pxmap.fill("#f0f0f0")
         if self.data is None:
-            self.setPixmap(pixmap)
+            invoke_in_main_thread(lambda: self.setPixmap(pxmap))
+            # self.setPixmap(pxmap)
             return
-        painter = QPainter(pixmap)
+        painter = QPainter(pxmap)
         pen = QPen(Qt.black,1)
         painter.setPen(pen)
         painter.translate(self.paint_area/2, self.paint_area/2)
@@ -233,11 +232,6 @@ class Animacja(QLabel):
             y = self.data["Rg"] * math.sin(i * self.skok_kata * 0.0175) * self.scala
             painter.drawEllipse(x-(self.data["g"]*self.scala),y-(self.data["g"]*self.scala),self.data["g"]*self.scala*2,self.data["g"]*self.scala*2)
 
-        #Rysowanie Wałka
-
-        #painter.setBrush(QBrush(Qt.yellow))
-        #painter.drawEllipse(-(10*self.scala),-(10*self.scala),20*self.scala,20*self.scala)
-
         # Rysowanie punktu mimośrodu
         # pen2 = QPen(Qt.red, 3)
         # painter.setPen(pen2)
@@ -253,7 +247,7 @@ class Animacja(QLabel):
         #painter.drawPoint(xp,yp)
 
         painter.end()
-        self.setPixmap(pixmap)
+        invoke_in_main_thread(lambda: self.setPixmap(pxmap))
 
     def setAngle(self, new_angle, reset=False):
         if reset:
@@ -266,18 +260,21 @@ class Animacja(QLabel):
         self.rysowanko()
         self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
 
-    def startAnimacji(self, event):
-        while event.is_set():
-            time.sleep(0.04)
-            self.kat_ += self.skok_kata
-            self.kat_2 += self.skok_kata
-            self.rysowanko()
-            if self.data is None:
-                return
-            # self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
-            if self.kat_ >= 360*(self.data["z"]+1):
-                self.kat_ = 0
-                self.kat_2 = 180*(self.data["z"]+1)
+    def startAnimacji(self, event, ghost_event):
+        while ghost_event.is_set():
+            while event.is_set():
+                time.sleep(0.04)
+                self.kat_ += self.skok_kata
+                self.kat_2 += self.skok_kata
+                self.rysowanko()
+
+                if self.data is None:
+                    return
+
+                self.animation_tick.emit(-self.kat_/(self.data["z"]+1))
+                if self.kat_ >= 360*(self.data["z"]+1):
+                    self.kat_ = 0
+                    self.kat_2 = 180*(self.data["z"]+1)
 
     def updatePaintArea(self, paint_area):
         self.paint_area = paint_area
@@ -311,3 +308,21 @@ class Animacja(QLabel):
             self.reset.emit()
             # self.setAngle(0, True)
         self.rysowanko()
+
+
+class InvokeEvent(QtCore.QEvent):
+    EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+
+    def __init__(self, fn): #, *args, **kwargs):
+        QtCore.QEvent.__init__(self, InvokeEvent.EVENT_TYPE)
+        self.fn = fn
+
+class Invoker(QtCore.QObject):
+    def event(self, event):
+        event.fn()
+        return True
+
+_invoker = Invoker()
+
+def invoke_in_main_thread(fn):
+    QtCore.QCoreApplication.postEvent(_invoker, InvokeEvent(fn))
