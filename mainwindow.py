@@ -1,8 +1,6 @@
 from functools import partial
-import datetime
 import json
 import math
-import re
 
 from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
@@ -14,9 +12,8 @@ from kamil import Tab_Kamil
 from main_view import AnimationView
 from milosz import Tab_Milosz
 from pawel import GearTab
+from utils import open_save_dialog
 from wiktor import PinOutTab
-
-# TODO: moze jedna metode zrobic z tego wszystkiego do generowaniaa raport csv dxf
 
 
 class MainWindow(QMainWindow):
@@ -189,6 +186,10 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def activateTab(self, index):
+        old_index = self.stacklayout.currentIndex()
+        if old_index == 0 or old_index == 1:
+            self.stacked_widgets[old_index].data.recalculate()
+        
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
         if index == 0:
@@ -212,9 +213,13 @@ class MainWindow(QMainWindow):
         if self.error_box.errorsExist():
             QMessageBox.critical(self, 'Błąd', 'Przed generowaniem raportu, pozbądź się błędów.')
             return
-        file_name = "CycloRaport_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".rtf"
+        
+        file_path = open_save_dialog(".rtf")
+        if not file_path:
+            return
+        # file_name = "CycloRaport_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".rtf"
         try:
-            with open(file_name, 'w') as f:
+            with open(file_path, 'w') as f:
                 f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs20")
                 f.write("{\\pard\\qc\\b Raport \\line\\par}")
                 f.write(self.base_data.reportData())
@@ -229,9 +234,13 @@ class MainWindow(QMainWindow):
         if self.error_box.errorsExist():
             QMessageBox.critical(self, 'Błąd', 'Przed generowaniem csv, pozbądź się błędów.')
             return
-        file_name = "CycloWykresy_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".csv"
+        
+        file_path = open_save_dialog(".csv")
+        if not file_path:
+            return
+        # file_name = "CycloWykresy_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".csv"
         try:
-            with open(file_name, "w") as f:
+            with open(file_path, "w") as f:
                 for tab_widget in self.stacked_widgets:
                     f.write(tab_widget.csvData())
             QMessageBox.information(self, 'Tabele zapisane', 'Utworzono plik CSV z danymi.')
@@ -242,9 +251,13 @@ class MainWindow(QMainWindow):
         if self.error_box.errorsExist():
             QMessageBox.critical(self, 'Błąd', 'Przed generowaniem rysunku, pozbądź się błędów.')
             return
-        file_name = "CycloRysunek_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".dxf"
+        
+        file_path = open_save_dialog(".dxf")
+        if not file_path:
+            return
+        # file_name = "CycloRysunek_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".dxf"
         try:
-            with open(file_name, "w") as f:
+            with open(file_path, "w") as f:
                 f.write("0\nSECTION\n2\nENTITIES\n0\nLWPOLYLINE\n39\n0.5\n")
                 z, ro = self.gear_tab.data.dane_all["z"], self.gear_tab.data.dane_all["ro"]
                 h, g = self.gear_tab.data.dane_all["lam"], self.gear_tab.data.dane_all["g"]
@@ -253,6 +266,7 @@ class MainWindow(QMainWindow):
                     x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
                     y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
                     f.write(f"10\n{x}\n20\n{y}\n")
+                f.write("0\nENDSEC\n0\nEOF\r")
             QMessageBox.information(self, 'Rysunek zapisany', 'Utworzono rysunek zarysu.')
         except Exception as e:
             QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia rysunku: {str(e)}')
@@ -306,19 +320,6 @@ class MainWindow(QMainWindow):
             save_ess(self.loaded_file, data)
             return
         
-        file_dialog = QFileDialog(self)
-        file_dialog.setFileMode(QFileDialog.AnyFile)
-        file_dialog.setWindowTitle("Zapis")
-        file_dialog.setLabelText(QFileDialog.Accept, "Zapisz")
-        file_dialog.setNameFilter('JSON Files (*.json)')
-
-        if file_dialog.exec_():
-            file_path = file_dialog.selectedFiles()[0]
-            file_name = re.search(r"/([^\s\./]+)(\.[^\s\./]+)?$", file_path)
-            if file_name is None or file_name.group(1) is None:
-                QMessageBox.critical(self, 'Błąd', f'Niepoprawna nazwa pliku.')
-                return
-            elif file_name.group(2) != ".json":
-                file_path += '.json'
-
+        file_path = open_save_dialog(".json")
+        if file_path:
             save_ess(file_path, data)

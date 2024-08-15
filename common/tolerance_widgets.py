@@ -1,19 +1,28 @@
+from typing import Dict, List, Tuple
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QPushButton, QCheckBox, QButtonGroup
 from common_widgets import DoubleSpinBox, QLabelD
 
+# TODO: min i max na polach w toleranceinput
+
 
 class ToleranceInput(QWidget):
-    def __init__(self, parent, label_text, tooltip_text):
+    '''Widżet do wprowadzania wartości tolerancji dla jednej wartości.
+    
+    Wyświetla dwa pola (na wprowadzenie dolnej i górnej odchyłki) w trybie pól tolerancji
+    lub jedno (na odchyłkę) w trybie wprowadzania konkretnych odchyłek.
+    '''
+
+    def __init__(self, parent: QWidget, label_text: str, tooltip_text: str) -> None:
         super().__init__(parent)
-        self.tol = [0, 0, 0]
+        self.tol = [0.0, 0.0, 0.0]
         self.precision = 3
 
         self.label = QLabelD(label_text)
         self.label.setToolTip(tooltip_text)
-        self.low_input = DoubleSpinBox(self.tol[0], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
-        self.high_input = DoubleSpinBox(self.tol[1], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
-        self.deviation_input = DoubleSpinBox(self.tol[2], -0.05, 0.05, 1 * 10**-self.precision, self.precision)
+        self.low_input = DoubleSpinBox(self.tol[0], -1, 1, 1 * 10**-self.precision, self.precision)
+        self.high_input = DoubleSpinBox(self.tol[1], -1, 1, 1 * 10**-self.precision, self.precision)
+        self.deviation_input = DoubleSpinBox(self.tol[2], -1, 1, 1 * 10**-self.precision, self.precision)
 
         self.low_input.valueChanged.connect(self.modifiedLow)
         self.high_input.valueChanged.connect(self.modifiedHigh)
@@ -29,28 +38,25 @@ class ToleranceInput(QWidget):
     def setEnabled(self, arg__1: bool) -> None:
         super().setEnabled(arg__1)
         self.label.setEnabled(arg__1)
-        self.low_input.setEnabled(arg__1)
-        self.high_input.setEnabled(arg__1)
-        self.deviation_input.setEnabled(arg__1)
 
-    def modifiedLow(self):
+    def modifiedLow(self) -> None:
         self.tol[0] = round(self.low_input.value(), self.precision)
         if self.tol[0] == 0:
             self.high_input.modify(minimum=0)
         else:
             self.high_input.modify(minimum=self.tol[0] + 1 * 10**-self.precision)
     
-    def modifiedHigh(self):
+    def modifiedHigh(self) -> None:
         self.tol[1] = round(self.high_input.value(), self.precision)
         if self.tol[1] == 0:
             self.low_input.modify(maximum=0)
         else:
             self.low_input.modify(maximum=self.tol[1] - 1 * 10**-self.precision)
     
-    def modifiedDeviation(self):
+    def modifiedDeviation(self) -> None:
         self.tol[2] = round(self.deviation_input.value(), self.precision)
     
-    def resetTolerances(self):
+    def resetTolerances(self) -> None:
         self.low_input.blockSignals(True)
         self.high_input.blockSignals(True)
         self.low_input.modify(maximum=0)
@@ -62,11 +68,11 @@ class ToleranceInput(QWidget):
         self.low_input.blockSignals(False)
         self.high_input.blockSignals(False)
     
-    def resetDeviations(self):
+    def resetDeviations(self) -> None:
         self.deviation_input.setValue(0)
         self.tol[2] = 0
     
-    def changeMode(self, mode):
+    def changeMode(self, mode: str) -> None:
         if mode == "deviations":
             self.low_input.hide()
             self.high_input.hide()
@@ -78,21 +84,29 @@ class ToleranceInput(QWidget):
 
 
 class ToleranceEdit(QWidget):
-    toleranceDataUpdated = Signal(dict)
+    '''Widżet obsługujący wprowadzanie tolerancji wykonania elementów dla zakładki.
+    
+    Zawiera wyznaczoną przy tworzeniu ilość pól ToleranceInput.
+    Możliwość wyboru trybu pól tolerancji lub konkretnej odchyłki, reset wartości, wyłączenie widżetu.
+    Zatwierdzenie zmian wysyła sygnał toleranceDataUpdated z słownikiem wartości odchyłek (Dict[str, float]),
+    lub pól tolerancji Dict[str, Tuple[float, float]].
+    Wyłączenie widżetu przyciskiem self.check wysyła sygnał toleranceDataUpdated(None).
+    '''
+    # https://doc.qt.io/qtforpython-6/tutorials/basictutorial/signals_and_slots.html#overloading-signals-and-slots
+    toleranceDataUpdated = Signal((dict,), (None,))
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget, fields: Tuple[Tuple[str, str, str], ...]) -> None:
+        '''Jako argument fields należy podać zestawy nazw dla pożądanych parametrów tolerancji:
+        - skrót do użycia jako klucz (z podkreśleniami),
+        - skrót do wyświetlania w UI (dopuszczalne RTF/tagi html),
+        - pełna nazwa.
+
+        Przykład:
+        (("T_s", "T<sub>s</sub>", "Tolerancja wykonania promieni sworzni"), ...)
+        '''
+
         super().__init__(parent)
-
-        self.fields = {
-            "T_o": ToleranceInput(self, "T<sub>o</sub>", "Tolerancja wykonania promieni otworów w kole cykloidalnym"),
-            "T_t": ToleranceInput(self, "T<sub>t</sub>", "Tolerancja wykonania promieni tuleji"),
-            "T_s": ToleranceInput(self, "T<sub>s</sub>", "Tolerancja wykonania promieni sworzni"),
-            "T_Rk": ToleranceInput(self, "T<sub>Rk</sub>", "Tolerancja wykonania promienia rozmieszczenia otworów w kole cykloidalnym"),
-            "T_Rt": ToleranceInput(self, "T<sub>Rt</sub>", "Tolerancja wykonania promienia rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_fi_k": ToleranceInput(self, "T<sub>\u03c6k</sub>", "Tolerancja wykonania kątowego rozmieszczenia otworów w kole cykloidalnym"),
-            "T_fi_t": ToleranceInput(self, "T<sub>\u03c6t</sub>", "Tolerancja wykonania kątowego rozmieszczenia tulei w elemencie wyjściowym"),
-            "T_e": ToleranceInput(self, "T<sub>e</sub>", "Tolerancja wykonania mimośrodu"),
-        }
+        self.fields = { field[0]: ToleranceInput(self, field[1], field[2]) for field in fields}
         self.labels = { key: [QLabelD(self.fields[key].label.text()), QLabelD("0"), QLabelD("0"), QLabelD("0")] for key in self.fields }
         for key in self.labels:
             self.labels[key][0].setToolTip(self.fields[key].toolTip())
@@ -157,8 +171,8 @@ class ToleranceEdit(QWidget):
         self.setLayout(layout)
         self.dev_check.setChecked(True)
         
-    def onCheck(self, state):
-        enable = False if state == 0 else True
+    def onCheck(self, state: int) -> None:
+        enable = True if state else False
         self.accept_button.setEnabled(enable)
         self.reset_button.setEnabled(enable)
         self.tol_check.setEnabled(enable)
@@ -173,13 +187,13 @@ class ToleranceEdit(QWidget):
         if enable:
             self.dataUpdated()
         else:
-            self.toleranceDataUpdated.emit({"tolerances": None})
+            self.toleranceDataUpdated.emit(None)
             for (_, l2, l3, l4) in self.labels.values():
                 l2.setText("0")
                 l3.setText("0")
                 l4.setText("0")
     
-    def modeChanged(self, state):
+    def modeChanged(self, state: int) -> None:
         mode = "deviations" if state == 2 else "tolerances"
         self.mode = mode
         for widget in self.fields.values():
@@ -203,14 +217,17 @@ class ToleranceEdit(QWidget):
                 l3.show()
                 l4.hide()
 
-    def dataUpdated(self):
+    def dataUpdated(self) -> None:
         for key, widget in self.fields.items():
-            for ind in range(3):
-                temp_text = str(widget.tol[ind]) if widget.tol[ind] <= 0 else "+" + str(widget.tol[ind])
-                self.labels[key][ind+1].setText(temp_text)
-        self.toleranceDataUpdated.emit({"tolerances": {key: val[2] if self.mode == "deviations" else [val[0], val[1]] for key, val in self.tolerancje.items()}})
+            for i in range(3):
+                temp_text = str(widget.tol[i]) if widget.tol[i] <= 0 else "+" + str(widget.tol[i])
+                self.labels[key][i+1].setText(temp_text)
+        self.toleranceDataUpdated.emit({key: val[2] if self.mode == "deviations" else (val[0], val[1]) for key, val in self.tolerancje.items()})
     
-    def copyDataToInputs(self, new_tolerances):
+    def saveData(self) -> Dict[str, Tuple[float, float, float]]:
+        return {key: (val[0], val[1], val[2]) for key, val in self.tolerancje.items()}
+
+    def copyDataToInputs(self, new_tolerances: Dict[str, Tuple[float, float, float]]) -> None:
         for key, widget in self.fields.items():
             widget.low_input.setValue(new_tolerances[key][0])
             widget.high_input.setValue(new_tolerances[key][1])

@@ -25,7 +25,7 @@ class AbstractTab(QWidget):
     def __init__(self, parent: MainWindow) -> None:
         super().__init__(parent)
     
-    def sendData(self) -> DaneZakladek:
+    def sendData(self) -> None:
         '''Wysyła potrzebne innym zakładkom dane w momencie zmiany zakładki z tej na inną.'''
         ...
     

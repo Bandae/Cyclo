@@ -4,10 +4,9 @@ from PySide2.QtGui import QFont, QResizeEvent
 from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout
 
 class DoubleSpinBox(QDoubleSpinBox):
-    def __init__(self, value, minimum, maximum, step, decimal_places=2):
+    def __init__(self, value, minimum=None, maximum=None, step=0.01, decimal_places=2):
         super().__init__()
-        self.setRange(minimum, maximum)
-        self.setValue(value)
+        self.modify(value, minimum, maximum)
         # self.lineEdit().setReadOnly(False)
         self.setSingleStep(step)
         self.setDecimals(decimal_places)
@@ -23,12 +22,19 @@ class DoubleSpinBox(QDoubleSpinBox):
 
 
 class IntSpinBox(QSpinBox):
-    def __init__(self, value, minimum, maximum, step):
+    def __init__(self, value, minimum=None, maximum=None, step=1):
         super().__init__()
-        self.setRange(minimum, maximum)
-        self.setValue(value)
+        self.modify(value, minimum, maximum)
         # self.lineEdit().setReadOnly(False)
         self.setSingleStep(step)
+    
+    def modify(self, value=None, minimum=None, maximum=None):
+        if minimum is not None:
+            self.setMinimum(minimum)
+        if maximum is not None:
+            self.setMaximum(maximum)
+        if value is not None:
+            self.setValue(value)
 
 
 class QLabelD(QLabel):
