@@ -1,12 +1,12 @@
 # Cyclo
 
-![gif pokazujący działanie animacji](https://github.com/Bandae/Cyclo/assets/76438366/384c1b6e-6d84-4db4-86d4-43015b082037)
+![gif pokazujący działanie animacji](https://github.com/Bandae/Cyclo/assets/76438366/0cb5427e-fd2f-4393-bb05-137e92004c8a)
 
 Program *cyclo* z interfejsem stworzonym dzięki bibliotece Qt wspomaga wykonywanie obliczeń wytrzymałościowych dla przekładni cykloidalnych. Może zostać użyty, aby wykonać pełny projekt przekładni spełniający wszystkie wymogi do danego zastosowania, a także dla ponownego obliczenia już istniejącej przekładni, biorąc pod uwagę potencjalne odchyłki wykonania elementów, również wynikające ze zużycia podczas eksploatacji. Dzięki programowi cały proces jest znacznie uproszczony i przystępny nawet dla początkujących projektantów.
 
 Celem przy projektowaniu jest spełnienie wszystkich wymagań, a więc opisanie możliwego do wykonania zarysu cykloidalnego, spełnienie warunków wytrzymałościowych przy przenoszeniu narzuconego momentu wyjściowego, a także w dalszej kolejności optymalizacja przez np. dobór jak najbardziej opłacalnych materiałów.
 
-![Ogólny widok aplikacji](https://github.com/Bandae/Cyclo/assets/76438366/3d838570-2a47-4721-bbb5-59da7ea3a0ca)
+![Ogólny widok aplikacji](https://github.com/Bandae/Cyclo/assets/76438366/6e77f278-b188-4b99-9e11-282ade94119e)
 
 Tworzona przekładnia jest widoczna na ekranie i istnieje możliwość uruchomienia jej animacji. W lewym górnym rogu ekranu wyświetlane są błędy, wraz z informacjami o tym, jak się ich pozbyć. Dostępny jest pasek menu pozwalający na zapisanie i wczytanie stanu aplikacji, a także na wygenerowanie raportu do pliku tekstowego z wszystkimi informacjami o przekładni. Można też stworzyć plik .dxf z rysunkiem koła cykloidalnego. Pliki są tworzone w folderze z plikiem main. Po prawej stronie ekranu widoczne są przyciski do przełączania pomiędzy modułami aplikacji oraz aktywny moduł.
 
@@ -15,7 +15,7 @@ Projekt rozpoczyna się od wprowadzenia wymaganych od przekładni parametrów - 
 
 ## Moduł zarysu
 
-![widok zakładki danych modułu zarysu](https://github.com/Bandae/Cyclo/assets/76438366/b4452ca6-78a6-4017-8158-d2448e62164d)
+![widok zakładki danych modułu zarysu](https://github.com/Bandae/Cyclo/assets/76438366/dffd42de-965d-4156-af29-eacd9526f60a)
 
 Koła cykloidalne w przekładni wykonują ruch planetarny, będący złożeniem toczenia się po rolkach, oraz obrotu z mimośrodem.
 Moduł przyjmuje od użytkownika dane potrzebne do wyznaczenia zarysu, a także liczbę kół cykloidalnych w przekładni, szerokość kół i współczynniki tarcia. Dodatkowo podać należy materiał i obróbkę cieplną kół oraz rolek. Wraz z wprowadzaniem zmian, zaktualizuje się animacja oraz wyniki, w które wliczają się maksymalne wartości sił i nacisków, wykresy, oraz dane geometryczne koła cykloidalnego. Moduł sprawdza kilka warunków poprawnego wykonania zazębienia i informuje o ewentualnych błędach.
@@ -26,7 +26,7 @@ W przekładni można użyć jednego z kilku mechanizmów wyjściowych. W każdej
 
 ### Moduł mechanizmu wyjściowego z tulejami
 
-![Widok zakładki wprowadzania danych modułu mechanizmu z tulejami](https://github.com/Bandae/Cyclo/assets/76438366/70a7e1f1-674c-406e-b353-5d675591f839)
+![Widok zakładki wprowadzania danych modułu mechanizmu z tulejami](https://github.com/Bandae/Cyclo/assets/76438366/dc4a0030-6311-40ef-80df-e244ecab2f6f)
 
 Zadaniem mechanizmu wyjściowego jest zamiana ruchu planetarnego koła cykloidalnego na ruch obrotowy elementu wyjściowego. W mechanizmie z tulejami koło cykloidalne ma otwory przez które oddziałuje na tuleje, które są osadzone na sworzniach będąch częścią elementu wyjściowego.
 Moduł przyjmuje od użytkownika kilka parametrów mechanizmu i oblicza średnicę sworzni wymaganą by przenieść obciążenie.
