@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from mainwindow import MainWindow
+    from main_window.main_window import MainWindow
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Signal

@@ -6,14 +6,17 @@ from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
 
-from base_data_widget import BaseDataWidget
-from error_widget import ErrorWidget
-from kamil import Tab_Kamil
-from main_view import AnimationView
-from milosz import Tab_Milosz
-from pawel import GearTab
-from utils import open_save_dialog
-from wiktor import PinOutTab
+from animation.animation_view import AnimationView
+
+from .base_data_widget import BaseDataWidget
+from .error_widget import ErrorWidget
+
+from tabs.pin_out.pin_out_tab import PinOutTab
+from tabs.input_shaft.input_shaft_tab import InputShaftTab
+from tabs.output_mechanism.output_mechanism_tab import OutputMechanismTab
+from tabs.gear.gear_tab import GearTab
+
+from common.utils import open_save_dialog
 
 
 class MainWindow(QMainWindow):
@@ -39,13 +42,13 @@ class MainWindow(QMainWindow):
         self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
         self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
-        milosz = Tab_Milosz(central_widget)
+        self.output_mechanism_tab = OutputMechanismTab(central_widget)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.pin_out_tab.thisEnabled.connect(milosz.useOtherChanged)
-        milosz.this_enabled.connect(self.pin_out_tab.useOtherChanged)
+        self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
+        self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
 
-        kamil = Tab_Kamil(central_widget)
+        self.input_shaft_tab = InputShaftTab(central_widget)
 
         main_layout = QGridLayout()
         data_layout = QVBoxLayout()
@@ -80,7 +83,7 @@ class MainWindow(QMainWindow):
         self.help_button.pressed.connect(self.helpClicked)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, milosz, kamil]
+        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)

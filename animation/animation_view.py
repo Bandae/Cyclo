@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushBu
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QResizeEvent
 
-from animation import Animation
+from .animation import Animation
 
 class AnimationControls(QWidget):
     """

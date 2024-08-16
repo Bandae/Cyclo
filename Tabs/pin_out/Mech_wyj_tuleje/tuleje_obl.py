@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from common.tolerance_calc import normal_in_tolerance, normal_in_tolerance_set
+from tabs.common.tolerance_calc import normal_in_tolerance, normal_in_tolerance_set
 # różnica z excelem w odchyłkach jest dlatego, że licze wszystkie sworznie, a w excelu są 6na10, te przenoszące normalnie obciążenie. To ma znaczenie w obliczeniach z odchyłką przy braniu pod uwagę sum wartości z kilku sworzni. To psuje obliczenia gładkie całkiem.
 # odchyłki częściowo poprawione, ale połowa sworzni nie jest obliczana, mimo że przenosi obciążenie w niektóych przypadkach.
 SAMPLES = 500
