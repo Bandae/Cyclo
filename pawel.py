@@ -105,9 +105,10 @@ class DataEdit(QWidget):
         layout.addWidget(self.spin_lam, 4, 2, 1, 1)
         layout.addWidget(QLabelD("Promień rolek - g [mm]"), 5, 0, 1, 2)
         layout.addWidget(self.spin_g, 5, 2, 1, 1)
-
-        layout.addWidget(QLabelD("sr"), 7, 0, 1, 2)
-        name_label.setToolTip(self.label_descriptions["sr"])
+        
+        label = QLabelD("sr")
+        layout.addWidget(label, 7, 0, 1, 2)
+        label.setToolTip(self.label_descriptions["sr"])
         layout.addWidget(self.data_labels["sr"], 7, 2, 1, 1)
 
         layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 8, 0, 1, 3)
