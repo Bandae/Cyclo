@@ -1,8 +1,8 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QStackedLayout
-from abstract_tab import AbstractTab
+from tabs.common.abstract_tab import AbstractTab
 
 
-class Tab_Kamil(AbstractTab):
+class InputShaftTab(AbstractTab):
     def __init__(self, parent):
         super().__init__(parent)
 

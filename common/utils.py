@@ -1,13 +1,15 @@
 from typing import Optional
 import os
 import re
+
 from PySide2.QtWidgets import QMessageBox, QFileDialog
+
+from config import resource_path
 
 
 def open_pdf(relative_path: str) -> None:
-    filename = os.path.join(os.path.dirname(__file__), relative_path)
+    filename = resource_path(relative_path)
     os.startfile(filename)
-
 
 def open_save_dialog(file_extension: str) -> Optional[str]:
     file_dialog = QFileDialog()

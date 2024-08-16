@@ -5,15 +5,15 @@ from typing import Dict, Optional, Union, Tuple
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QStackedLayout, QCheckBox
 
-from abstract_tab import AbstractTab
-from common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, ResponsiveContainer
-from utils import open_pdf
-from common.tolerance_widgets import ToleranceEdit
-from common.charts import ResultsTab
-from Mech_wyj_tuleje.popups import SupportWin
-from Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
-from Mech_wyj_tuleje.utils import sprawdz_przecinanie_otworow
-from Mech_wyj_tuleje.widgets import ResultsFrame, MaterialsFrame
+from tabs.common.abstract_tab import AbstractTab
+from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, ResponsiveContainer
+from common.utils import open_pdf
+from ..common.tolerance_widgets import ToleranceEdit
+from ..common.charts import ResultsTab
+from .Mech_wyj_tuleje.popups import SupportWin
+from .Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
+from .Mech_wyj_tuleje.utils import sprawdz_przecinanie_otworow
+from .Mech_wyj_tuleje.widgets import ResultsFrame, MaterialsFrame
 #TODO: mam przesunięte do tyłu w poziomie punkty wykresów. Pawel też.
 # moze jakos usuwac dane z wykresow jak sa bledy?
 # po trzy razy wysylam dane w niektorych sytuacjach, np jak sie zaznaczy zeby uzywac tego. Może to jest pętla.

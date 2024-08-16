@@ -3,13 +3,13 @@ from typing import Dict, Optional, Tuple, Union
 import math
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QHBoxLayout, QStackedLayout
-from abstract_tab import AbstractTab
-from common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContainer
-from common.tolerance_widgets import ToleranceEdit
-from common.charts import ResultsTab
-from pawlowe.widgets import DaneMaterialowe, ResultsFrame
-from pawlowe.gear_calc import calculate_gear, get_lam_min, get_ro_min, gear_error_check
-from utils import open_pdf
+from tabs.common.abstract_tab import AbstractTab
+from common.common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContainer
+from ..common.tolerance_widgets import ToleranceEdit
+from ..common.charts import ResultsTab
+from .pawlowe.widgets import DaneMaterialowe, ResultsFrame
+from .pawlowe.gear_calc import calculate_gear, get_lam_min, get_ro_min, gear_error_check
+from common.utils import open_pdf
 #TODO: nie podoba mi się obliczanie p_max, jako po prostu największego nacisku z wszystkich. U wiktora jest p_max wiekszy niz na sworzniu czasem, bo sworzen zmienia p jak sie obraca.
 
 

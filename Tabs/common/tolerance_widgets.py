@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QPushButton, QCheckBox, QButtonGroup
-from common_widgets import DoubleSpinBox, QLabelD
+from common.common_widgets import DoubleSpinBox, QLabelD
 
 # TODO: min i max na polach w toleranceinput
 

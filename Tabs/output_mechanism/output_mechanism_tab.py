@@ -1,9 +1,9 @@
 from PySide2.QtWidgets import QLabel, QGridLayout, QStackedLayout, QVBoxLayout, QCheckBox
-from abstract_tab import AbstractTab
+from tabs.common.abstract_tab import AbstractTab
 from PySide2.QtCore import Signal
 
 
-class Tab_Milosz(AbstractTab):
+class OutputMechanismTab(AbstractTab):
     this_enabled = Signal(bool)
     def __init__(self, parent):
         super().__init__(parent)
