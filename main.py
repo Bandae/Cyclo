@@ -1,5 +1,6 @@
 from PySide2.QtWidgets import QApplication
-from main_window.main_window import MainWindow
+from main_window.view.main_window import MainWindow
+from main_window.controller.main_window_controller import MainWindowController
 import sys
 
 # TODO: sprawdzic obliczenia tolerancje: T_ze: (0, 0,004), T_fi-ri: (-0,003, 0)
@@ -10,6 +11,9 @@ import sys
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+
     window = MainWindow()
+    controller = MainWindowController(window)
+
     window.show()
     app.exec_()

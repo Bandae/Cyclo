@@ -1,10 +1,8 @@
 from functools import partial
-import json
-import math
 
 from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
+from PySide2.QtWidgets import QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
 
 from animation.animation_view import AnimationView
 
@@ -16,13 +14,9 @@ from tabs.input_shaft.input_shaft_tab import InputShaftTab
 from tabs.output_mechanism.output_mechanism_tab import OutputMechanismTab
 from tabs.gear.gear_tab import GearTab
 
-from common.utils import open_save_dialog
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
-        self.loaded_file = None
 
         self._init_ui()
 
@@ -125,33 +119,27 @@ class MainWindow(QMainWindow):
         # Set file menu
         filemenu = menu.addMenu("&Plik")
 
-        otworz = QAction("Otwórz",self)
-        filemenu.addAction(otworz)
-        otworz.triggered.connect(self.loadJSON)
+        self.otworz = QAction("Otwórz",self)
+        filemenu.addAction(self.otworz)
 
-        zapis = QAction("Zapisz",self)
-        filemenu.addAction(zapis)
-        zapis.setShortcut("Ctrl+S")
-        zapis.triggered.connect(self.saveToJSON)
+        self.zapis = QAction("Zapisz",self)
+        filemenu.addAction(self.zapis)
+        self.zapis.setShortcut("Ctrl+S")
 
-        zapis_jako = QAction("Zapisz jako",self)
-        filemenu.addAction(zapis_jako)
-        zapis_jako.triggered.connect(lambda: self.saveToJSON("save as"))
+        self.zapis_jako = QAction("Zapisz jako",self)
+        filemenu.addAction(self.zapis_jako)
 
         # Set export menu
         eksport_menu = menu.addMenu("&Eksport")
 
-        raport = QAction("Generuj raport", self)
-        eksport_menu.addAction(raport)
-        raport.triggered.connect(self.generateRaport)
+        self.raport = QAction("Generuj raport", self)
+        eksport_menu.addAction(self.raport)
 
-        eksport_csv = QAction("Eksport wykresów", self)
-        eksport_menu.addAction(eksport_csv)
-        eksport_csv.triggered.connect(self.generateCSV)
+        self.eksport_csv = QAction("Eksport wykresów", self)
+        eksport_menu.addAction(self.eksport_csv)
 
-        eksport_dxf = QAction("Eksport do DXF", self)
-        eksport_menu.addAction(eksport_dxf)
-        eksport_dxf.triggered.connect(self.generateDXF)
+        self.eksport_dxf = QAction("Eksport do DXF", self)
+        eksport_menu.addAction(self.eksport_dxf)
 
         # Set sections menu
         sectionmenu = menu.addMenu("&Sekcja")
@@ -202,16 +190,16 @@ class MainWindow(QMainWindow):
         dialog.setLayout(layout)
 
         choice = dialog.exec_()
-        if choice == 2:
-            self.saveToJSON()
-            self.animation_view.closeEvent(event)
-            return super().closeEvent(event)
+        if choice == 0:
+            event.ignore()
         elif choice == 1:
             self.animation_view.closeEvent(event)
             return super().closeEvent(event)
-        elif choice == 0:
-            event.ignore()
-
+        if choice == 2:
+            self.zapis.trigger()
+            self.animation_view.closeEvent(event)
+            return super().closeEvent(event)
+        
     def activateTab(self, index):
         old_index = self.stacklayout.currentIndex()
         if old_index == 0 or old_index == 1:
@@ -235,118 +223,3 @@ class MainWindow(QMainWindow):
     
     def updateAnimationData(self, dane):
         self.animation_view.animation.updateData(dane)
-
-    def generateRaport(self):
-        if self.error_box.errorsExist():
-            QMessageBox.critical(self, 'Błąd', 'Przed generowaniem raportu, pozbądź się błędów.')
-            return
-        
-        file_path = open_save_dialog(".rtf")
-        if not file_path:
-            return
-        # file_name = "CycloRaport_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".rtf"
-        try:
-            with open(file_path, 'w') as f:
-                f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs20")
-                f.write("{\\pard\\qc\\b Raport \\line\\par}")
-                f.write(self.base_data.reportData())
-                for tab_widget in self.tab_widgets:
-                    f.write(tab_widget.reportData())
-                f.write("}")
-            QMessageBox.information(self, 'Raport zapisany', 'Raport został utworzony.')
-        except Exception as e:
-            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia raportu: {str(e)}')
-
-    def generateCSV(self):
-        if self.error_box.errorsExist():
-            QMessageBox.critical(self, 'Błąd', 'Przed generowaniem csv, pozbądź się błędów.')
-            return
-        
-        file_path = open_save_dialog(".csv")
-        if not file_path:
-            return
-        # file_name = "CycloWykresy_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".csv"
-        try:
-            with open(file_path, "w") as f:
-                for tab_widget in self.tab_widgets:
-                    f.write(tab_widget.csvData())
-            QMessageBox.information(self, 'Tabele zapisane', 'Utworzono plik CSV z danymi.')
-        except Exception as e:
-            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia pliku csv: {str(e)}')
-
-    def generateDXF(self):
-        if self.error_box.errorsExist():
-            QMessageBox.critical(self, 'Błąd', 'Przed generowaniem rysunku, pozbądź się błędów.')
-            return
-        
-        file_path = open_save_dialog(".dxf")
-        if not file_path:
-            return
-        # file_name = "CycloRysunek_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".dxf"
-        try:
-            with open(file_path, "w") as f:
-                f.write("0\nSECTION\n2\nENTITIES\n0\nLWPOLYLINE\n39\n0.5\n")
-                z, ro = self.gear_tab.data.dane_all["z"], self.gear_tab.data.dane_all["ro"]
-                h, g = self.gear_tab.data.dane_all["lam"], self.gear_tab.data.dane_all["g"]
-                for j in range(0, 720):
-                    i= j / 2
-                    x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
-                    y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
-                    f.write(f"10\n{x}\n20\n{y}\n")
-                f.write("0\nENDSEC\n0\nEOF\r")
-            QMessageBox.information(self, 'Rysunek zapisany', 'Utworzono rysunek zarysu.')
-        except Exception as e:
-            QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas tworzenia rysunku: {str(e)}')
-
-    def loadJSON(self):
-        '''Wczytuje dane z pliku .json, wywołuje metodę loadData() każdej z zakładek, podając im słownik jej danych.
-        Może być None, każdy musi z osobna sprawdzić przed odczytywaniem pojedynczych pozycji.'''
-        data = None
-        file_path = None
-        file_dialog = QFileDialog(self)
-        file_dialog.setFileMode(QFileDialog.ExistingFile)
-        file_dialog.setWindowTitle("Wczytywanie danych")
-        file_dialog.setNameFilter('JSON Files (*.json)')
-
-        if file_dialog.exec_():
-            file_path = file_dialog.selectedFiles()[0]
-            try:
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                QMessageBox.information(self, 'Dane wczytane', 'Dane zostały wczytane.')
-            except Exception as e:
-                QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku: {str(e)}')
-        
-        if data is None or list(data.keys()) != self.tab_titles:
-            # QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku.')
-            return
-        
-        self.loaded_file = file_path
-        self.base_data.loadData(data.get("base"))
-        for key, tab in zip(self.tab_titles, self.tab_widgets):
-            tab.loadData(data.get(key))
-        
-    def saveToJSON(self, mode="save"):
-        '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę saveData(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
-        których klucze są takie same, jak self.tab_titles.
-        Wywołuje activateTab(), żeby upewnić się, że przekazane są między nami dane, i wykonane obliczenia przed zapisem.
-
-        Użycie tej metody, albo loadJSON(), zapisuje podaną przez użytkownika ścieżkę, i kolejne wywołania tej metody automatycznie zapisują do tego pliku.'''
-        def save_ess(f_path, dane):
-            try:
-                with open(f_path, 'w') as f:
-                    json.dump(dane, f)
-                QMessageBox.information(self, 'Plik zapisany', 'Dane zostały zapisane do pliku JSON.')
-                self.loaded_file = f_path
-            except Exception as e:
-                QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
-
-        data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.tab_widgets)}
-        data.update({"base": self.base_data.saveData()})
-        if self.loaded_file is not None and mode != "save as":
-            save_ess(self.loaded_file, data)
-            return
-        
-        file_path = open_save_dialog(".json")
-        if file_path:
-            save_ess(file_path, data)
