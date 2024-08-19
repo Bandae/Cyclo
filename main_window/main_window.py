@@ -18,63 +18,99 @@ from tabs.gear.gear_tab import GearTab
 
 from common.utils import open_save_dialog
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Przekładnia Cykloidalna")
-        self.setMinimumSize(1050,750)
-        self.showMaximized()
+        self.loaded_file = None
 
-        #ustawienie ikonki :
+        self._init_ui()
+
+    def _init_ui(self):
+        # Set window title
+        self.setWindowTitle("Przekładnia Cykloidalna")
+
+        # Set window icon
         main_icon = QIcon()
         main_icon.addFile("icons//mainwindow_icon.png")
         self.setWindowIcon(main_icon)
 
-        self.loaded_file = None
-        central_widget = QWidget()
+        # Set window size
+        self.setMinimumSize(1050,750)
+        self.showMaximized()
 
-        self.gear_tab = GearTab(central_widget)
+        # Set main layout
+        self.central_widget = QWidget()
+        self.main_layout = QGridLayout()
+        self.central_widget.setLayout(self.main_layout)
+        self.setCentralWidget(self.central_widget)
+
+        self._init_tabs()
+        self._init_animation()
+        self._init_menu_bar()
+
+    def _init_tabs(self):
+        # Set data layout
+        data_layout = QVBoxLayout()
+        self.main_layout.addLayout(data_layout,0,7,1,3)
+
+        # Set button layout
+        button_layout = QHBoxLayout()
+        data_layout.addLayout(button_layout)
+
+        # Set stacklayout
+        self.stacklayout = QStackedLayout()
+        data_layout.addLayout(self.stacklayout)
+
+        # Set tabs widgets
+        self.gear_tab = GearTab(self.central_widget)
         self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
 
-        self.pin_out_tab = PinOutTab(central_widget)
+        self.pin_out_tab = PinOutTab(self.central_widget)
         self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
         self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
-        self.output_mechanism_tab = OutputMechanismTab(central_widget)
+        self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
         self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
         self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
 
-        self.input_shaft_tab = InputShaftTab(central_widget)
+        self.input_shaft_tab = InputShaftTab(self.central_widget)
 
-        main_layout = QGridLayout()
-        data_layout = QVBoxLayout()
-        button_layout = QHBoxLayout()
-        self.stacklayout = QStackedLayout()
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.tab_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
+
+        for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
+            button = QPushButton(title)
+            button_layout.addWidget(button)
+            self.stacklayout.addWidget(tab)
+            tab.dataChanged.connect(self.exchangeData)
+            button.pressed.connect(partial(self.activateTab, index))
+
+    def _init_animation(self):
+        # Set animation layout
         animation_layout = QStackedLayout()
-
-        self.animation_view = AnimationView(central_widget, self.gear_tab.data.dane_all.copy())
+        self.main_layout.addLayout(animation_layout,0,1,1,6)
+        
+        # Set animation view 
+        self.animation_view = AnimationView(self.central_widget, self.gear_tab.data.dane_all.copy())
         animation_layout.addWidget(self.animation_view)
         # self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
-
-        data_layout.addLayout(button_layout)
-        data_layout.addLayout(self.stacklayout)
-
-        main_layout.addLayout(animation_layout,0,1,1,6)
-        main_layout.addLayout(data_layout,0,7,1,3)
-        self.error_box = ErrorWidget(central_widget)
+        
+        # Set error widget
+        self.error_box = ErrorWidget(self.central_widget)
         self.error_box.show()
         self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
-        self.base_data = BaseDataWidget(central_widget)
+        # Set base data widget
+        self.base_data = BaseDataWidget(self.central_widget)
         self.base_data.dataChanged.connect(self.exchangeData)
-
-        self.help_button = QPushButton(central_widget)
+        
+        # Set help button
+        self.help_button = QPushButton(self.central_widget)
         self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
         self.help_button.setIconSize(QSize(140, 140))
         self.help_button.resize(150, 150)
@@ -82,18 +118,11 @@ class MainWindow(QMainWindow):
         self.help_label.move(10, 10)
         self.help_button.pressed.connect(self.helpClicked)
 
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
-
-        for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
-            button = QPushButton(title)
-            button_layout.addWidget(button)
-            self.stacklayout.addWidget(widget)
-            widget.dataChanged.connect(self.exchangeData)
-            button.pressed.connect(partial(self.activateTab, index))
-        
-        #Menu główne:
+    def _init_menu_bar(self):
+        # Set main menu
         menu = self.menuBar()
+
+        # Set file menu
         filemenu = menu.addMenu("&Plik")
 
         otworz = QAction("Otwórz",self)
@@ -109,7 +138,7 @@ class MainWindow(QMainWindow):
         filemenu.addAction(zapis_jako)
         zapis_jako.triggered.connect(lambda: self.saveToJSON("save as"))
 
-        #EKSPORTY :
+        # Set export menu
         eksport_menu = menu.addMenu("&Eksport")
 
         raport = QAction("Generuj raport", self)
@@ -124,16 +153,13 @@ class MainWindow(QMainWindow):
         eksport_menu.addAction(eksport_dxf)
         eksport_dxf.triggered.connect(self.generateDXF)
 
-        #PRZECHODZENIE MIĘDZY SEKCJAMI MENU :
+        # Set sections menu
         sectionmenu = menu.addMenu("&Sekcja")
 
-        for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
+        for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
             button = QAction(title, self)
             sectionmenu.addAction(button)
-            button.triggered.connect(partial(self.activateTab, index))
-
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
+            button.triggered.connect(partial(self.activateTab, index))    
     
     def resizeEvent(self, event) -> None:
         try:
@@ -189,7 +215,7 @@ class MainWindow(QMainWindow):
     def activateTab(self, index):
         old_index = self.stacklayout.currentIndex()
         if old_index == 0 or old_index == 1:
-            self.stacked_widgets[old_index].data.recalculate()
+            self.tab_widgets[old_index].data.recalculate()
         
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
@@ -201,7 +227,7 @@ class MainWindow(QMainWindow):
             self.help_button.hide()
     
     def exchangeData(self, passed_data):
-        for tab_widget in self.stacked_widgets:
+        for tab_widget in self.tab_widgets:
             tab_widget.receiveData(passed_data)
     
     def onAnimationTick(self, kat):
@@ -224,7 +250,7 @@ class MainWindow(QMainWindow):
                 f.write("{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs20")
                 f.write("{\\pard\\qc\\b Raport \\line\\par}")
                 f.write(self.base_data.reportData())
-                for tab_widget in self.stacked_widgets:
+                for tab_widget in self.tab_widgets:
                     f.write(tab_widget.reportData())
                 f.write("}")
             QMessageBox.information(self, 'Raport zapisany', 'Raport został utworzony.')
@@ -242,7 +268,7 @@ class MainWindow(QMainWindow):
         # file_name = "CycloWykresy_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".csv"
         try:
             with open(file_path, "w") as f:
-                for tab_widget in self.stacked_widgets:
+                for tab_widget in self.tab_widgets:
                     f.write(tab_widget.csvData())
             QMessageBox.information(self, 'Tabele zapisane', 'Utworzono plik CSV z danymi.')
         except Exception as e:
@@ -297,7 +323,7 @@ class MainWindow(QMainWindow):
         
         self.loaded_file = file_path
         self.base_data.loadData(data.get("base"))
-        for key, tab in zip(self.tab_titles, self.stacked_widgets):
+        for key, tab in zip(self.tab_titles, self.tab_widgets):
             tab.loadData(data.get(key))
         
     def saveToJSON(self, mode="save"):
@@ -315,7 +341,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
 
-        data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.stacked_widgets)}
+        data = { key: tab.saveData() for key, tab in zip(self.tab_titles, self.tab_widgets)}
         data.update({"base": self.base_data.saveData()})
         if self.loaded_file is not None and mode != "save as":
             save_ess(self.loaded_file, data)
