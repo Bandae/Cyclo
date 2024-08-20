@@ -9,10 +9,11 @@ from animation.animation_view import AnimationView
 from .base_data_widget import BaseDataWidget
 from .error_widget import ErrorWidget
 
+from tabs.gear.view.gear_tab import GearTab
+from tabs.gear.controller.gear_tab_controller import GearTabController
 from tabs.pin_out.pin_out_tab import PinOutTab
 from tabs.input_shaft.input_shaft_tab import InputShaftTab
 from tabs.output_mechanism.output_mechanism_tab import OutputMechanismTab
-from tabs.gear.gear_tab import GearTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -58,22 +59,24 @@ class MainWindow(QMainWindow):
 
         # Set tabs widgets
         self.gear_tab = GearTab(self.central_widget)
+        self.gear_tab_controller = GearTabController(self.gear_tab)
         self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
 
-        self.pin_out_tab = PinOutTab(self.central_widget)
-        self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
-        self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
+        # self.pin_out_tab = PinOutTab(self.central_widget)
+        # self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
+        # self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
-        self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
+        # self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
 
-        # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
-        self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
+        # # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
+        # self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
+        # self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
 
-        self.input_shaft_tab = InputShaftTab(self.central_widget)
+        # self.input_shaft_tab = InputShaftTab(self.central_widget)
 
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.tab_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
+        self.tab_titles = ["Zarys"] #, "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.tab_widgets = [self.gear_tab] #, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
+        self.tab_controllers = [self.gear_tab_controller]
 
         for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
             button = QPushButton(title)
@@ -95,8 +98,8 @@ class MainWindow(QMainWindow):
         # Set error widget
         self.error_box = ErrorWidget(self.central_widget)
         self.error_box.show()
-        self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
+        # self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.error_box.resetErrors()
 
         # Set base data widget
@@ -215,11 +218,12 @@ class MainWindow(QMainWindow):
             self.help_button.hide()
     
     def exchangeData(self, passed_data):
-        for tab_widget in self.tab_widgets:
-            tab_widget.receiveData(passed_data)
+        for tab_controller in self.tab_controllers:
+            tab_controller.receiveData(passed_data)
     
     def onAnimationTick(self, kat):
-        self.pin_out_tab.data.recalculate(kat)
+        pass
+        # self.pin_out_tab.data.recalculate(kat)
     
     def updateAnimationData(self, dane):
         self.animation_view.animation.updateData(dane)
