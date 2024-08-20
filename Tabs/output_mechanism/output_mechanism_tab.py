@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QLabel, QGridLayout, QStackedLayout, QVBoxLayout, QCheckBox
-from tabs.common.abstract_tab import AbstractTab
+from tabs.common.widgets.abstract_tab import AbstractTab
 from PySide2.QtCore import Signal
 
 

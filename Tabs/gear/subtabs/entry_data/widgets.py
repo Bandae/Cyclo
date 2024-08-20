@@ -2,7 +2,6 @@ from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QFrame, QGridLayout, QComboBox
 from common.common_widgets import DoubleSpinBox, QLabelD
 
-
 class ResultsFrame(QFrame):
     def __init__(self, parent):
         super().__init__(parent)

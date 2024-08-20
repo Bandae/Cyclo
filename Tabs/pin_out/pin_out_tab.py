@@ -5,11 +5,11 @@ from typing import Dict, Optional, Union, Tuple
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QStackedLayout, QCheckBox
 
-from tabs.common.abstract_tab import AbstractTab
+from tabs.common.widgets.abstract_tab import AbstractTab
 from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, ResponsiveContainer
 from common.utils import open_pdf
-from ..common.tolerance_widgets import ToleranceEdit
-from ..common.charts import ResultsTab
+from ..common.widgets.tolerance_widgets import ToleranceEdit
+from ..common.widgets.charts import ResultsTab
 from .Mech_wyj_tuleje.popups import SupportWin
 from .Mech_wyj_tuleje.tuleje_obl import obliczenia_mech_wyjsciowy
 from .Mech_wyj_tuleje.utils import sprawdz_przecinanie_otworow

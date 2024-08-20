@@ -35,7 +35,7 @@ class MainWindowController:
             tab.loadData(data.get(key))
 
     def saveData(self, mode):
-        data = { key: tab.saveData() for key, tab in zip(self._main_window.tab_titles, self._main_window.tab_widgets)}
+        data = { key: tab_controller.saveData() for key, tab_controller in zip(self._main_window.tab_titles, self._main_window.tab_controllers)}
         data.update({"base": self._main_window.base_data.saveData()})
 
         self._session_manager.saveToJSON(data, mode)
@@ -47,8 +47,8 @@ class MainWindowController:
         
         report_data = self._main_window.base_data.reportData()
         
-        for tab_widget in self._main_window.tab_widgets:
-            report_data += tab_widget.reportData()
+        for tab_controller in self._main_window.tab_controllers:
+            report_data += tab_controller.reportData()
         
         self._generator.generateRaport(report_data)
 
@@ -58,8 +58,8 @@ class MainWindowController:
             return
         
         csv_data = ''
-        for tab_widget in self._main_window.tab_widgets:
-                   csv_data += tab_widget.csvData()
+        for tab_controller in self._main_window.tab_controllers:
+                   csv_data += tab_controller.csvData()
                     
         self._generator.generateCSV(csv_data)
 
@@ -69,8 +69,8 @@ class MainWindowController:
             return
         
         data = ''
-        z, ro = self._main_window.gear_tab.data.dane_all["z"], self._main_window.gear_tab.data.dane_all["ro"]
-        h, g = self._main_window.gear_tab.data.dane_all["lam"], self._main_window.gear_tab.data.dane_all["g"]
+        z, ro = self._main_window.gear_tab_controller.tab.data.dane_all["z"], self._main_window.gear_tab_controller.tab.data.dane_all["ro"]
+        h, g = self._main_window.gear_tab_controller.tab.data.dane_all["lam"], self._main_window.gear_tab_controller.tab.data.dane_all["g"]
 
         for j in range(0, 720):
             i= j / 2

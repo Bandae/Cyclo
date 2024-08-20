@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QStackedLayout
-from tabs.common.abstract_tab import AbstractTab
+from tabs.common.widgets.abstract_tab import AbstractTab
 
 
 class InputShaftTab(AbstractTab):
