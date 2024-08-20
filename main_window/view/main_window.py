@@ -14,8 +14,12 @@ from tabs.gear.controller.gear_tab_controller import GearTabController
 
 from tabs.pin_out.view.pin_out_tab import PinOutTab
 from tabs.pin_out.controller.pin_out_tab_controller import PinOutTabController
-from tabs.input_shaft.input_shaft_tab import InputShaftTab
+
 from tabs.output_mechanism.output_mechanism_tab import OutputMechanismTab
+from tabs.output_mechanism.output_mechanism_tab_controller import OutputMechanismTabController
+
+from tabs.input_shaft.input_shaft_tab import InputShaftTab
+from tabs.input_shaft.input_shaft_controller import InputShaftTabController
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -69,17 +73,19 @@ class MainWindow(QMainWindow):
         self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
         self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
-        # self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
+        self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
+        self.output_mechanism_tab_controller = OutputMechanismTabController(self.output_mechanism_tab)
 
-        # # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        # self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
-        # self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
+        # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
+        self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
+        self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
 
-        # self.input_shaft_tab = InputShaftTab(self.central_widget)
+        self.input_shaft_tab = InputShaftTab(self.central_widget)
+        self.input_shaft_tab_controller = InputShaftTabController(self.input_shaft_tab)
 
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I"] #, "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.tab_widgets = [self.gear_tab, self.pin_out_tab] # self.output_mechanism_tab, self.input_shaft_tab]
-        self.tab_controllers = [self.gear_tab_controller, self.pin_out_tab_controller]
+        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.tab_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
+        self.tab_controllers = [self.gear_tab_controller, self.pin_out_tab_controller, self.output_mechanism_tab_controller]
 
         for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
             button = QPushButton(title)
