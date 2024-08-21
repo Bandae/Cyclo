@@ -24,4 +24,4 @@ def resource_path(relative_path):
 
 # Set application name and icon
 APP_NAME = 'Przekładnia Cykloidalna'
-APP_ICON = dependencies_path('icons//mainwindow_icon.png')
+APP_ICON = dependencies_path('resources//icons//mainwindow_icon.png')

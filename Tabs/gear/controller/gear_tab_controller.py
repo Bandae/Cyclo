@@ -17,7 +17,7 @@ class GearTabController(ITabController):
         self.tab.data.shouldSendData.connect(self.sendData)
         self.tab.data.chartDataUpdated.connect(self.tab.wykresy.updateResults)
         self.tab.tolerance_edit.toleranceDataUpdated.connect(self.tab.data.toleranceUpdate)
-        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("help//zazebienie-help-1.pdf"))
+        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//zazebienie-help-1.pdf"))
 
     def sendData(self) -> None:
         material_data = self.tab.data.dane_materialowe.getData()

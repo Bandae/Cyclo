@@ -51,4 +51,4 @@ Po wprowadzeniu powyższych danych należy wcisnąć przycisk "oblicz". Animacja
 
 ## Dodatkowe
 
-Więcej informacji o poszczególnych modułach można znaleźć w plikach .pdf w folderze **help**
+Więcej informacji o poszczególnych modułach można znaleźć w plikach .pdf w folderze **resources/help_docs**
