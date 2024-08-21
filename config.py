@@ -21,3 +21,7 @@ def dependencies_path(relative_path):
 
 def resource_path(relative_path):
     return os.path.normpath(os.path.join(relative_path))
+
+# Set application name and icon
+APP_NAME = 'Przekładnia Cykloidalna'
+APP_ICON = dependencies_path('icons//mainwindow_icon.png')
