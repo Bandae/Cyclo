@@ -52,9 +52,7 @@ class MainWindowController:
         self.input_shaft_tab_controller = InputShaftTabController(self.input_shaft_tab)
         self.components['Mechanizm Wej'] = (self.input_shaft_tab, self.input_shaft_tab_controller)
 
-        self._main_window._init_tabs({key: value[0] for key, value in self.components.items()})
-        self._main_window._init_animation()
-        self._main_window._init_menu_bar()
+        self._main_window.set_tabs({key: value[0] for key, value in self.components.items()})
 
     def _connect_signals_and_slots(self):
         self._main_window.otworz.triggered.connect(self.loadData)
