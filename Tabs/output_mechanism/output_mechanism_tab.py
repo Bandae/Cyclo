@@ -4,8 +4,8 @@ from PySide2.QtCore import Signal
 
 class OutputMechanismTab(AbstractTab):
     this_enabled = Signal(bool)
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
 
         self._init_ui()
     
