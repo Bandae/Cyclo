@@ -9,18 +9,6 @@ from animation.animation_view import AnimationView
 from .base_data_widget import BaseDataWidget
 from .error_widget import ErrorWidget
 
-from tabs.gear.view.gear_tab import GearTab
-from tabs.gear.controller.gear_tab_controller import GearTabController
-
-from tabs.pin_out.view.pin_out_tab import PinOutTab
-from tabs.pin_out.controller.pin_out_tab_controller import PinOutTabController
-
-from tabs.output_mechanism.output_mechanism_tab import OutputMechanismTab
-from tabs.output_mechanism.output_mechanism_tab_controller import OutputMechanismTabController
-
-from tabs.input_shaft.input_shaft_tab import InputShaftTab
-from tabs.input_shaft.input_shaft_controller import InputShaftTabController
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -46,11 +34,12 @@ class MainWindow(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.central_widget)
 
-        self._init_tabs()
-        self._init_animation()
-        self._init_menu_bar()
+    def _init_tabs(self, tabs: QWidget):
+        self.tabs = tabs
 
-    def _init_tabs(self):
+        # Workaround - info about tabs is still needed in main_window
+        self.gear_tab = self.tabs['Zarys']
+
         # Set data layout
         data_layout = QVBoxLayout()
         self.main_layout.addLayout(data_layout,0,7,1,3)
@@ -63,35 +52,11 @@ class MainWindow(QMainWindow):
         self.stacklayout = QStackedLayout()
         data_layout.addLayout(self.stacklayout)
 
-        # Set tabs widgets
-        self.gear_tab = GearTab(self.central_widget)
-        self.gear_tab_controller = GearTabController(self.gear_tab)
-        self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
-
-        self.pin_out_tab = PinOutTab(self.central_widget)
-        self.pin_out_tab_controller = PinOutTabController(self.pin_out_tab)
-        self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
-        self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
-
-        self.output_mechanism_tab = OutputMechanismTab(self.central_widget)
-        self.output_mechanism_tab_controller = OutputMechanismTabController(self.output_mechanism_tab)
-
-        # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.pin_out_tab.thisEnabled.connect(self.output_mechanism_tab.useOtherChanged)
-        self.output_mechanism_tab.this_enabled.connect(self.pin_out_tab.useOtherChanged)
-
-        self.input_shaft_tab = InputShaftTab(self.central_widget)
-        self.input_shaft_tab_controller = InputShaftTabController(self.input_shaft_tab)
-
-        self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.tab_widgets = [self.gear_tab, self.pin_out_tab, self.output_mechanism_tab, self.input_shaft_tab]
-        self.tab_controllers = [self.gear_tab_controller, self.pin_out_tab_controller, self.output_mechanism_tab_controller]
-
-        for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
+        for index, (title, tab) in enumerate(self.tabs.items()):
             button = QPushButton(title)
             button_layout.addWidget(button)
+            tab.setParent(self)
             self.stacklayout.addWidget(tab)
-            tab.dataChanged.connect(self.exchangeData)
             button.pressed.connect(partial(self.activateTab, index))
 
     def _init_animation(self):
@@ -107,13 +72,10 @@ class MainWindow(QMainWindow):
         # Set error widget
         self.error_box = ErrorWidget(self.central_widget)
         self.error_box.show()
-        self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
-        self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.error_box.resetErrors()
 
         # Set base data widget
         self.base_data = BaseDataWidget(self.central_widget)
-        self.base_data.dataChanged.connect(self.exchangeData)
         
         # Set help button
         self.help_button = QPushButton(self.central_widget)
@@ -156,7 +118,7 @@ class MainWindow(QMainWindow):
         # Set sections menu
         sectionmenu = menu.addMenu("&Sekcja")
 
-        for index, (title, tab) in enumerate(zip(self.tab_titles, self.tab_widgets)):
+        for index, (title) in enumerate(self.tabs.keys()):
             button = QAction(title, self)
             sectionmenu.addAction(button)
             button.triggered.connect(partial(self.activateTab, index))    
@@ -215,7 +177,7 @@ class MainWindow(QMainWindow):
     def activateTab(self, index):
         old_index = self.stacklayout.currentIndex()
         if old_index == 0 or old_index == 1:
-            self.tab_widgets[old_index].data.recalculate()
+            list(self.tabs.values())[old_index].data.recalculate()
         
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
@@ -226,12 +188,8 @@ class MainWindow(QMainWindow):
         else:
             self.help_button.hide()
     
-    def exchangeData(self, passed_data):
-        for tab_controller in self.tab_controllers:
-            tab_controller.receiveData(passed_data)
-    
-    def onAnimationTick(self, kat):
-        self.pin_out_tab.data.recalculate(kat)
+    # def onAnimationTick(self, kat):
+    #     self.pin_out_tab.data.recalculate(kat)
     
     def updateAnimationData(self, dane):
         self.animation_view.animation.updateData(dane)

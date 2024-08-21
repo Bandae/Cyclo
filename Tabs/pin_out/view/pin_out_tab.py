@@ -17,8 +17,8 @@ from ...common.widgets.charts import ResultsTab
 
 class PinOutTab(AbstractTab):
     thisEnabled = Signal(bool)
-    def __init__(self, parent: QWidget) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
 
         self._init_ui()
     

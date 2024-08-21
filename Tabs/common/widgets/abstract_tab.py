@@ -12,5 +12,8 @@ class AbstractTab(QWidget):
     dataChanged = Signal(dict)
     # sygnal wysyłany, kiedy zmienią się dane potrzebne dla innych zakładek
 
-    def __init__(self, parent: MainWindow) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
+
+    def setParent(self, parent: MainWindow):
+        super().setParent(parent)
