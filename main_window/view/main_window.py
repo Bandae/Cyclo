@@ -9,6 +9,8 @@ from animation.animation_view import AnimationView
 from .base_data_widget import BaseDataWidget
 from .error_widget import ErrorWidget
 
+from config import APP_ICON, APP_NAME
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -17,11 +19,11 @@ class MainWindow(QMainWindow):
 
     def _init_ui(self):
         # Set window title
-        self.setWindowTitle("Przekładnia Cykloidalna")
+        self.setWindowTitle(APP_NAME)
 
         # Set window icon
         main_icon = QIcon()
-        main_icon.addFile("icons//mainwindow_icon.png")
+        main_icon.addFile(APP_ICON)
         self.setWindowIcon(main_icon)
 
         # Set window size
