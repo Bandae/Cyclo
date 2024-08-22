@@ -1,8 +1,6 @@
 import math
 from functools import partial
 
-from PySide2.QtWidgets import QMessageBox
-
 from main_window.view.main_window import MainWindow
 from main_window.model.session_manager import SessionManager
 from main_window.model.generator import Generator
@@ -18,6 +16,8 @@ from tabs.output_mechanism.output_mechanism_tab_controller import OutputMechanis
 
 from tabs.input_shaft.input_shaft_tab import InputShaftTab
 from tabs.input_shaft.input_shaft_controller import InputShaftTabController
+
+from common.message_handler import MessageHandler
 
 class MainWindowController:
     def __init__(self, main_window: MainWindow):
@@ -86,7 +86,7 @@ class MainWindowController:
         data = self._session_manager.loadJSON()
         
         if data is None or list(data.keys()) != list[self.components.keys()]:
-            QMessageBox.critical(self._main_window, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku.')
+            MessageHandler.critical(self._main_window, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku.')
             return
         
         self._main_window.base_data.loadData(data.get("base"))
@@ -101,7 +101,7 @@ class MainWindowController:
         
     def generateRaport(self):
         if self._main_window.error_box.errorsExist():
-            QMessageBox.critical(self._main_window, 'Błąd', 'Przed generowaniem raportu, pozbądź się błędów.')
+            MessageHandler.critical(self._main_window, 'Błąd', 'Przed generowaniem raportu, pozbądź się błędów.')
             return
         
         report_data = self._main_window.base_data.reportData()
@@ -113,7 +113,7 @@ class MainWindowController:
 
     def generateCSV(self):
         if self._main_window.error_box.errorsExist():
-            QMessageBox.critical(self._main_window, 'Błąd', 'Przed generowaniem csv, pozbądź się błędów.')
+            MessageHandler.critical(self._main_window, 'Błąd', 'Przed generowaniem csv, pozbądź się błędów.')
             return
         
         csv_data = ''
@@ -124,7 +124,7 @@ class MainWindowController:
 
     def generateDXF(self):
         if self._main_window.error_box.errorsExist():
-            QMessageBox.critical(self._main_window, 'Błąd', 'Przed generowaniem rysunku, pozbądź się błędów.')
+            MessageHandler.critical(self._main_window, 'Błąd', 'Przed generowaniem rysunku, pozbądź się błędów.')
             return
         
         data = ''
