@@ -1,8 +1,9 @@
 
 import json
-from PySide2.QtWidgets import QFileDialog, QMessageBox
+from PySide2.QtWidgets import QFileDialog
 
 from common.utils import open_save_dialog
+from common.message_handler import MessageHandler
 from main_window.view.main_window import MainWindow
 
 class SessionManager:
@@ -27,12 +28,12 @@ class SessionManager:
             try:
                 with open(file_path, 'r') as f:
                     data = json.load(f)
-                QMessageBox.information(self._parent, 'Dane wczytane', 'Dane zostały wczytane.')
+                MessageHandler.information(self._parent, 'Dane wczytane', 'Dane zostały wczytane.')
 
                 self._loaded_file = file_path
 
             except Exception as e:
-                QMessageBox.critical(self._parent, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku: {str(e)}')
+                MessageHandler.critical(self._parent, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku: {str(e)}')
         
         return data
         
@@ -48,15 +49,15 @@ class SessionManager:
             try:
                 with open(f_path, 'w') as f:
                     json.dump(dane, f)
-                QMessageBox.information(self._parent, 'Plik zapisany', 'Dane zostały zapisane do pliku JSON.')
+                MessageHandler.information(self._parent, 'Plik zapisany', 'Dane zostały zapisane do pliku JSON.')
                 self._loaded_file = f_path
             except Exception as e:
-                QMessageBox.critical(self._parent, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
+                MessageHandler.critical(self._parent, 'Błąd', f'Wystąpił błąd podczas zapisu do pliku: {str(e)}')
 
         if self._loaded_file is not None and mode != "save as":
             save_ess(self._loaded_file, data)
             return
             
-        file_path = open_save_dialog(".json")
+        file_path = open_save_dialog(self._parent, ".json")
         if file_path:
             save_ess(file_path, data)
