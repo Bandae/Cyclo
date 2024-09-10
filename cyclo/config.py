@@ -14,7 +14,7 @@ def dependencies_path(relative_path):
     else:
         # If running in a development environment, get 
         # path to root directory of repository
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     dependency_path = os.path.join(base_path, relative_path)
     return dependency_path
