@@ -1,6 +1,6 @@
 import math
 import time
-from PySide2.QtCore import QPoint, Qt, Signal, QEvent, QObject, QCoreApplication
+from PySide2.QtCore import QPoint, Qt, Signal
 from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen, QBrush, QPainterPath
 from PySide2.QtWidgets import QLabel
 
@@ -13,6 +13,7 @@ from PySide2.QtWidgets import QLabel
 class Animacja(QLabel):
     """Manages the drawing of the animated cycloidal wheel and its motion."""
     animation_tick = Signal(float)
+    update_pixmap= Signal(QPixmap)
     reset = Signal()
 
     BRONZE = "#B08D57"
@@ -35,6 +36,8 @@ class Animacja(QLabel):
         self.skok_kata = 0
         self.paint_area = 700
 
+        self.update_pixmap.connect(self.setPixmap) 
+
         self.updateAnimationData({})
         self.rysowanko()
 
@@ -43,7 +46,7 @@ class Animacja(QLabel):
         pxmap = QPixmap(self.size())
         pxmap.fill("#f0f0f0")
         if self.data is None:
-            invoke_in_main_thread(lambda: self.setPixmap(pxmap))
+            self.update_pixmap_signal.emit(pxmap)
             return
 
         painter = QPainter(pxmap)
@@ -131,7 +134,7 @@ class Animacja(QLabel):
         #painter.drawPoint(xp,yp)
 
         painter.end()
-        invoke_in_main_thread(lambda: self.setPixmap(pxmap))
+        self.update_pixmap.emit(pxmap)
 
     def setAngle(self, new_angle, reset=False):
         """Sets the angle for the next frame of the animation."""
@@ -244,23 +247,3 @@ def rysowanie_tuleje(painter, scala, dane_wiktor, kolory):
     painter.drawPath(tuleje)
     painter.setBrush(QBrush(kolory["sworznie"], Qt.SolidPattern))
     painter.drawPath(sworznie)
-
-class InvokeEvent(QEvent):
-    """Custom event to invoke a function in the main thread."""
-    EVENT_TYPE = QEvent.Type(QEvent.registerEventType())
-
-    def __init__(self, fn):
-        super().__init__(InvokeEvent.EVENT_TYPE)
-        self.fn = fn
-
-class Invoker(QObject):
-    """Handles invoking functions in the main thread through custom events."""
-    def event(self, event):
-        event.fn()
-        return True
-
-_invoker = Invoker()
-
-def invoke_in_main_thread(fn):
-    """Posts an event to invoke the given function in the main UI thread."""
-    QCoreApplication.postEvent(_invoker, InvokeEvent(fn))
