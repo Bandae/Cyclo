@@ -175,12 +175,10 @@ class MainWindow(QMainWindow):
         choice = dialog.exec_()
         if choice == 2:
             self.saveToJSON()
-            self.animation_view.start_event.clear()
-            self.animation_view.ghost_event.clear()
+            self.animation_view.closeEvent(event)
             return super().closeEvent(event)
         elif choice == 1:
-            self.animation_view.start_event.clear()
-            self.animation_view.ghost_event.clear()
+            self.animation_view.closeEvent(event)
             return super().closeEvent(event)
         elif choice == 0:
             event.ignore()
