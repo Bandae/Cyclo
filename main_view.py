@@ -1,4 +1,3 @@
-import threading
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushButton, QSlider
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QResizeEvent
@@ -13,19 +12,17 @@ class AnimationView(QWidget):
 
         self._initUI()
 
-        self.start_event = threading.Event()
-        self.ghost_event = threading.Event()
-        self.ghost_event.set()
-        threading.Thread(target=self.animacja.startAnimacji, args=(self.start_event, self.ghost_event)).start()
+        # Start and stop signals are managed internally, no ghost_event
+        self.is_animation_running = False
 
     def _initUI(self):
         """Initializes the UI elements and layout."""
-        # Set main layout
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignHCenter)
         main_layout.setContentsMargins(80, 20, 80, 20)
         self.setLayout(main_layout)
 
+        # Set animation
         self.animacja = Animacja(self, self.dane)
         self.animacja.animation_tick.connect(self.updateSlider)
         self.animacja.reset.connect(self.resetAnimacji)
@@ -52,6 +49,7 @@ class AnimationView(QWidget):
         self.slider = QSlider(Qt.Horizontal, bcgrd)
         self.slider.setMaximum(360)
         self.slider.valueChanged.connect(self.setAngle)
+
         # Set label to display the current angle
         self.angle_label = QLabel(bcgrd)
 
@@ -73,17 +71,20 @@ class AnimationView(QWidget):
 
     def startPrzycisk(self):
         """Starts or stops the animation based on the current button state."""
-        if self.start_animation_button.text() == "START ANIMACJI":
+        if not self.is_animation_running:
             self.start_animation_button.setText("STOP ANIMACJI")
-            self.start_event.set()
+            self.animacja.startAnimacji()  # Start the animation (thread)
+            self.is_animation_running = True
         else:
             self.start_animation_button.setText("START ANIMACJI")
-            self.start_event.clear()
+            self.animacja.stopAnimacji()  # Stop the animation (thread)
+            self.is_animation_running = False
 
     def resetAnimacji(self):
         """Resets the animation to the initial position."""
         self.start_animation_button.setText("START ANIMACJI")
-        self.start_event.clear()
+        self.animacja.stopAnimacji()  # Ensure the animation stops before resetting
+        self.is_animation_running = False
         self.angle_label.setText("0" + "\u00B0")
         self.slider.setValue(0)
         self.animacja.setAngle(0, reset=True)
@@ -99,3 +100,9 @@ class AnimationView(QWidget):
         self.slider.blockSignals(True)
         self.slider.setValue(-value)
         self.slider.blockSignals(False)
+    
+    def closeEvent(self, event):
+        """Handle app closure to ensure thread is stopped."""
+        if self.animacja.worker is not None:
+            self.animacja.stopAnimacji()
+        event.accept()  # Accept the close event
