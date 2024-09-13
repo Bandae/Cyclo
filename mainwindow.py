@@ -205,7 +205,7 @@ class MainWindow(QMainWindow):
         self.pin_out_tab.data.recalculate(kat)
     
     def updateAnimationData(self, dane):
-        self.animation_view.animacja.updateAnimationData(dane)
+        self.animation_view.animation.updateData(dane)
 
     def generateRaport(self):
         if self.error_box.errorsExist():
