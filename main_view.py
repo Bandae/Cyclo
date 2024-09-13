@@ -2,107 +2,171 @@ from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QPushBu
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QResizeEvent
 
-from animation import Animacja
+from animation import Animation
+
+class AnimationControls(QWidget):
+    """
+    A custom widget that provides controls for starting/stopping, resetting, and adjusting 
+    the animation of the cycloidal wheel.
+    """
+    def __init__(self, parent):
+        """
+        Initializes the AnimationControls widget, which includes buttons for controlling
+        the animation and a slider for adjusting the angle of the cycloidal wheel.
+        """
+        super().__init__(parent)
+
+        # Set style
+        self.setStyleSheet("QPushButton { padding: 4px; min-height: 15px;}")
+        self.setMaximumHeight(80)
+
+        # Set layout
+        layout = QGridLayout()
+        layout.setAlignment(Qt.AlignHCenter)
+        self.setLayout(layout)
+
+        # Set button for starting/stopping the animation
+        self.toggleAnimationButton = QPushButton(self)
+        self.toggleAnimationButton.setCheckable(True)
+        self.toggleAnimationButton.setMaximumSize(160, 20)
+        self.toggleAnimationButton.toggled.connect(self._updateAnimationButtonLabel)
+        self.toggleAnimationButtonLabelOff = 'START ANIMACJI'
+        self.toggleAnimationButtonLabelOn = 'STOP ANIMACJI'
+        self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOff)
+
+        # Set button for resetting animation
+        self.resetAnimationButton = QPushButton("RESET ANIMACJI", self)
+        self.resetAnimationButton.setMaximumSize(160, 20)
+
+        # Set slider for viewing the cycloidal wheel at a given angle
+        self.animationSlider = QSlider(Qt.Horizontal, self)
+        self.animationSlider.setMaximum(360)
+        self.animationSlider.valueChanged.connect(self._setAngleLabel)
+        
+        # Set label to display the current angle
+        self.angleLabel = QLabel(self)
+
+        # Add controls to the layout
+        layout.addWidget(self.toggleAnimationButton, 1, 0)
+        layout.addWidget(self.resetAnimationButton, 1, 1)
+        layout.addWidget(self.animationSlider, 0, 0, 1, 2)
+        layout.addWidget(self.angleLabel, 0, 3)
+    
+    def _updateAnimationButtonLabel(self, checked):
+        """
+        Updates the label of the toggle button to show 'START ANIMACJI' or 'STOP ANIMACJI'
+        depending on whether the animation is running or stopped.
+        
+        Args:
+            checked (bool): A boolean indicating whether the button is checked (animation running).
+        """
+        if checked:
+            self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOn)
+        else:
+            self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOff)
+    
+    def _setAngleLabel(self, sliderValue):
+        """
+        Updates the angle label to reflect the current position of the slider in degrees.
+
+        Args:
+            sliderValue (float): The current value of the slider.
+        """
+        self.angleLabel.setText(str(round(sliderValue)) + "\u00B0")
+    
+    def resetAnimationControls(self):
+        """
+        Resets the controls to their default state: the start/stop button is set to 'START ANIMACJI',
+        and the slider is reset to the zero angle position.
+        """
+        if self.toggleAnimationButton.isChecked():
+            self.toggleAnimationButton.toggle()
+        self.animationSlider.setValue(0)
+
+    def setSliderPosition(self, angleValue):
+        """
+        Sets the slider position to a given angle value. Signals from the slider are blocked 
+        while the position is updated to prevent unnecessary events being triggered.
+        
+        Args:
+            angleValue (float): The angle value to set the slider to.
+        """
+        self.animationSlider.blockSignals(True)
+        self.animationSlider.setValue(-angleValue)
+        self._setAngleLabel(-angleValue)
+        self.animationSlider.blockSignals(False)
 
 class AnimationView(QWidget):
-    """Main widget for managing the animation view and its controls."""
-    def __init__(self, parent, dane):
+    """
+    Main widget for managing the animation view and its controls.
+    """
+    def __init__(self, parent, data):
         super().__init__(parent)
-        self.dane = dane
+        self.data = data
 
         self._initUI()
 
-        # Start and stop signals are managed internally, no ghost_event
-        self.is_animation_running = False
-
-    def _initUI(self):
-        """Initializes the UI elements and layout."""
-        main_layout = QVBoxLayout()
-        main_layout.setAlignment(Qt.AlignHCenter)
-        main_layout.setContentsMargins(80, 20, 80, 20)
-        self.setLayout(main_layout)
+    def _initUI(self):   
+        """
+        Initializes the UI elements and layout.
+        """
+        mainLayout = QVBoxLayout()
+        mainLayout.setAlignment(Qt.AlignHCenter)
+        mainLayout.setContentsMargins(80, 20, 80, 20)
+        self.setLayout(mainLayout)
 
         # Set animation
-        self.animacja = Animacja(self, self.dane)
-        self.animacja.animation_tick.connect(self.updateSlider)
-        self.animacja.reset.connect(self.resetAnimacji)
+        self.animation = Animation(self, self.data)
 
-        bcgrd = QWidget(self)
-        bcgrd.setStyleSheet("QPushButton { padding: 4px; min-height: 15px;}")
-        bcgrd.setMaximumHeight(80)
+        # Set animation controls
+        self.animationControls = AnimationControls(self)
 
-        animation_controls = QGridLayout()
-        animation_controls.setAlignment(Qt.AlignHCenter)
-        bcgrd.setLayout(animation_controls)
+        # Connect signals and slots
+        self.animation.animationTick.connect(self.animationControls.setSliderPosition)
+        self.animation.reset.connect(self._resetAnimation)
+        self.animationControls.toggleAnimationButton.toggled.connect(self._toggleAnimation)
+        self.animationControls.resetAnimationButton.clicked.connect(self._resetAnimation)
+        self.animationControls.animationSlider.valueChanged.connect(self.animation.setAngle)
 
-        # Set button for starting/stopping the animation
-        self.start_animation_button = QPushButton("START ANIMACJI", bcgrd)
-        self.start_animation_button.setMaximumSize(160, 20)
-        self.start_animation_button.clicked.connect(self.startPrzycisk)
+        mainLayout.addWidget(self.animation)
+        mainLayout.addWidget(self.animationControls)
 
-        # Set button for resetting animation
-        self.restet_animacji = QPushButton("POZYCJA POCZĄTKOWA", bcgrd)
-        self.restet_animacji.setMaximumSize(160, 20)
-        self.restet_animacji.clicked.connect(self.resetAnimacji)
+    def _toggleAnimation(self, runAnimation):
+        """
+        Starts or stops the animation based on the current state of toggleAnimationButton.
 
-        # Set slider for viewing the cycloidal wheel at a given angle
-        self.slider = QSlider(Qt.Horizontal, bcgrd)
-        self.slider.setMaximum(360)
-        self.slider.valueChanged.connect(self.setAngle)
+        Args:
+            runAnimation (bool): Bollean value indicating if the toggleAnimationButton is checked 
+                                 (1 - animation not running, 0 - animation running)                 
+        """
+        if runAnimation:
+            self.animation.start()  # Start the animation (thread)
+        else:
+            self.animation.stop()  # Stop the animation (thread)
 
-        # Set label to display the current angle
-        self.angle_label = QLabel(bcgrd)
-
-        # Add controls to the layout
-        animation_controls.addWidget(self.start_animation_button, 1, 0)
-        animation_controls.addWidget(self.restet_animacji, 1, 1)
-        animation_controls.addWidget(self.slider, 0, 0, 1, 2)
-        animation_controls.addWidget(self.angle_label, 0, 3)
-
-        main_layout.addWidget(self.animacja)
-        main_layout.addWidget(bcgrd)
+    def _resetAnimation(self):
+        """
+        Resets the animation and its contrtols to the initial position.
+        """
+        self.animationControls.resetAnimationControls()
+        self.animation.setAngle(0, reset=True)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handles window resize events and adjusts the animation area."""
+        """
+        Handles window resize events and adjusts the animation area.
+        Args:
+            event (QResizeEvent): Resize event of this widget.
+        """
         new_size = min(event.size().width(), 1000), event.size().height()
-        self.animacja.setFixedSize(*new_size)
-        self.animacja.updatePaintArea(min(new_size) - 75)
+        self.animation.setFixedSize(*new_size)
+        self.animation.updatePaintArea(min(new_size) - 75)
         return super().resizeEvent(event)
-
-    def startPrzycisk(self):
-        """Starts or stops the animation based on the current button state."""
-        if not self.is_animation_running:
-            self.start_animation_button.setText("STOP ANIMACJI")
-            self.animacja.startAnimacji()  # Start the animation (thread)
-            self.is_animation_running = True
-        else:
-            self.start_animation_button.setText("START ANIMACJI")
-            self.animacja.stopAnimacji()  # Stop the animation (thread)
-            self.is_animation_running = False
-
-    def resetAnimacji(self):
-        """Resets the animation to the initial position."""
-        self.start_animation_button.setText("START ANIMACJI")
-        self.animacja.stopAnimacji()  # Ensure the animation stops before resetting
-        self.is_animation_running = False
-        self.angle_label.setText("0" + "\u00B0")
-        self.slider.setValue(0)
-        self.animacja.setAngle(0, reset=True)
-
-    def setAngle(self, slider_value):
-        """Sets the current angle of the cycloidal wheel based on the slider value."""
-        self.angle_label.setText(str(slider_value) + "\u00B0")
-        self.animacja.setAngle(slider_value)
-
-    def updateSlider(self, value):
-        """Updates the slider position based on the current angle of the animation."""
-        self.angle_label.setText(str(-round(value)) + "\u00B0")
-        self.slider.blockSignals(True)
-        self.slider.setValue(-value)
-        self.slider.blockSignals(False)
     
     def closeEvent(self, event):
-        """Handle app closure to ensure thread is stopped."""
-        if self.animacja.worker is not None:
-            self.animacja.stopAnimacji()
+        """
+        Handle app closure to ensure thread is stopped.
+        Args:
+            event (QCloseEvent): Close event of this widget 
+        """
+        self.animation.stop()
         event.accept()  # Accept the close event
