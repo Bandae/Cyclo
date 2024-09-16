@@ -5,6 +5,7 @@ from ..view.gear_tab import GearTab
 from ..model.gear_calc import calculate_gear
 
 from ...common.Itab_controller import ITabController
+
 from common.utils import open_pdf
 
 class GearTabController(ITabController):
@@ -17,7 +18,7 @@ class GearTabController(ITabController):
         self.tab.data.shouldSendData.connect(self.sendData)
         self.tab.data.chartDataUpdated.connect(self.tab.wykresy.updateResults)
         self.tab.tolerance_edit.toleranceDataUpdated.connect(self.tab.data.toleranceUpdate)
-        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//zazebienie-help-1.pdf"))
+        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("zazebienie-help-1.pdf"))
 
     def sendData(self) -> None:
         material_data = self.tab.data.dane_materialowe.getData()

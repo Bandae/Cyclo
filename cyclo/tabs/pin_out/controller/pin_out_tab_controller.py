@@ -17,7 +17,7 @@ class PinOutTabController(ITabController):
         self.tab.data.shouldSendData.connect(self.sendData)
         self.tab.data.chartDataUpdated.connect(self.tab.wykresy.updateResults)
         self.tab.tol_edit.toleranceDataUpdated.connect(self.tab.data.toleranceUpdate)
-        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//mechanizmy-sworzniowe-help-1.pdf"))
+        self.tab.help_pdf_button.clicked.connect(lambda: open_pdf("mechanizmy-sworzniowe-help-1.pdf"))
 
     def sendData(self) -> None:
         M_k = self.tab.data.zew_dane["M_wyj"] / self.tab.data.zew_dane["K"]

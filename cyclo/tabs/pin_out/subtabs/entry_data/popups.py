@@ -3,6 +3,8 @@ from PySide2.QtCore import Signal, QSize, Qt
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QPushButton
 
+from config import dependencies_path, RESOURCES_DIR_NAME
+
 class SupportWin(QWidget):
     choiceMade = Signal(str)
     VARIANTS = [
@@ -24,9 +26,9 @@ class SupportWin(QWidget):
 
         layout = QGridLayout()
         self.buttons = [
-            QPushButton(icon=QIcon("resources//images//sworzen_jednostronnie_utwierdzony.png")),
-            QPushButton(icon=QIcon("resources//images//sworzen_utwierdzony_podparty.png")),
-            QPushButton(icon=QIcon("resources//images//sworzen_obustronnie_utwierdzony.png"))
+            QPushButton(icon=QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//sworzen_jednostronnie_utwierdzony.png'))),
+            QPushButton(icon=QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//sworzen_utwierdzony_podparty.png'))),
+            QPushButton(icon=QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//sworzen_obustronnie_utwierdzony.png')))
         ]
         for ind, button in enumerate(self.buttons):
             button.setIconSize(QSize(400, 400))

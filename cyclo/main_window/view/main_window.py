@@ -9,7 +9,7 @@ from animation.animation_view import AnimationView
 from .base_data_widget import BaseDataWidget
 from .error_widget import ErrorWidget
 
-from config import APP_ICON, APP_NAME
+from config import dependencies_path, APP_ICON, APP_NAME, RESOURCES_DIR_NAME
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         
         # Set help button
         self.help_button = QPushButton(self.central_widget)
-        self.help_button.setIcon(QIcon("resources//images//pomoc_zarys1.png"))
+        self.help_button.setIcon(QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//pomoc_zarys1.png')))
         self.help_button.setIconSize(QSize(140, 140))
         self.help_button.resize(150, 150)
         self.help_label = QLabel("Otwórz obrazek pomocniczy", self.help_button)
@@ -192,9 +192,9 @@ class MainWindow(QMainWindow):
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
         if index == 0:
-            self.help_button.setIcon(QIcon("resources//images//pomoc_zarys1.png"))
+            self.help_button.setIcon(QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//pomoc_zarys1.png')))
         elif index == 1:
-            self.help_button.setIcon(QIcon("resources//images//pomoc_mechanizm_I.png"))
+            self.help_button.setIcon(QIcon(dependencies_path(f'{RESOURCES_DIR_NAME}//images//pomoc_mechanizm_I.png')))
         else:
             self.help_button.hide()
     
