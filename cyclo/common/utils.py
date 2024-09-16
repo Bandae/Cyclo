@@ -5,10 +5,10 @@ import re
 from PySide2.QtWidgets import QWidget, QFileDialog
 from common.message_handler import MessageHandler
 
-from config import dependencies_path
+from config import dependencies_path, RESOURCES_DIR_NAME
 
-def open_pdf(relative_path: str) -> None:
-    filename = dependencies_path(relative_path)
+def open_pdf(file_name: str) -> None:
+    filename = dependencies_path(f'{RESOURCES_DIR_NAME}//help_docs//{file_name}')
     os.startfile(filename)
 
 def open_save_dialog(parent: QWidget, file_extension: str) -> Optional[str]:

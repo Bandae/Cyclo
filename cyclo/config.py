@@ -27,6 +27,11 @@ def dependencies_path(relative_path):
     return dependency_path
 
 # --------------------------------------------CONSTANTS---------------------------------------------
+RESOURCES_DIR_NAME = 'resources'
+
+# Set path to resources directory
+RESOURCES_PATH = dependencies_path(RESOURCES_DIR_NAME)
+
 # Set application name and icon
 APP_NAME = 'Przekładnia Cykloidalna'
-APP_ICON = dependencies_path('resources//icons//mainwindow_icon.png')
+APP_ICON = dependencies_path(f'{RESOURCES_DIR_NAME}//icons//mainwindow_icon.png')
