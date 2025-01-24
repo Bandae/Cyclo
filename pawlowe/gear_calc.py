@@ -159,11 +159,11 @@ def calculate_gear_tolerances(gear_data, material_data, out_data, sily_0, R_eke_
     liczba_rolek = gear_data["z"] + 1
     liczba_obciazonych_rolek = int(gear_data["z"]/2 if gear_data["z"]%2 == 0 else (gear_data["z"]+1)/2)
     etas = np.array([i * 2 * math.pi / liczba_rolek for i in range(liczba_obciazonych_rolek)])
-    odch_zarys = normal_in_tolerance(gear_data["g"], tolerancje["T_ze"], size=SAMPLES)
-    odch_rolka = normal_in_tolerance(gear_data["g"], tolerancje["T_Rr"], size=SAMPLES)
-    odch_rb2 = normal_in_tolerance(gear_data["Rb2"], tolerancje["T_Rg"], size=SAMPLES)
-    odch_eta = normal_in_tolerance_set(etas, tolerancje["T_fi_Ri"], size=SAMPLES)
-    odch_e = normal_in_tolerance(gear_data["e"], tolerancje["T_e"], size=SAMPLES)
+    odch_zarys = normal_in_tolerance(gear_data["g"], tolerancje["T_ze"], sample_amount=SAMPLES)
+    odch_rolka = normal_in_tolerance(gear_data["g"], tolerancje["T_Rr"], sample_amount=SAMPLES)
+    odch_rb2 = normal_in_tolerance(gear_data["Rb2"], tolerancje["T_Rg"], sample_amount=SAMPLES)
+    odch_eta = normal_in_tolerance_set(etas, tolerancje["T_fi_Ri"], sample_amount=SAMPLES)
+    odch_e = normal_in_tolerance(gear_data["e"], tolerancje["T_e"], sample_amount=SAMPLES)
 
     omg_wej = math.pi*out_data["n_wej"]/30
     c = (4.9*10**-3)*((max(sily_0)/material_data["b_wheel"])*(((1-material_data["wheel"]["v"]**2)/material_data["wheel"]["E"])+((1-material_data["roller"]["v"]**2)/material_data["roller"]["E"]))*((max(R_eke_0)*gear_data["g"])/(max(R_eke_0)+gear_data["g"])))**0.5

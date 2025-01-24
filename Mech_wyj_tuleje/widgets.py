@@ -33,14 +33,15 @@ class ResultsFrame(QFrame):
 
         self.setLayout(layout)
     
-    def update(self, new_data, p_dop):
-        data_units = [" N", " MPa", " N", " mm", " W"]
-        for index, (key, new_value) in enumerate(new_data.items()):
-            self.data_labels[key].setText(str(new_value) + data_units[index])
-        if new_data["p_max"] < p_dop: 
+    def update(self, new_data):
+        if new_data["p_max"] < new_data.pop("p_dop"):
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
         else:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> nie jest spełniony.")
+        
+        data_units = [" N", " MPa", " N", " mm", " W"]
+        for index, (key, new_value) in enumerate(new_data.items()):
+            self.data_labels[key].setText(str(new_value) + data_units[index])
 
 
 class MaterialsFrame(QFrame):

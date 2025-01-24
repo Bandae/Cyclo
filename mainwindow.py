@@ -256,14 +256,57 @@ class MainWindow(QMainWindow):
         # file_name = "CycloRysunek_" + datetime.datetime.today().strftime('%d-%m-%Y_%H-%M-%S') + ".dxf"
         try:
             with open(file_path, "w") as f:
-                f.write("0\nSECTION\n2\nENTITIES\n0\nLWPOLYLINE\n39\n0.5\n")
+                # TODO generowanie dxf nie jest 100% pewne. przy range(720), psuje się dla parzystego przełożenia.
+                f.write("0\nSECTION\n2\nENTITIES\n")
+
+                data = ''
                 z, ro = self.gear_tab.data.dane_all["z"], self.gear_tab.data.dane_all["ro"]
                 h, g = self.gear_tab.data.dane_all["lam"], self.gear_tab.data.dane_all["g"]
-                for j in range(0, 720):
-                    i= j / 2
-                    x = (ro * (z + 1) * math.cos(i * 0.0175)) - (h * ro * (math.cos((z + 1) * i * 0.0175))) - ((g * ((math.cos(i * 0.0175) - (h * math.cos((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
-                    y = (ro * (z + 1) * math.sin(i * 0.0175)) - (h * ro * (math.sin((z + 1) * i * 0.0175))) - ((g * ((math.sin(i * 0.0175) - (h * math.sin((z + 1) * i * 0.0175))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.0175)) + (h * h))))))
-                    f.write(f"10\n{x}\n20\n{y}\n")
+                e = self.gear_tab.data.dane_all["e"]
+                Rg = self.gear_tab.data.dane_all["Rg"]
+
+                wheel_layer_name = "zarys"
+
+                data += f"0\nPOLYLINE\n8\n{wheel_layer_name}\n66\n1\n"
+                # TODO: dokładniejsza konwersja na radiany` jest konieczna, żeby nie było drobnych błędów, przecinania kół.
+                for j in range(0, 1440):
+                    i = j / 4
+                    x = (ro * (z + 1) * math.cos(i * 0.01745329)) - (h * ro * (math.cos((z + 1) * i * 0.01745329))) - ((g * ((math.cos(i * 0.01745329) - (h * math.cos((z + 1) * i * 0.01745329))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.01745329)) + (h * h))))))
+                    y = (ro * (z + 1) * math.sin(i * 0.01745329)) - (h * ro * (math.sin((z + 1) * i * 0.01745329))) - ((g * ((math.sin(i * 0.01745329) - (h * math.sin((z + 1) * i * 0.01745329))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.01745329)) + (h * h))))))
+                    # zarys przesuniety o mimosrod
+                    data += f"0\nVERTEX\n8\n{wheel_layer_name}\n10\n{x+e}\n20\n{y}\n"
+                data += f"0\nSEQEND\n8\n{wheel_layer_name}\n"
+
+                layer_name = "rolki"
+                angle_step = 360 / (z+1)
+                for i in range(z+1):
+                    x = Rg * math.cos(i * angle_step * 0.01745329)
+                    y = Rg * math.sin(i * angle_step * 0.01745329)
+                    data += f"0\nCIRCLE\n8\n{layer_name}\n10\n{x}\n20\n{y}\n40\n{g}\n"
+                
+                layer_name = "osie"
+                # axes extend beyond the mechanism by a small distance for readability. The distance == g (roller radius).
+                data += f"0\nLINE\n8\n{layer_name}\n10\n{-(Rg+2*g)}\n20\n0\n11\n{Rg+2*g}\n21\n0\n"
+                data += f"0\nLINE\n8\n{layer_name}\n10\n0\n20\n{-(Rg+2*g)}\n11\n0\n21\n{Rg+2*g}\n"
+                data += f"0\nLINE\n8\n{layer_name}\n10\n{e}\n20\n{-(Rg+2*g)}\n11\n{e}\n21\n{Rg+2*g}\n"
+                data += f"0\nCIRCLE\n8\n{layer_name}\n10\n0\n20\n0\n40\n{Rg}\n"
+
+                if self.pin_out_tab.use_this_check.isChecked():
+                    radius, bushings_count = self.pin_out_tab.data.input_dane["R_wt"], self.pin_out_tab.data.input_dane["n"]
+                    pin_diameter, bushing_diameter = self.pin_out_tab.data.input_dane["d_sw"], self.pin_out_tab.data.input_dane["d_tul"]
+                    hole_diameter = self.pin_out_tab.data.obliczone_dane["d_otw"]
+
+                    layer_name = "mechanizm_wyjsciowy"
+                    for i in range(bushings_count):
+                        bushing_angle = (2 * math.pi * i) / bushings_count
+                        x = radius * math.cos(bushing_angle)
+                        y = radius * math.sin(bushing_angle)
+
+                        data += f"0\nCIRCLE\n8\n{wheel_layer_name}\n10\n{x+e}\n20\n{y}\n40\n{hole_diameter/2}\n"
+                        data += f"0\nCIRCLE\n8\n{layer_name}\n10\n{x}\n20\n{y}\n40\n{bushing_diameter/2}\n"
+                        data += f"0\nCIRCLE\n8\n{layer_name}\n10\n{x}\n20\n{y}\n40\n{pin_diameter/2}\n"
+                
+                f.write(data)
                 f.write("0\nENDSEC\n0\nEOF\r")
             QMessageBox.information(self, 'Rysunek zapisany', 'Utworzono rysunek zarysu.')
         except Exception as e:

@@ -290,7 +290,7 @@ class DataEdit(QWidget):
         self.obliczone_dane["r_mr"] = round(pi * self.input_dane["R_wt"] / 4, 2)
         self.obliczone_dane["N_cmr"] = round(sum(wyniki['straty'][0]), 3)
         self.results_frame.update({"F_max": wyniki["F_max"], "p_max": wyniki["p_max"], "F_wmr": self.obliczone_dane["F_wmr"],
-                                   "r_mr": self.obliczone_dane["r_mr"], "N_cmr": self.obliczone_dane["N_cmr"]}, material_data["p_dop"])
+                                   "r_mr": self.obliczone_dane["r_mr"], "N_cmr": self.obliczone_dane["N_cmr"], "p_dop": material_data["p_dop"]})
         # if should_send_data:
         # zrobie tak bo nie wiem jak wyslac po oddznaczeniu, bo jak sie zmieni K albo M jak jest wylaczone to potem bym nie wyslal jak sie odblokuje
         # TODO: a moze wysyłac ten sygnal/odpalac metode sendData w tej funkcji od zaznaczenia ze chce to, po uzyciu inputsModified

@@ -3,7 +3,7 @@ import numpy as np
 from common.tolerance_calc import normal_in_tolerance, normal_in_tolerance_set
 # różnica z excelem w odchyłkach jest dlatego, że licze wszystkie sworznie, a w excelu są 6na10, te przenoszące normalnie obciążenie. To ma znaczenie w obliczeniach z odchyłką przy braniu pod uwagę sum wartości z kilku sworzni. To psuje obliczenia gładkie całkiem.
 # odchyłki częściowo poprawione, ale połowa sworzni nie jest obliczana, mimo że przenosi obciążenie w niektóych przypadkach.
-SAMPLES = 500
+SAMPLES = 1000
 POINTS_SMOOTH_GRAPH = 40
 
 def lista_fi_sworzni(n_sworzni, kat, mode="standard"):
@@ -225,14 +225,14 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
 
 def obliczenia_z_tolerancjami(n_sworzni, M_k, sily_0, d_otw, d_tul, d_sw, mimosrod, R_wt, F_max, b_kola, E_k, v_k, E_t, v_t, E_sw, e1, e2, R_w1, omg_0, f_kt, f_ts, podparcie, K, tolerancje):
     lista_fi = np.array([(2 * math.pi * (i - 1)) / n_sworzni for i in range(1, n_sworzni + 1)])
-    odch_fik = normal_in_tolerance_set(lista_fi, tolerancje["T_fi_k"], size=SAMPLES)
-    odch_fit = normal_in_tolerance_set(lista_fi, tolerancje["T_fi_t"], size=SAMPLES)
-    odch_d_otw = normal_in_tolerance(d_otw, tolerancje["T_o"], size=n_sworzni*SAMPLES)
-    odch_d_tz = normal_in_tolerance(d_tul, tolerancje["T_t"], size=n_sworzni*SAMPLES)
-    odch_d_sw = normal_in_tolerance(d_sw, tolerancje["T_s"], size=n_sworzni*SAMPLES)
-    odch_e = normal_in_tolerance(mimosrod, tolerancje["T_e"], size=SAMPLES)
-    odch_R_wk = normal_in_tolerance(R_wt, tolerancje["T_Rk"], size=SAMPLES)
-    odch_R_wt = normal_in_tolerance(R_wt, tolerancje["T_Rt"], size=SAMPLES)
+    odch_fik = normal_in_tolerance_set(lista_fi, tolerancje["T_fi_k"], sample_amount=SAMPLES)
+    odch_fit = normal_in_tolerance_set(lista_fi, tolerancje["T_fi_t"], sample_amount=SAMPLES)
+    odch_d_otw = normal_in_tolerance(d_otw, tolerancje["T_o"], sample_amount=n_sworzni*SAMPLES)
+    odch_d_tz = normal_in_tolerance(d_tul, tolerancje["T_t"], sample_amount=n_sworzni*SAMPLES)
+    odch_d_sw = normal_in_tolerance(d_sw, tolerancje["T_s"], sample_amount=n_sworzni*SAMPLES)
+    odch_e = normal_in_tolerance(mimosrod, tolerancje["T_e"], sample_amount=SAMPLES)
+    odch_R_wk = normal_in_tolerance(R_wt, tolerancje["T_Rk"], sample_amount=SAMPLES)
+    odch_R_wt = normal_in_tolerance(R_wt, tolerancje["T_Rt"], sample_amount=SAMPLES)
 
     del_max = oblicz_przemieszczenie_tul_otw(F_max, b_kola, d_otw, d_tul, E_k, v_k, E_t, v_t)
     delty = np.array([del_max * math.sin(fi_k) for fi_k in odch_fik])

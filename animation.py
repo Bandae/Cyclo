@@ -87,8 +87,8 @@ class Animation(QLabel):
             secondary_rotation_angle = -((self._angle2 + 180) / rollers_count)
 
         # Calculate translation for eccentric movement
-        translation_x = self._data["e"] * math.cos(self._angle * 0.0175) * self.scale
-        translation_y = self._data["e"] * math.sin(self._angle * 0.0175) * self.scale
+        translation_x = self._data["e"] * math.cos(self._angle * 0.01745329) * self.scale
+        translation_y = self._data["e"] * math.sin(self._angle * 0.01745329) * self.scale
 
         # Draw the outer ring of the wheel
         painter.setBrush(QBrush(self.PASTEL_BLUE, Qt.SolidPattern))
@@ -148,8 +148,8 @@ class Animation(QLabel):
         # Draw the rollers around the outer ring
         painter.setBrush(QBrush(self.GRAY_LIGHT, Qt.SolidPattern))
         for i in range(rollers_count):
-            x = self._data["Rg"] * math.cos(i * self._angleStep * 0.0175) * self.scale
-            y = self._data["Rg"] * math.sin(i * self._angleStep * 0.0175) * self.scale
+            x = self._data["Rg"] * math.cos(i * self._angleStep * 0.01745329) * self.scale
+            y = self._data["Rg"] * math.sin(i * self._angleStep * 0.01745329) * self.scale
             painter.drawEllipse(x - (self._data["g"] * self.scale), y - (self._data["g"] * self.scale), self._data["g"] * self.scale * 2, self._data["g"] * self.scale * 2)
         
         # Optional: Draw eccentric point (currently commented out)
@@ -163,8 +163,8 @@ class Animation(QLabel):
         #     painter.drawArc(-pr, -pr, pr * 2, pr * 2, 0, 16 * 360)
 
         # Optional: Draw point "C" (currently commented out)
-        # xp = self._data[8] * math.cos(rotation_angle * 0.0175)
-        # yp = self._data[8] * math.sin(rotation_angle * 0.0175)
+        # xp = self._data[8] * math.cos(rotation_angle * 0.01745329)
+        # yp = self._data[8] * math.sin(rotation_angle * 0.01745329)
         # painter.drawPoint(xp, yp)
 
         # End painting and apply the pixmap to the widget
@@ -238,6 +238,7 @@ class Animation(QLabel):
         """
         Updates the animation data and recalculates components if necessary.
         """
+        # TODO: to jest wciąż potrzebne, aby poprawnie był rysowany mechanizm wyj.
         oldTeethCount = self._data["z"] if self._data is not None else None
         if data.get("GearTab") is False:
             self._data = None
@@ -280,18 +281,18 @@ def drawGearOutline(teethCount, baseRadius, heightFactor, displacementFactor, sc
     for pointIndex in range(720):
         angle = pointIndex / 2  # Angle step in degrees, divided by 2 to get 360 degrees
         # Calculate x-coordinate based on cycloidal formula
-        x = (baseRadius * (teethCount + 1) * math.cos(angle * 0.0175)) \
-            - (heightFactor * baseRadius * math.cos((teethCount + 1) * angle * 0.0175)) \
-            - (displacementFactor * ((math.cos(angle * 0.0175) 
-            - (heightFactor * math.cos((teethCount + 1) * angle * 0.0175))) / (math.sqrt(1 
-            - (2 * heightFactor * math.cos(teethCount * angle * 0.0175)) + (heightFactor ** 2)))))
+        x = (baseRadius * (teethCount + 1) * math.cos(angle * 0.01745329)) \
+            - (heightFactor * baseRadius * math.cos((teethCount + 1) * angle * 0.01745329)) \
+            - (displacementFactor * ((math.cos(angle * 0.01745329) 
+            - (heightFactor * math.cos((teethCount + 1) * angle * 0.01745329))) / (math.sqrt(1 
+            - (2 * heightFactor * math.cos(teethCount * angle * 0.01745329)) + (heightFactor ** 2)))))
         
         # Calculate y-coordinate based on cycloidal formula
-        y = (baseRadius * (teethCount + 1) * math.sin(angle * 0.0175)) \
-            - (heightFactor * baseRadius * math.sin((teethCount + 1) * angle * 0.0175)) \
-            - (displacementFactor * ((math.sin(angle * 0.0175) 
-            - (heightFactor * math.sin((teethCount + 1) * angle * 0.0175))) / (math.sqrt(1 
-            - (2 * heightFactor * math.cos(teethCount * angle * 0.0175)) + (heightFactor ** 2)))))
+        y = (baseRadius * (teethCount + 1) * math.sin(angle * 0.01745329)) \
+            - (heightFactor * baseRadius * math.sin((teethCount + 1) * angle * 0.01745329)) \
+            - (displacementFactor * ((math.sin(angle * 0.01745329) 
+            - (heightFactor * math.sin((teethCount + 1) * angle * 0.01745329))) / (math.sqrt(1 
+            - (2 * heightFactor * math.cos(teethCount * angle * 0.01745329)) + (heightFactor ** 2)))))
         
         # Insert the calculated point into the polygon
         points.insert(pointIndex, QPoint(x * scale, y * scale))
@@ -324,8 +325,8 @@ def cutHoles(outlinePath, scale, bushingData, initialRotationDegrees):
         # Angular position of each bushing in radians
         bushingAngle = (2 * math.pi * bushingIndex) / bushingsCount
         
-        # Convert the initial rotation from degrees to radians (0.0175 = pi/180)
-        rotationRadians = initialRotationDegrees * 0.0175
+        # Convert the initial rotation from degrees to radians (0.01745329 = pi/180)
+        rotationRadians = initialRotationDegrees * 0.01745329
 
         # Calculate the x and y coordinates for the center of the hole
         holeCenterX = (bushingRadius * math.cos(bushingAngle - rotationRadians)) * scale - holeDiameter / 2
@@ -413,7 +414,8 @@ class AnimationWorker(QObject):
                 # Emit a signal to request redrawing in the main thread
                 self.redrawAnimation.emit()
 
-                # Check if the angle exceeds 360 and reset
+                # TODO: nie jestem pewien czy rzeczywiście jest potrzeba tego resetu po różnych zmianach w animacji...
+                # Angle is reset to 0 every full rotation of the gear to eliminate inaccuracies adding up over time
                 if self.animation._angle >= 360 * (self.animation._data["z"] + 1):
                     self.animation._angle = 0
                     self.animation._angle2 = 180 * (self.animation._data["z"] + 1)
