@@ -1,11 +1,20 @@
-*.json
-*.rtf
-*.csv
-*.dxf
 *.cmd
 *.exe
-main.build
-main.dist
+
+# program generated files at root directory
+/*.json
+/*.rtf
+/*.csv
+/*.dxf
+
+# Project specifics
+workspace/
+
+# databases
+*.db
+
+# vscode
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -40,6 +49,8 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+main.build
+main.dist
 
 # Installer logs
 pip-log.txt
