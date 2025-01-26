@@ -1,6 +1,6 @@
 from PySide2.QtCore import Signal
 
-from utils.widgets.PushButton import PushButton
+from common.common_widgets import PushButton
 
 class DataButton(PushButton):
     dataChangedSignal = Signal(object)

@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from common.tolerance_calc import normal_in_tolerance, normal_in_tolerance_set
+from modules.common.calculations.tolerance_calc import normal_in_tolerance, normal_in_tolerance_set
 SAMPLES = 500
 
 # TODO: skoro w R_eke sie odejmuje g to jak potem sie bierze pod uwagę odchyłke tego to chyba też sie powinno odjąć. Dowiedzieć sie, narazie zmieniłem na -.

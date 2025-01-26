@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import QWidget
 
-from .widgets.MessageDialog import MessageDialog
+from .MessageDialog import MessageDialog
 
 from config import APP_NAME
 
@@ -18,7 +18,7 @@ class MessageHandler:
     @classmethod
     def _title(cls, subtitle: str) -> str:
         """
-        Concatenate the bas title with the subtitle
+        Concatenate the base title with the subtitle
 
         Args:
             subtitle (str): additional window description

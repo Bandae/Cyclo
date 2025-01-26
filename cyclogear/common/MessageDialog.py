@@ -2,8 +2,7 @@ from PySide2.QtWidgets import QDialog, QVBoxLayout, QApplication, QHBoxLayout, Q
 from PySide2.QtGui import QFontMetrics
 from PySide2.QtCore import QSize, Qt
 
-from .Label import Label
-from .PushButton import PushButton
+from .common_widgets import Label, PushButton
 
 class MessageDialog(QDialog):
     '''

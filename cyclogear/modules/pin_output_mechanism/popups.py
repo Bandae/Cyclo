@@ -24,9 +24,9 @@ class SupportWin(QWidget):
 
         layout = QGridLayout()
         self.buttons = [
-            QPushButton(icon=QIcon("icons//sworzen_jednostronnie_utwierdzony.png")),
-            QPushButton(icon=QIcon("icons//sworzen_utwierdzony_podparty.png")),
-            QPushButton(icon=QIcon("icons//sworzen_obustronnie_utwierdzony.png"))
+            QPushButton(icon=QIcon("resources//images//sworzen_jednostronnie_utwierdzony.png")),
+            QPushButton(icon=QIcon("resources//images//sworzen_utwierdzony_podparty.png")),
+            QPushButton(icon=QIcon("resources//images//sworzen_obustronnie_utwierdzony.png"))
         ]
         for ind, button in enumerate(self.buttons):
             button.setIconSize(QSize(400, 400))

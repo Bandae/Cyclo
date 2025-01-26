@@ -1,10 +1,10 @@
 from PySide2.QtWidgets import QLabel, QGridLayout, QStackedLayout, QVBoxLayout, QCheckBox
-from abstract_tab import AbstractTab
+from modules.common.abstract_tab import AbstractTab
 from PySide2.QtCore import Signal
 
 
-class Tab_Milosz(AbstractTab):
-    this_enabled = Signal(bool)
+class RollerOutTab(AbstractTab):
+    thisEnabled = Signal(bool)
     def __init__(self, parent):
         super().__init__(parent)
         main_layout = QVBoxLayout()
@@ -26,9 +26,9 @@ class Tab_Milosz(AbstractTab):
         if state:
             # TODO: wlaczyc wszystkie mozliwosci wprowadzania danych
             # self.data.setEnabled(False)
-            self.this_enabled.emit(True)
+            self.thisEnabled.emit(True)
         else:
-            self.this_enabled.emit(False)
+            self.thisEnabled.emit(False)
             # TODO: wylaczyc wszystkie mozliwosci wprowadzania danych
             # self.data.setEnabled(True)
     

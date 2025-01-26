@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from mainwindow import MainWindow
+    from main_window.mainwindow import MainWindow
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Signal
@@ -22,8 +22,12 @@ class AbstractTab(QWidget):
     dataChanged = Signal(dict)
     # sygnal wysyłany, kiedy zmienią się dane potrzebne dla innych zakładek
 
-    def __init__(self, parent: MainWindow) -> None:
-        super().__init__(parent)
+    def getView(self) -> QWidget:
+        '''
+        Pozwala na dostosowanie modułu wału wejściowego, którego główny widżet jest kontrolerem,
+        a nie widokiem do reszty aplikacji
+        '''
+        return self
     
     def sendData(self) -> None:
         '''Wysyła potrzebne innym zakładkom dane w momencie zmiany zakładki z tej na inną.'''

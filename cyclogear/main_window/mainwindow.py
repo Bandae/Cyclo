@@ -6,15 +6,16 @@ from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QMainWindow, QPushButton, QWidget, QHBoxLayout, QStackedLayout, QVBoxLayout, QAction, QGridLayout, QDialog, QDialogButtonBox, QLabel
 
-from base_data_widget import BaseDataWidget
-from error_widget import ErrorWidget
-from kamil import Tab_Kamil
-from main_view import AnimationView
-from milosz import Tab_Milosz
-from pawel import GearTab
-from utils import open_save_dialog
-from wiktor import PinOutTab
-
+from .base_data_widget import BaseDataWidget
+from .error_widget import ErrorWidget
+from animation.animation_view import AnimationView
+from modules.roller_output_mechanism.roller_mechanism import RollerOutTab
+from modules.gear.gear_tab import GearTab
+from common.utils import open_save_dialog
+from modules.pin_output_mechanism.pin_mechanism import PinOutTab
+from modules.input_mechanism.controller.input_mechanism_controller import InputMechanismController
+from modules.input_mechanism.view.InputMechanism import InputMechanism
+from modules.input_mechanism.model.input_mechanism_calculator import InputMechanismCalculator
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -26,7 +27,7 @@ class MainWindow(QMainWindow):
 
         #ustawienie ikonki :
         main_icon = QIcon()
-        main_icon.addFile("icons//mainwindow_icon.png")
+        main_icon.addFile("resources//images//mainwindow_icon.png")
         self.setWindowIcon(main_icon)
 
         self.loaded_file = None
@@ -39,13 +40,13 @@ class MainWindow(QMainWindow):
         self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
         self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
-        milosz = Tab_Milosz(central_widget)
+        roller_out_tab = RollerOutTab(central_widget)
 
         # Zapewnienie, że tylko jeden mechanizm wyjściowy będzie aktywny
-        self.pin_out_tab.thisEnabled.connect(milosz.useOtherChanged)
-        milosz.this_enabled.connect(self.pin_out_tab.useOtherChanged)
+        self.pin_out_tab.thisEnabled.connect(roller_out_tab.useOtherChanged)
+        roller_out_tab.thisEnabled.connect(self.pin_out_tab.useOtherChanged)
 
-        kamil = Tab_Kamil(central_widget)
+        self.input_shaft_tab_controller = InputMechanismController(central_widget)
 
         main_layout = QGridLayout()
         data_layout = QVBoxLayout()
@@ -72,7 +73,7 @@ class MainWindow(QMainWindow):
         self.base_data.dataChanged.connect(self.exchangeData)
 
         self.help_button = QPushButton(central_widget)
-        self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
+        self.help_button.setIcon(QIcon("resources//images//pomoc_zarys1.png"))
         self.help_button.setIconSize(QSize(140, 140))
         self.help_button.resize(150, 150)
         self.help_label = QLabel("Otwórz obrazek pomocniczy", self.help_button)
@@ -80,12 +81,13 @@ class MainWindow(QMainWindow):
         self.help_button.pressed.connect(self.helpClicked)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, milosz, kamil]
+        # self.stacked_widgets = [self.gear_tab, self.pin_out_tab, roller_out_tab]
+        self.stacked_widgets = [self.gear_tab, self.pin_out_tab, roller_out_tab, self.input_shaft_tab_controller]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)
             button_layout.addWidget(button)
-            self.stacklayout.addWidget(widget)
+            self.stacklayout.addWidget(widget.getView())
             widget.dataChanged.connect(self.exchangeData)
             button.pressed.connect(partial(self.activateTab, index))
         
@@ -191,9 +193,9 @@ class MainWindow(QMainWindow):
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
         if index == 0:
-            self.help_button.setIcon(QIcon("icons//pomoc_zarys1.png"))
+            self.help_button.setIcon(QIcon("resources//images//pomoc_zarys1.png"))
         elif index == 1:
-            self.help_button.setIcon(QIcon("icons//pomoc_mechanizm_I.bmp"))
+            self.help_button.setIcon(QIcon("resources//images//pomoc_mechanizm_I.bmp"))
         else:
             self.help_button.hide()
     

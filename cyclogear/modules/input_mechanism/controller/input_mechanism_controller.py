@@ -17,14 +17,16 @@ from ..tabs.power_loss_tab.controller.power_loss_controller import PowerLossTabC
 from ..tabs.results_tab.view.ResultsTab import ResultsTab
 from ..tabs.results_tab.controller.results_tab_controller import ResultsTabController
 
-from shaft_designer.view.ShaftDesigner import ShaftDesigner
-from shaft_designer.controller.shaft_designer_controller import ShaftDesignerController
+from modules.shaft_designer.view.ShaftDesigner import ShaftDesigner
+from modules.shaft_designer.controller.shaft_designer_controller import ShaftDesignerController
 
 from db_handler.controller.db_controller import DbController
 from db_handler.model.db_handler import DbHandler
 from db_handler.view.DbItemsWindow import DbItemsWindow
 
-class InputMechanismController:
+from modules.common.abstract_tab import AbstractTab
+
+class InputMechanismController(AbstractTab):
     """
     Controller for the InputMechanism in the application.
 
@@ -32,15 +34,16 @@ class InputMechanismController:
     including initializing the view with data, connecting signals and slots, and handling
     user interactions.
     """
-    def __init__(self, model: InputMechanismCalculator, view: InputMechanism):
+    def __init__(self, parent_for_view):
         """
-        Initialize the InputMechanismController.W
+        Initialize the InputMechanismController.
 
         :param data: The data for the application.
         :param view: The InputMechanism (QWidget) instance of the input shaft coomponent's GUI.
         """
-        self._input_mechanism = view
-        self._calculator = model
+        super().__init__()
+        self._input_mechanism = InputMechanism(parent_for_view)
+        self._calculator = InputMechanismCalculator()
 
         self._startup()
         self._connect_signals_and_slots()
@@ -231,3 +234,6 @@ class InputMechanismController:
         self._input_mechanism.isShaftDesigned = data[-1]
         if self._input_mechanism.isShaftDesigned:
             self._on_shaft_designing_finished()
+    
+    def getView(self):
+        return self._input_mechanism

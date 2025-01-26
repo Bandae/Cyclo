@@ -2,7 +2,7 @@ from PySide2.QtCore import Qt, QRegularExpression
 from PySide2.QtGui import QRegularExpressionValidator, QFont
 from PySide2.QtWidgets import QHBoxLayout, QLabel, QLineEdit
 
-from utils.widgets.Label import Label
+from common.common_widgets import Label
 
 def createDataInputRow(symbol):
     layout = QHBoxLayout()

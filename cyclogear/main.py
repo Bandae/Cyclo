@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QApplication
-from mainwindow import MainWindow
+from main_window.mainwindow import MainWindow
 import sys
 
 # TODO: sprawdzic obliczenia tolerancje: T_ze: (0, 0,004), T_fi-ri: (-0,003, 0)

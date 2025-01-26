@@ -6,7 +6,7 @@ from PySide2.QtWidgets import QHBoxLayout, QFrame, QSizePolicy, QLineEdit
 from PySide2.QtGui import QFont
 from PySide2.QtCore import Qt
 
-from utils.widgets.Label import Label
+from common.common_widgets import Label
 from .widgets.Input import Input
 from .widgets.Output import Output
 

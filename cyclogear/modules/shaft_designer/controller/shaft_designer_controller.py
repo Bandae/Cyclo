@@ -5,7 +5,7 @@ from ..model.shaft_calculator import ShaftCalculator
 from ..model.functions_calculator import FunctionsCalculator
 
 
-from utils.message_handler import MessageHandler
+from common.message_handler import MessageHandler
         
 class ShaftDesignerController:
     def __init__(self, view: ShaftDesigner, mediator):

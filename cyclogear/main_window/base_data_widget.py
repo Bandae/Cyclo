@@ -1,6 +1,6 @@
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QGridLayout, QFrame
-from common_widgets import QLabelD, IntSpinBox
+from common.common_widgets import QLabelD, IntSpinBox
 
 
 class BaseDataWidget(QFrame):

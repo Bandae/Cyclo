@@ -3,13 +3,13 @@ from typing import Dict, Optional, Tuple, Union
 import math
 from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QHBoxLayout, QStackedLayout
-from abstract_tab import AbstractTab
-from common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContainer
-from common.tolerance_widgets import ToleranceEdit
-from common.charts import ResultsTab
-from pawlowe.widgets import DaneMaterialowe, ResultsFrame
-from pawlowe.gear_calc import calculate_gear, get_lam_min, get_ro_min, gear_error_check
-from utils import open_pdf
+from modules.common.abstract_tab import AbstractTab
+from common.common_widgets import IntSpinBox, DoubleSpinBox, QLabelD, ResponsiveContainer
+from modules.common.widgets.tolerance_widgets import ToleranceEdit
+from modules.common.widgets.charts import ResultsTab
+from .widgets import DaneMaterialowe, ResultsFrame
+from .calculations import calculate_gear, get_lam_min, get_ro_min, gear_error_check
+from common.utils import open_pdf
 #TODO: nie podoba mi się obliczanie p_max, jako po prostu największego nacisku z wszystkich. U wiktora jest p_max wiekszy niz na sworzniu czasem, bo sworzen zmienia p jak sie obraca.
 
 
@@ -310,7 +310,7 @@ class GearTab(AbstractTab):
 
         help_pdf_button = QPushButton("Pomoc")
         button_layout.addWidget(help_pdf_button)
-        help_pdf_button.clicked.connect(lambda: open_pdf("help//zazebienie-help-1.pdf"))
+        help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//zazebienie-help-1.pdf"))
 
         scrollable_tab = ResponsiveContainer(self, self.data, self.data.setupSmallLayout, self.data.setupLayout, 480, 1300)
         tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]

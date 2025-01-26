@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 from PySide2.QtWidgets import QWidget, QVBoxLayout
-from common_widgets import QLabelD
+from common.common_widgets import QLabelD
 
 
 class ErrorWidget(QWidget):

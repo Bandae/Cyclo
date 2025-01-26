@@ -1,4 +1,4 @@
-from PySide2.QtCore import QSize
+from PySide2.QtCore import QSize, Signal
 from PySide2.QtGui import QIcon, QFont
 from PySide2.QtWidgets import QTabWidget, QWidget, QHBoxLayout, QVBoxLayout, QPushButton
 

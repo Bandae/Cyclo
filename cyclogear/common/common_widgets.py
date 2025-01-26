@@ -1,7 +1,7 @@
 from typing import Callable
 
 from PySide2.QtGui import QFont, QResizeEvent
-from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout
+from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout, QPushButton
 
 class DoubleSpinBox(QDoubleSpinBox):
     def __init__(self, value, minimum=None, maximum=None, step=0.01, decimal_places=2):
@@ -35,6 +35,36 @@ class IntSpinBox(QSpinBox):
             self.setMaximum(maximum)
         if value is not None:
             self.setValue(value)
+
+
+class PushButton(QPushButton):
+    def __init__(self, *args, **kwargs):
+        """
+        Custom QPushButton that applies a custom font to the button text.
+
+        This constructor allows flexible initialization by passing any combination
+        of text and parent, while ensuring the custom font is applied.
+        """
+        super().__init__(*args, **kwargs)
+
+        # Set a custom font for the button text
+        custom_font = QFont('Arial', 9, QFont.Normal)
+        self.setFont(custom_font)
+
+
+class Label(QLabel):
+    def __init__(self, *args, **kwargs):
+        """
+        Custom QLabel that applies a custom font to the label text.
+
+        This constructor allows flexible initialization by passing any combination
+        of text and parent, while ensuring the custom font is applied.
+        """
+        super().__init__(*args, **kwargs)
+
+        # Set a custom font for the label text
+        font = QFont('Arial', 10, QFont.Normal)
+        self.setFont(font)
 
 
 class QLabelD(QLabel):
