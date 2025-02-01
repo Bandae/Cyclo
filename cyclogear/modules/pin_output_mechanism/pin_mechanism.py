@@ -391,11 +391,12 @@ class PinOutTab(AbstractTab):
         R_wt = self.data.input_dane["R_wt"]
         
         self.dataChanged.emit({"PinOutTab": {
-            "F_wmr": 1000 * 4 * M_k / (pi * R_wt),
+            "Fwm": 1000 * 4 * M_k / (pi * R_wt),
             "r_mr": pi * R_wt / 4,
+            "x": self.data.input_dane["e2"],
         }})
     
-    def receiveData(self, new_data: Dict[str, Optional[Dict[str, Union[int, float]]]]) -> None:
+    def receiveData(self, new_data) -> None:
         wanted_data = None
         if new_data.get("GearTab") is not None:
             wanted_data = new_data.get("GearTab")

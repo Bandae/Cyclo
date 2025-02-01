@@ -34,6 +34,7 @@ class BearingsTab(ITrackedTab):
 
     def _init_sections(self):
         self.stacked_sections = QStackedWidget()
+        self.sections_reference = {}
 
         for section_name in self._items['Bearings']:
             container = self._init_bearings_section(section_name)
@@ -86,6 +87,9 @@ class BearingsTab(ITrackedTab):
         section_layout.addWidget(createDataDisplayRow(self._inputs['Bearings'][section_name]['C'], 'C', 'Wymagana nośność łożyska', decimalPrecision=2))
         section_layout.addLayout(bearing_button_layout)
         section_layout.addStretch()
+
+        # TODO HACK: dostęp do sekcji, żeby sprawdzić czy wszystko jest wypełnione kiedy podane są dane z zewnątrz. Jeśli tak, to przeliczana jest nośność.
+        self.sections_reference.update({section_name: section})
 
         return container
 

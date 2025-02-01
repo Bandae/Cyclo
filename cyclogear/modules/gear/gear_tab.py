@@ -249,7 +249,8 @@ class DataEdit(QWidget):
             "luzy": results["luzy"],
         })
 
-        self.results_frame.update(results, material_data["p_dop"])
+        results.update({"p_dop": material_data["p_dop"]})
+        self.results_frame.update(results)
         self.dane_all["nwyj"] = round(self.outside_data["n_wej"] / self.dane_all["z"], 2)
         self.dane_materialowe.n_out_label.setText(str(self.dane_all["nwyj"]) + " obr/min")
 
@@ -326,9 +327,12 @@ class GearTab(AbstractTab):
 
     def sendData(self) -> None:
         material_data = self.data.dane_materialowe.getData()
+        
         self.dataChanged.emit({"GearTab": {
             "R_w1": self.data.dane_all["Rw1"],
             "R_f1": self.data.dane_all["Rf1"],
+            "Fwzx": self.data.results_frame.data["F_wzx"],
+            "Fwzy": self.data.results_frame.data["F_wzy"],
             "e": self.data.dane_all["e"],
             "K": self.data.dane_all["K"],
             "B": material_data["b_wheel"],

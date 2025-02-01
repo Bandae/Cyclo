@@ -53,10 +53,7 @@ class DriveShaftTab(ITrackedTab):
         # Loop backwards to remove and delete all items from the layout
         def clearLayout(layout):
             for i in reversed(range(layout.count())):
-                item = layout.itemAt(i)
-
-                # Remove the item from the layout
-                layout.removeItem(item)
+                item = layout.takeAt(i)
 
                 # If the item is a widget, delete it
                 if widget := item.widget():

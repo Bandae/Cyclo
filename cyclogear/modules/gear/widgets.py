@@ -34,12 +34,13 @@ class ResultsFrame(QFrame):
 
         self.setLayout(layout)
     
-    def update(self, new_data, p_dop):
+    def update(self, new_data):
+        # TODO: przechowywane żeby wysłać do modułu mech wejściowego. Zmienić całą strukture potem, będzie model na wszystkie dane.
+        self.data = {"F_wzx": new_data["F_wzx"], "F_wzy": new_data["F_wzy"]}
         data_units = [" N", " MPa", " N", " N", " N", " W"]
         for index, (key, label) in enumerate(self.data_labels.items()):
             label.setText(str(new_data[key]) + data_units[index])
-            # self.data_labels[key].setText(str(new_value) + data_units[index])
-        if new_data["p_max"] < p_dop:
+        if new_data["p_max"] < new_data["p_dop"]:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
         else:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> nie jest spełniony.")

@@ -34,6 +34,8 @@ class PowerLossTab(ITrackedTab):
     def _initSections(self):
         self.stackedSections = QStackedWidget()
 
+        # TODO: HACK dostęp do subsekcji danych, aby przeliczać straty mocy po zmianie danych z zewnątrz
+        self.dataSubsections = {sectionName: None for sectionName in self._items['Bearings']}
         for sectionName in self._items['Bearings']:
             container = self._initBearingsSection(sectionName)
             self.stackedSections.addWidget(container)
@@ -69,6 +71,9 @@ class PowerLossTab(ITrackedTab):
         dataSubsection = Section(self, sectionName, self.sectionDataProvided.emit)
         dataSubsection.addLayout(buttonLayout)
         dataSubsection.addWidget(createDataInputRow(self._inputs['Bearings'][sectionName]['f'], 'f', 'Współczynnik tarcia tocznego łożyska', decimalPrecision=5))
+        
+        # TODO: HACK dostęp do subsekcji danych, aby przeliczać straty mocy po zmianie danych z zewnątrz
+        self.dataSubsections[sectionName] = dataSubsection
 
         # Add widgets to section layout
         sectionLayout.addWidget(diameterSubsection)

@@ -140,7 +140,7 @@ class ShaftDesignerController:
             last_subsection_number = self._sections[section_name].subsectionCount - 1
             if self._sections[section_name].subsectionCount == 0 or (section_name in self.shaft_calculator.shaft_sections and
             last_subsection_number in self.shaft_calculator.shaft_sections[section_name]):
-                self._sections[section_name].setAddSubsectionButtonEnabled(True)
+                self._sections[section_name].setAddSubHeaderButtonEnabled(True)
 
     def _set_functions_plots(self, shaft_functions):
         def update_plot_menus(id, function_details, key, plot_menu):
