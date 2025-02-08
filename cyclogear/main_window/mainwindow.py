@@ -14,8 +14,6 @@ from modules.gear.gear_tab import GearTab
 from common.utils import open_save_dialog
 from modules.pin_output_mechanism.pin_mechanism import PinOutTab
 from modules.input_mechanism.controller.input_mechanism_controller import InputMechanismController
-from modules.input_mechanism.view.InputMechanism import InputMechanism
-from modules.input_mechanism.model.input_mechanism_calculator import InputMechanismCalculator
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -37,7 +35,7 @@ class MainWindow(QMainWindow):
         self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
 
         self.pin_out_tab = PinOutTab(central_widget)
-        self.pin_out_tab.data.animDataUpdated.connect(self.updateAnimationData)
+        self.pin_out_tab.animDataUpdated.connect(self.updateAnimationData)
         self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
         roller_out_tab = RollerOutTab(central_widget)
@@ -65,7 +63,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(data_layout,0,7,1,3)
         self.error_box = ErrorWidget(central_widget)
         self.error_box.show()
-        self.pin_out_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
+        self.pin_out_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
@@ -81,7 +79,6 @@ class MainWindow(QMainWindow):
         self.help_button.pressed.connect(self.helpClicked)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
-        # self.stacked_widgets = [self.gear_tab, self.pin_out_tab, roller_out_tab]
         self.stacked_widgets = [self.gear_tab, self.pin_out_tab, roller_out_tab, self.input_shaft_tab_controller]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
@@ -187,8 +184,9 @@ class MainWindow(QMainWindow):
 
     def activateTab(self, index):
         old_index = self.stacklayout.currentIndex()
-        if old_index == 0 or old_index == 1:
-            self.stacked_widgets[old_index].data.recalculate()
+        # TODO: to zrobic zeby nie bylo potrzebne
+        # if old_index == 0 or old_index == 1:
+        #     self.stacked_widgets[old_index].data.recalculate()
         
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()

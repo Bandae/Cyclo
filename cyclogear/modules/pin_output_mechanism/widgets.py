@@ -1,11 +1,68 @@
 from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QGridLayout, QComboBox, QFrame
-from common.common_widgets import QLabelD, DoubleSpinBox
+from PySide2.QtWidgets import QGridLayout, QComboBox, QFrame, QPushButton
+from common.common_widgets import QLabelD, DoubleSpinBox, IntSpinBox
+
+
+class VisualsFrame(QFrame):
+    accepted = Signal(bool)
+
+    def __init__(self, parent, model):
+        super().__init__(parent)
+        self.model = model
+        self.filled_out = False
+        self.is_accepted = False
+
+        self.setFrameStyle(QFrame.Box | QFrame.Raised)
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        self.n_input = IntSpinBox(self.model.input_dane["n"], 4, 28, 1)
+        self.n_input.valueChanged.connect(self.changed)
+        self.Rwt_input = DoubleSpinBox(self.model.input_dane["R_wt"], 20, 300, 1, 1)
+        self.Rwt_input.valueChanged.connect(self.changed)
+
+        self.accept_button = QPushButton("Ok")
+        self.accept_button.setEnabled(False)
+        self.accept_button.clicked.connect(self.okClicked)
+
+        n_label = QLabelD("Liczba sworzni [n]")
+        layout.addWidget(n_label, 0, 0, 1, 2)
+        layout.addWidget(self.n_input, 0, 2, 1, 2)
+        lab_Rwt = QLabelD("R<sub>wt</sub> [mm]")
+        lab_Rwt.setToolTip("Promień rozmieszczenia sworzni")
+        layout.addWidget(lab_Rwt, 1, 0)
+        layout.addWidget(self.Rwt_input, 1, 1)
+        name_Rwk = QLabelD("R<sub>wk</sub>")
+        name_Rwk.setToolTip("Promień rozmieszczenia otworów w kole cykloidalnym")
+        layout.addWidget(name_Rwk, 1, 2)
+        self.Rwk_label = QLabelD("")
+        layout.addWidget(self.Rwk_label, 1, 3)
+        layout.addWidget(self.accept_button, 2, 3)
+    
+    def changed(self):
+        self.is_accepted = False
+        n, R_wt = self.n_input.value(), self.Rwt_input.value()
+        self.accepted.emit(False)
+        if n is not None and R_wt is not None:
+            self.model.sendAnimationUpdates(n, R_wt)
+            self.accept_button.setEnabled(True)
+        if R_wt is not None:
+            self.Rwk_label.setText(str(self.Rwt_input.value()) + " mm")
+    
+    def okClicked(self):
+        self.model.input_dane["n"] = self.n_input.value()
+        self.model.input_dane["R_wt"] = self.Rwt_input.value()
+        self.accept_button.setEnabled(False)
+        self.filled_out = True
+        self.is_accepted = True
+        self.accepted.emit(True)
 
 
 class ResultsFrame(QFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, model):
         super().__init__(parent)
+        self.model = model
+
         layout = QGridLayout()
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
 
@@ -33,51 +90,37 @@ class ResultsFrame(QFrame):
 
         self.setLayout(layout)
     
-    def update(self, new_data):
-        if new_data["p_max"] < new_data.pop("p_dop"):
+    def update(self):
+        if self.model.obliczone_dane["p_max"] < self.model.material_data["p_dop"]:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
         else:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> nie jest spełniony.")
         
-        data_units = [" N", " MPa", " N", " mm", " W"]
-        for index, (key, new_value) in enumerate(new_data.items()):
-            self.data_labels[key].setText(str(new_value) + data_units[index])
+        keys = ("F_max", "p_max", "F_wmr", "r_mr", "N_cmr")
+        data_units = (" N", " MPa", " N", " mm", " W")
+        for key, unit in zip(keys, data_units):
+            self.data_labels[key].setText(str(self.model.obliczone_dane[key]) + unit)
 
 
 class MaterialsFrame(QFrame):
     updated = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, parent, model):
         super().__init__(parent)
+        self.model = model
+
         layout = QGridLayout()
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
 
-        self.materials = {
-            "15HN": {"nazwa": "15HN", "type": "steel", "E": 210000, "v": 0.3, "Re": 850, "use": "pin"},
-            "16HG": {"nazwa": "16HG", "type": "steel", "E": 210000, "v": 0.3, "Re": 850, "use": "pin"},
-            "40HM": {"nazwa": "40HM", "type": "steel", "E": 210000, "v": 0.3, "Re": 900, "use": "pin"},
-            "34HNM": {"nazwa": "34HNM", "type": "steel", "E": 210000, "v": 0.3, "Re": 1000, "use": "pin"},
-            "C45": {"nazwa": "C45", "type": "steel", "E": 210000, "v": 0.3, "Re": 710, "p_dop_normalizowanie": 550, "p_dop_ulepszanie cieplne": 700, "p_dop_hartowanie": 1300, "use": "both"},
-            "C55": {"nazwa": "C55", "type": "steel", "E": 210000, "v": 0.3, "Re": 810, "p_dop_normalizowanie": 600, "p_dop_ulepszanie cieplne": 900, "p_dop_hartowanie": 1500, "use": "both"},
-            "B 101": {"nazwa": "B 101", "type": "bronze", "E": 117000, "v": 0.34, "use": "sleeve"},
-            "B 102": {"nazwa": "B 102", "type": "bronze", "E": 117000, "v": 0.34, "use": "sleeve"},
-            "BA 1044": {"nazwa": "BA 1044", "type": "bronze", "E": 117000, "v": 0.34, "use": "sleeve"},
-            "C30": {"nazwa": "C30", "type": "steel", "E": 210000, "v": 0.3, "p_dop_normalizowanie": 450, "p_dop_ulepszanie cieplne": 550, "p_dop_hartowanie": 1000, "use": "sleeve"},
-            "50G": {"nazwa": "50G", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 900, "p_dop_hartowanie": 1450, "use": "sleeve"},
-            "40H": {"nazwa": "40H", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1550, "use": "sleeve"},
-            "40HN": {"nazwa": "40HN", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1600, "use": "sleeve"},
-        }
-        self.pin_sft_coef = 2
-        self.allowed_pressure = 450
-        self.current_mats = {"pin": self.materials["15HN"], "sleeve": self.materials["C45"], "wheel": self.materials["C30"], "wheel_treat": "normalizowanie"}
         self.data_inputs = {"sw_mat": QComboBox(), "tul_mat": QComboBox(), "tul_treat": QComboBox()}
-        self.data_inputs["sw_mat"].addItems([mat["nazwa"] for mat in self.materials.values() if mat["use"] == "pin" or mat["use"] == "both"])
-        self.data_inputs["tul_mat"].addItems([mat["nazwa"] for mat in self.materials.values() if mat["use"] == "sleeve" or mat["use"] == "both"])
+        # TODO: zamienić na używanie bazy danych.
+        self.data_inputs["sw_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values() if mat["use"] == "pin" or mat["use"] == "both"])
+        self.data_inputs["tul_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values() if mat["use"] == "sleeve" or mat["use"] == "both"])
         self.data_inputs["tul_treat"].addItems(["normalizowanie", "ulepszanie cieplne", "hartowanie"])
         self.data_inputs["sw_mat"].currentIndexChanged.connect(self.update)
         self.data_inputs["tul_mat"].currentIndexChanged.connect(self.update)
-        self.data_inputs["tul_treat"].currentIndexChanged.connect(self.updateTreat)
-        self.coef_input = DoubleSpinBox(self.pin_sft_coef, 1, 2.5, 0.1)
+        self.data_inputs["tul_treat"].currentIndexChanged.connect(self.updateAllowedPressure)
+        self.coef_input = DoubleSpinBox(self.model.material_data["pin_safety_coef"], 1, 2.5, 0.1)
         self.coef_input.valueChanged.connect(self.update)
         data_label_names = ["pin_re", "tul_E", "tul_v", "wh_name", "wh_treat", "wh_E", "wh_v", "p_dop"]
         self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
@@ -108,85 +151,60 @@ class MaterialsFrame(QFrame):
 
         self.setLayout(layout)
         self.update()
-        self.changeWheelMat(self.current_mats["wheel"], "normalizowanie")
-    
-    def getAllowedPressure(self) -> int:
-        wheel_material = self.current_mats["wheel"]
-        sleeve_material = self.current_mats["sleeve"]
-        sleeve_treat = self.data_inputs["tul_treat"].currentText()
-        wheel_treat = self.current_mats["wheel_treat"]
-        wheel_tempered = wheel_material["type"] == "steel" and wheel_treat == "ulepszanie cieplne"
-
-        if sleeve_material["nazwa"] == "B 101" and wheel_tempered:
-            return 320
-        elif sleeve_material["nazwa"] == "B 101" and not wheel_tempered:
-            return 210
-        elif sleeve_material["nazwa"] == "B 102" and wheel_tempered:
-            return 320
-        elif sleeve_material["nazwa"] == "B 102" and not wheel_tempered:
-            return 215
-        elif sleeve_material["nazwa"] == "BA 1044" and wheel_tempered:
-            return 495
-        elif sleeve_material["nazwa"] == "BA 1044" and not wheel_tempered:
-            return 330
-        else:
-            wheel_p_dop = self.current_mats["wheel"]["p_dop_" + wheel_treat]
-            sleeve_p_dop = self.current_mats["sleeve"]["p_dop_" + sleeve_treat]
-            return min(sleeve_p_dop, wheel_p_dop)
-    
-    def getData(self):
-        copy = self.current_mats.copy()
-        copy.update({"p_dop": self.allowed_pressure, "pin_sft_coef": self.pin_sft_coef})
-        return copy
+        self.changeWheelMat(self.model.material_data["wheel_mat"], "normalizowanie")
 
     def changeWheelMat(self, new_mat, new_treat):
-        self.current_mats["wheel"] = new_mat
-        self.current_mats["wheel_treat"] = new_treat
+        self.model.material_data["wheel_mat"] = new_mat
+        self.model.material_data["wheel_treat"] = new_treat
+
         self.data_labels["wh_name"].setText(str(new_mat["nazwa"]))
         self.data_labels["wh_treat"].setText(new_treat)
         self.data_labels["wh_E"].setText("E: " + str(new_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(new_mat["v"]))
-        p_dop = self.getAllowedPressure()
-        self.allowed_pressure = p_dop
-        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
-        self.updated.emit()
+
+        self.updateAllowedPressure()
 
     def update(self):
-        sw_mat = self.materials[self.data_inputs["sw_mat"].currentText()]
-        tul_mat = self.materials[self.data_inputs["tul_mat"].currentText()]
-        self.current_mats["pin"] = sw_mat
-        self.current_mats["sleeve"] = tul_mat
-        self.pin_sft_coef = self.coef_input.value()
+        sw_mat = self.model.materials[self.data_inputs["sw_mat"].currentText()]
+        tul_mat = self.model.materials[self.data_inputs["tul_mat"].currentText()]
+        tul_treat = self.data_inputs["tul_treat"].currentText()
+        self.model.material_data["pin_mat"] = sw_mat
+        self.model.material_data["sleeve_mat"] = tul_mat
+        self.model.material_data["pin_safety_coef"] = self.coef_input.value()
 
         self.data_inputs["tul_treat"].blockSignals(True)
-        tul_treat = self.data_inputs["tul_treat"].currentText()
         self.data_inputs["tul_treat"].clear()
         for treat in ["normalizowanie", "ulepszanie cieplne", "hartowanie"]:
             if tul_mat.get("p_dop_" + treat):
                 self.data_inputs["tul_treat"].addItem(treat)
         if self.data_inputs["tul_treat"].findText(tul_treat) != -1:
+            # keep the treat option as it was, if it is available for the new material
             self.data_inputs["tul_treat"].setCurrentText(tul_treat)
+            self.model.material_data["sleeve_treat"] = tul_treat
+        elif self.data_inputs["tul_treat"].count() != 0:
+            # if not available, update to the now displayed treat
+            self.model.material_data["sleeve_treat"] = self.data_inputs["tul_treat"].currentText()
+        else:
+            # if no available treat for the new material, update treat to None
+            self.model.material_data["sleeve_treat"] = None
         self.data_inputs["tul_treat"].blockSignals(False)
 
         self.data_labels["pin_re"].setText("Re: " + str(sw_mat["Re"]) + " MPa")
         self.data_labels["tul_E"].setText("E: " + str(tul_mat["E"]) + " MPa")
         self.data_labels["tul_v"].setText("v: " + str(tul_mat["v"]))
-        p_dop = self.getAllowedPressure()
-        self.allowed_pressure = p_dop
-        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
-        self.updated.emit()
+
+        self.updateAllowedPressure()
     
-    def updateTreat(self):
-        p_dop = self.getAllowedPressure()
-        self.allowed_pressure = p_dop
-        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
+    def updateAllowedPressure(self):
+        self.model.findAllowedPressure()
+        self.data_labels["p_dop"].setText("p<sub>dop</sub> = " + str(self.model.material_data["p_dop"]) + " MPa")
         self.updated.emit()
 
     def loadData(self, new_material_data):
         self.coef_input.blockSignals(True)
         self.coef_input.setValue(new_material_data["pin_sft_coef"])
         self.coef_input.blockSignals(False)
-        self.current_mats["wheel"] = new_material_data["wheel"]
+        self.model.material_data["wheel_mat"] = new_material_data["wheel"]
         for key in self.data_inputs:
             self.data_inputs[key].blockSignals(True)
             self.data_inputs[key].setCurrentText(new_material_data[key]["nazwa"])

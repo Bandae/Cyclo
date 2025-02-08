@@ -1,19 +1,18 @@
 from functools import partial
-from math import pi
 from typing import Dict, Optional, Union, Tuple
 
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Qt
 from PySide2.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QPushButton, QStackedLayout, QCheckBox
 
 from modules.common.abstract_tab import AbstractTab
-from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, ResponsiveContainer
+from common.common_widgets import DoubleSpinBox, QLabelD, ResponsiveContainer, StatusDiodes
 from common.utils import open_pdf
 from modules.common.widgets.tolerance_widgets import ToleranceEdit
 from modules.common.widgets.charts import ResultsTab
 from .popups import SupportWin
 from .calculations import obliczenia_mech_wyjsciowy
-from .utils import sprawdz_przecinanie_otworow
-from .widgets import ResultsFrame, MaterialsFrame
+from .widgets import ResultsFrame, MaterialsFrame, VisualsFrame
+from .model import PinOutputMechanismModel
 #TODO: mam przesunięte do tyłu w poziomie punkty wykresów. Pawel też.
 # moze jakos usuwac dane z wykresow jak sa bledy?
 # po trzy razy wysylam dane w niektorych sytuacjach, np jak sie zaznaczy zeby uzywac tego. Może to jest pętla.
@@ -22,130 +21,90 @@ from .widgets import ResultsFrame, MaterialsFrame
 
 
 class DataEdit(QWidget):
-    chartDataUpdated = Signal(dict)
-    animDataUpdated = Signal(dict)
-    errorsUpdated = Signal(dict)
-    shouldSendData = Signal()
-
-    def __init__(self, parent: AbstractTab) -> None:
+    changeDiode = Signal(StatusDiodes.Status)
+    
+    def __init__(self, parent: AbstractTab, model) -> None:
         super().__init__(parent)
-        self.wheel_rotation_angle = 0
-        self.module_enabled = False
-        self.tol_data = None
-        self.input_dane = {
-            "M_k": 500,
-            "n": 10,
-            "R_wt": 80,
-            "podparcie": "jednostronnie utwierdzony",
-            "d_sw": 10,
-            "d_tul": 14,
-            "wsp_k": 1.2,
-            "e1": 1,
-            "e2": 1,
-            "f_kt": 0.00005,
-            "f_ts": 0.00005,
-        }
-        self.obliczone_dane = {
-            "d_sw": 10,
-            "d_tul": 14,
-            "d_otw": 20,
-            "F_max": 1200,
-            "p_max": 200,
-            "F_wmr": 1000,
-            "r_mr": 80,
-            "N_cmr": 10,
-        }
-        self.zew_dane = {
-            "R_w1": 72,
-            "R_f1": 107,
-            "e": 3,
-            "K": 2,
-            "B": 20,
-            "M_wyj": 500,
-            "n_wej": 500,
-        }
+        self.model = model
 
         self.input_widgets = {
-            "n": IntSpinBox(self.input_dane["n"], 4, 28, 1),
-            "R_wt": DoubleSpinBox(self.input_dane["R_wt"], 20, 300, 1, 1),
-            "e1": DoubleSpinBox(self.input_dane["e1"], 0, 10, 0.05),
-            "e2": DoubleSpinBox(self.input_dane["e2"], 0, 10, 0.05),
-            "wsp_k": DoubleSpinBox(self.input_dane["wsp_k"], 1.2, 1.5, 0.05),
-            "d_sw": DoubleSpinBox(self.input_dane["d_sw"], 5, step=0.1),
-            "d_tul": DoubleSpinBox(self.input_dane["d_tul"], 5, step=0.1),
-            "f_kt": DoubleSpinBox(self.input_dane["f_kt"], 0.00001, 0.0001, 0.00001, 5),
-            "f_ts": DoubleSpinBox(self.input_dane["f_ts"], 0.00001, 0.0001, 0.00001, 5),
+            "e1": DoubleSpinBox(self.model.input_dane["e1"], 0, 10, 0.05),
+            "e2": DoubleSpinBox(self.model.input_dane["e2"], 0, 10, 0.05),
+            "f_kt": DoubleSpinBox(self.model.input_dane["f_kt"], 0.00001, 0.0001, 0.00001, 5),
+            "f_ts": DoubleSpinBox(self.model.input_dane["f_ts"], 0.00001, 0.0001, 0.00001, 5),
+        }
+        self.tuning_widgets = {
+            "wsp_k": DoubleSpinBox(self.model.input_dane["wsp_k"], 1.2, 1.5, 0.05),
+            "d_sw": DoubleSpinBox(self.model.input_dane["d_sw"], 5, step=0.1),
+            "d_tul": DoubleSpinBox(self.model.input_dane["d_tul"], 5, step=0.1),
         }
 
-        def inputsAboveAcceptChanged():
-            self.accept_button.setEnabled(True)
-            for key in ["d_sw", "d_tul", "wsp_k"]:
-                self.input_widgets[key].setEnabled(False)
-        
-        self.Rwk_label = QLabelD("")
+        self.visual_frame = VisualsFrame(self, model)
+        self.visual_frame.accepted.connect(self.visualsChanged)
 
         self.support_popup = SupportWin()
         self.support_popup.choiceMade.connect(self.closeChoiceWindow)
         self.ch_support_button = QPushButton(text="Wybierz sposób podparcia kół")
         self.ch_support_button.clicked.connect(self.support_popup.show)
-        self.ch_var_label = QLabelD("jednostronnie utwierdzony")
+        self.ch_var_label = QLabelD("")
 
-        self.results_frame = ResultsFrame(self)
-        self.material_frame = MaterialsFrame(self)
+        self.material_frame = MaterialsFrame(self, model)
+        self.material_frame.updated.connect(self.inputsChanged)
 
+        self.results_frame = ResultsFrame(self, model)
         self.label_e2 = QLabelD("Odstęp pomiędzy kołami")
         self.obl_srednice_labels = [QLabelD(style=False), QLabelD(style=False), QLabelD(style=False)]
 
         self.accept_button = QPushButton("Oblicz")
-        self.accept_button.setEnabled(False)
         self.accept_button.clicked.connect(lambda: self.recalculate())
 
+        for key in self.tuning_widgets:
+            self.tuning_widgets[key].valueChanged.connect(lambda: self.recalculate())
         for key in self.input_widgets:
-            if key in ["d_sw", "d_tul", "wsp_k"]:
-                self.input_widgets[key].valueChanged.connect(lambda: self.recalculate())
-            else:
-                self.input_widgets[key].valueChanged.connect(inputsAboveAcceptChanged)
-                if key in ["n", "R_wt"]:
-                    self.input_widgets[key].valueChanged.connect(lambda: self.sendAnimationUpdates())
-                    
-        self.material_frame.updated.connect(inputsAboveAcceptChanged)
+            self.input_widgets[key].valueChanged.connect(self.inputsChanged)
         
         layout = QGridLayout()
         self.setupSmallLayout(layout)
         self.setLayout(layout)
-        self.recalculate()
+        # self.visualsChanged(False)
+    
+    def inputsChanged(self):
+        self.accept_button.setEnabled(True)
+        for widget in self.tuning_widgets.values():
+            widget.setEnabled(False)
+        self.changeDiode.emit(StatusDiodes.Status.WARNING)
+    
+    def visualsChanged(self, is_accepted):
+        for child in (child for child in self.children() if child != self.visual_frame):
+            child.setEnabled(is_accepted)
     
     def setupLayout(self, layout: QGridLayout) -> None:
         # layout.setVerticalSpacing(10)
-        n_label = QLabelD("Liczba sworzni [n]")
-        layout.addWidget(n_label, 0, 0, 1, 2)
-        layout.addWidget(self.input_widgets["n"], 0, 2, 1, 2)
-        lab_Rwt = QLabelD("R<sub>wt</sub> [mm]")
-        lab_Rwt.setToolTip("Promień rozmieszczenia sworzni")
-        layout.addWidget(lab_Rwt, 1, 0)
-        layout.addWidget(self.input_widgets["R_wt"], 1, 1)
-        name_Rwk = QLabelD("R<sub>wk</sub>")
-        name_Rwk.setToolTip("Promień rozmieszczenia otworów w kole cykloidalnym")
-        layout.addWidget(name_Rwk, 1, 2)
-        layout.addWidget(self.Rwk_label, 1, 3)
+        # n_label = QLabelD("Liczba sworzni [n]")
+        # layout.addWidget(n_label, 0, 0, 1, 2)
+        # layout.addWidget(self.input_widgets["n"], 0, 2, 1, 2)
+        # lab_Rwt = QLabelD("R<sub>wt</sub> [mm]")
+        # lab_Rwt.setToolTip("Promień rozmieszczenia sworzni")
+        # layout.addWidget(lab_Rwt, 1, 0)
+        # layout.addWidget(self.input_widgets["R_wt"], 1, 1)
+        # name_Rwk = QLabelD("R<sub>wk</sub>")
+        # name_Rwk.setToolTip("Promień rozmieszczenia otworów w kole cykloidalnym")
+        # layout.addWidget(name_Rwk, 1, 2)
+        # layout.addWidget(self.Rwk_label, 1, 3)
+        # TODO: moze byc za male
+        layout.addWidget(self.visual_frame, 0, 0, 2, 4)
         layout.addWidget(self.material_frame, 0, 5, 6, 4)
         layout.addWidget(self.ch_support_button, 2, 0, 1, 2)
         layout.addWidget(self.ch_var_label, 2, 2, 1, 2)
-        layout.addWidget(QLabelD("Odstęp pomiędzy kołem a tarczą"), 3, 0, 1, 3)
+        layout.addWidget(self.labels["e1"], 3, 0, 1, 3)
         layout.addWidget(self.input_widgets["e1"], 3, 3)
         layout.addWidget(self.label_e2, 4, 0, 1, 3)
         layout.addWidget(self.input_widgets["e2"], 4, 3)
 
-        layout.addWidget(QLabelD("Współczynniki tarcia dla pary ciernej:", style=False), 6, 5, 1, 4)
-        lab_f_kt = QLabelD("tuleja - koło cykloidalne")
-        # lab_f_kt = QLabelD("f<sub>kt</sub>")
-        # lab_f_kt.setToolTip("f kt - Współczynnik tarcia tocznego pomiędzy otworem w kole a tuleją")
-        layout.addWidget(lab_f_kt, 7, 5, 1, 3)
+        layout.addWidget(self.labels["f_header"], 6, 5, 1, 4)
+        layout.addWidget(self.labels["f_kt"], 7, 5, 1, 3)
         layout.addWidget(self.input_widgets["f_kt"], 7, 8)
-        lab_f_ts = QLabelD("sworzeń - tuleja")
-        # lab_f_ts = QLabelD("f<sub>ts</sub>")
-        # lab_f_ts.setToolTip("f ts -Współczynnik tarcia tocznego pomiędzy tuleją a sworzniem")
-        layout.addWidget(lab_f_ts, 8, 5, 1, 3)
+        layout.addWidget(self.labels["f_ts"], 8, 5, 1, 3)
         layout.addWidget(self.input_widgets["f_ts"], 8, 8)
 
         # spac = QSpacerItem(100, 100, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -155,188 +114,153 @@ class DataEdit(QWidget):
         layout.addWidget(self.accept_button, 11, 3, 1, 3)
         self.accept_button.show()
 
-        layout.addWidget(QLabelD("Obliczone średnice:"), 12, 0, 1, 4)
-        layout.addWidget(QLabelD("sworznia - d<sub>s</sub>"), 13, 0)
-        layout.addWidget(QLabelD("tuleji - d<sub>t</sub>"), 13, 1)
+        layout.addWidget(self.labels["dia_header"], 12, 0, 1, 4)
+        layout.addWidget(self.labels["d_pin_calc"], 13, 0)
+        layout.addWidget(self.labels["d_sleeve_calc"], 13, 1)
         
         layout.addWidget(self.obl_srednice_labels[0], 14, 0)
         layout.addWidget(self.obl_srednice_labels[1], 14, 1)
-        lab_k = QLabelD("k")
-        lab_k.setToolTip("Współczynnik grubości ścianki tuleji")
-        layout.addWidget(lab_k, 15, 0)
-        layout.addWidget(self.input_widgets["wsp_k"], 15, 1)
-        layout.addWidget(QLabelD("Dobierz średnice [mm]:"), 16, 0, 1, 4)
-        layout.addWidget(QLabelD("sworznia - d<sub>s</sub>"), 17, 0)
-        layout.addWidget(QLabelD("tuleji - d<sub>t</sub>"), 17, 1)
-        layout.addWidget(QLabelD("otworów - d<sub>otw</sub>"), 17, 2)
-        layout.addWidget(self.input_widgets["d_sw"], 18, 0)
-        layout.addWidget(self.input_widgets["d_tul"], 18, 1)
+        layout.addWidget(self.labels["k"], 15, 0)
+        layout.addWidget(self.tuning_widgets["wsp_k"], 15, 1)
+        layout.addWidget(self.labels["dia_select_header"], 16, 0, 1, 4)
+        layout.addWidget(self.labels["d_pin_select"], 17, 0)
+        layout.addWidget(self.labels["d_sleeve_select"], 17, 1)
+        layout.addWidget(self.labels["d_hole"], 17, 2)
+        layout.addWidget(self.tuning_widgets["d_sw"], 18, 0)
+        layout.addWidget(self.tuning_widgets["d_tul"], 18, 1)
         layout.addWidget(self.obl_srednice_labels[2], 18, 2)
 
         layout.addWidget(self.results_frame, 12, 6, 6, 3)
         self.results_frame.show()
 
     def setupSmallLayout(self, layout: QGridLayout) -> None:
-        n_label = QLabelD("Liczba sworzni [n]")
-        layout.addWidget(n_label, 0, 0, 1, 6)
-        layout.addWidget(self.input_widgets["n"], 0, 6, 1, 6)
-        lab_Rwt = QLabelD("R<sub>wt</sub> [mm]")
-        lab_Rwt.setToolTip("Promień rozmieszczenia sworzni")
-        layout.addWidget(lab_Rwt, 1, 0, 1, 3)
-        layout.addWidget(self.input_widgets["R_wt"], 1, 3, 1, 3)
-        name_Rwk = QLabelD("R<sub>wk</sub>")
-        name_Rwk.setToolTip("Promień rozmieszczenia otworów w kole cykloidalnym")
-        layout.addWidget(name_Rwk, 1, 6, 1, 3)
-        layout.addWidget(self.Rwk_label, 1, 9, 1, 3)
+        if not hasattr(self, "labels"):
+            self.labels = {
+                "e1": QLabelD("Odstęp pomiędzy kołem a tarczą"),
+                "f_header": QLabelD("Współczynniki tarcia dla pary ciernej:", style=False),
+                "f_kt": QLabelD("tuleja - koło cykloidalne"),
+                "f_ts": QLabelD("sworzeń - tuleja"),
+                "dia_header": QLabelD("Obliczone średnice:"),
+                "d_pin_calc": QLabelD("sworznia - d<sub>s</sub>"),
+                "d_sleeve_calc": QLabelD("tuleji - d<sub>t</sub>"),
+                "k": QLabelD("k"),
+                "dia_select_header": QLabelD("Dobierz średnice [mm]:"),
+                "d_pin_select": QLabelD("sworznia - d<sub>s</sub>"),
+                "d_sleeve_select": QLabelD("tuleji - d<sub>t</sub>"),
+                "d_hole": QLabelD("otworów - d<sub>otw</sub>"),
+            }
+            self.labels["k"].setToolTip("Współczynnik grubości ścianki tuleji")
+            # lab_f_kt.setToolTip("f kt - Współczynnik tarcia tocznego pomiędzy otworem w kole a tuleją")
+            # lab_f_ts.setToolTip("f ts -Współczynnik tarcia tocznego pomiędzy tuleją a sworzniem")
+        
+        layout.addWidget(self.visual_frame, 0, 0, 2, 12)
 
         layout.addWidget(self.ch_support_button, 2, 0, 1, 6)
         layout.addWidget(self.ch_var_label, 2, 6, 1, 6)
-        layout.addWidget(QLabelD("Odstęp pomiędzy kołem a tarczą"), 3, 0, 1, 6)
+        layout.addWidget(self.labels["e1"], 3, 0, 1, 6)
         layout.addWidget(self.input_widgets["e1"], 3, 6, 1, 6)
         layout.addWidget(self.label_e2, 4, 0, 1, 6)
         layout.addWidget(self.input_widgets["e2"], 4, 6, 1, 6)
 
         layout.addWidget(self.material_frame, 5, 0, 8, 12)
 
-        layout.addWidget(QLabelD("Współczynniki tarcia dla pary ciernej:", style=False), 13, 0, 1, 12)
-        lab_f_kt = QLabelD("tuleja - koło cykloidalne")
-        layout.addWidget(lab_f_kt, 14, 0, 1, 6)
+        layout.addWidget(self.labels["f_header"], 13, 0, 1, 12)
+        layout.addWidget(self.labels["f_kt"], 14, 0, 1, 6)
         layout.addWidget(self.input_widgets["f_kt"], 14, 6, 1, 6)
-        lab_f_ts = QLabelD("sworzeń - tuleja")
-        layout.addWidget(lab_f_ts, 15, 0, 1, 6)
+        layout.addWidget(self.labels["f_ts"], 15, 0, 1, 6)
         layout.addWidget(self.input_widgets["f_ts"], 15, 6, 1, 6)
 
         layout.addWidget(self.accept_button, 16, 4, 1, 4)
 
-        layout.addWidget(QLabelD("Obliczone średnice:"), 17, 0, 1, 12)
-        layout.addWidget(QLabelD("sworznia - d<sub>s</sub>"), 18, 0, 1, 4)
-        layout.addWidget(QLabelD("tuleji - d<sub>t</sub>"), 18, 4, 1, 4)
+        layout.addWidget(self.labels["dia_header"], 17, 0, 1, 12)
+        layout.addWidget(self.labels["d_pin_calc"], 18, 0, 1, 4)
+        layout.addWidget(self.labels["d_sleeve_calc"], 18, 4, 1, 4)
         
         layout.addWidget(self.obl_srednice_labels[0], 19, 0, 1, 4)
         layout.addWidget(self.obl_srednice_labels[1], 19, 4, 1, 4)
-        lab_k = QLabelD("k")
-        lab_k.setToolTip("Współczynnik grubości ścianki tuleji")
-        layout.addWidget(lab_k, 20, 0, 1, 6)
-        layout.addWidget(self.input_widgets["wsp_k"], 20, 6, 1, 6)
-        layout.addWidget(QLabelD("Dobierz średnice [mm]:"), 21, 0, 1, 12)
-        layout.addWidget(QLabelD("sworznia - d<sub>s</sub>"), 22, 0, 1, 4)
-        layout.addWidget(QLabelD("tuleji - d<sub>t</sub>"), 22, 4, 1, 4)
-        layout.addWidget(QLabelD("otworów - d<sub>otw</sub>"), 22, 8, 1, 4)
-        layout.addWidget(self.input_widgets["d_sw"], 23, 0, 1, 4)
-        layout.addWidget(self.input_widgets["d_tul"], 23, 4, 1, 4)
+        layout.addWidget(self.labels["k"], 20, 0, 1, 6)
+        layout.addWidget(self.tuning_widgets["wsp_k"], 20, 6, 1, 6)
+        layout.addWidget(self.labels["dia_select_header"], 21, 0, 1, 12)
+        layout.addWidget(self.labels["d_pin_select"], 22, 0, 1, 4)
+        layout.addWidget(self.labels["d_sleeve_select"], 22, 4, 1, 4)
+        layout.addWidget(self.labels["d_hole"], 22, 8, 1, 4)
+        layout.addWidget(self.tuning_widgets["d_sw"], 23, 0, 1, 4)
+        layout.addWidget(self.tuning_widgets["d_tul"], 23, 4, 1, 4)
         layout.addWidget(self.obl_srednice_labels[2], 23, 8, 1, 4)
 
         layout.addWidget(self.results_frame, 24, 0, 6, 12)
 
-    def sendAnimationUpdates(self, p_max: Optional[Union[int, float]]=None, p_dop: Optional[Union[int, float]]=None) -> bool:
-        anim_data = {
-            "n": self.input_widgets["n"].value(),
-            "R_wt": self.input_widgets["R_wt"].value(),
-            "d_sw": self.input_dane["d_sw"],
-            "d_tul": self.input_dane["d_tul"],
-            "d_otw": self.obliczone_dane["d_otw"],
-        }
-        if anim_data["R_wt"] + anim_data["d_otw"] / 2 >= self.zew_dane["R_f1"]:
-            self.animDataUpdated.emit({"PinOutTab": False})
-            self.errorsUpdated.emit({"R_wt duze": True})
-        elif sprawdz_przecinanie_otworow(self.input_dane["R_wt"], self.input_dane["n"], self.obliczone_dane["d_otw"]):
-            self.animDataUpdated.emit({"PinOutTab": False})
-            self.errorsUpdated.emit({"R_wt male": True})
-        elif p_max is not None and p_max > p_dop:
-            self.animDataUpdated.emit({"PinOutTab": False})
-            self.errorsUpdated.emit({"naciski przekroczone": True})
-        else:
-            self.errorsUpdated.emit(None)
-            self.animDataUpdated.emit({"PinOutTab": anim_data})
-            return True
-        return False
-
     def recalculate(self, angle: float=None) -> None:
         if angle:
-            self.wheel_rotation_angle = angle
-        if not self.module_enabled:
+            self.model.wheel_rotation_angle = angle
+        if not self.model.module_enabled:
             return
         
-        for key in self.input_widgets:
-            self.input_dane[key] = self.input_widgets[key].value()
-        self.Rwk_label.setText(str(self.input_dane["R_wt"]) + " mm")
+        input_values = {key: self.input_widgets[key].value() for key in self.input_widgets}
+        # this check happens before adding the values of tuning widgets, because those will only be filled out after the first time calculations are run,
+        # and are not neccesary for calculations (except the sleeve_coef, which is prefilled).
+        if any((value is None for value in input_values.values())): return
+        if self.model.input_dane["podparcie"] is None: return
 
-        material_data = self.material_frame.getData()
-        wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, material_data, self.tol_data, self.wheel_rotation_angle)
+        input_values.update({key: self.tuning_widgets[key].value() for key in self.tuning_widgets})
+        results = self.model.recalculate(input_values)
 
-        self.obliczone_dane["d_sw"] = wyniki["d_s_obl"]
-        self.obliczone_dane["d_tul"] = wyniki["d_t_obl"]
-        self.obliczone_dane["d_otw"] = wyniki["d_o_obl"]
-        self.obliczone_dane["F_max"] = wyniki["F_max"]
-        self.obliczone_dane["p_max"] = wyniki["p_max"]
-        self.obl_srednice_labels[0].setText(str(wyniki["d_s_obl"]) + " mm")
-        self.obl_srednice_labels[1].setText(str(wyniki["d_t_obl"]) + " mm")
-        self.obl_srednice_labels[2].setText(str(wyniki["d_o_obl"]) + " mm")
-        self.input_widgets["d_sw"].modify(minimum=wyniki["d_s_obl"])
-        self.input_dane["d_sw"] = self.input_widgets["d_sw"].value()
-        self.input_widgets["d_tul"].modify(minimum=wyniki["d_t_obl"])
-        self.input_dane["d_tul"] = self.input_widgets["d_tul"].value()
+        self.obl_srednice_labels[0].setText(str(results["d_s_obl"]) + " mm")
+        self.obl_srednice_labels[1].setText(str(results["d_t_obl"]) + " mm")
+        self.obl_srednice_labels[2].setText(str(results["d_o_obl"]) + " mm")
+        self.tuning_widgets["d_sw"].modify(minimum=results["d_s_obl"])
+        self.tuning_widgets["d_tul"].modify(minimum=results["d_t_obl"])
 
-        no_errors = self.sendAnimationUpdates(wyniki["p_max"], material_data["p_dop"])
-        if no_errors:
-            self.chartDataUpdated.emit({
-                "sily": wyniki["sily"],
-                "naciski": wyniki["naciski"],
-                "straty": wyniki["straty"],
-                "luzy": wyniki["luzy"],
-            })
-
-        self.obliczone_dane["F_wmr"] = round(1000 * 4 * (self.zew_dane["M_wyj"] / self.zew_dane["K"]) / (pi * self.input_dane["R_wt"]), 1)
-        self.obliczone_dane["r_mr"] = round(pi * self.input_dane["R_wt"] / 4, 2)
-        self.obliczone_dane["N_cmr"] = round(sum(wyniki['straty'][0]), 3)
-        self.results_frame.update({"F_max": wyniki["F_max"], "p_max": wyniki["p_max"], "F_wmr": self.obliczone_dane["F_wmr"],
-                                   "r_mr": self.obliczone_dane["r_mr"], "N_cmr": self.obliczone_dane["N_cmr"], "p_dop": material_data["p_dop"]})
-        # if should_send_data:
-        # zrobie tak bo nie wiem jak wyslac po oddznaczeniu, bo jak sie zmieni K albo M jak jest wylaczone to potem bym nie wyslal jak sie odblokuje
-        # TODO: a moze wysyłac ten sygnal/odpalac metode sendData w tej funkcji od zaznaczenia ze chce to, po uzyciu inputsModified
-        self.shouldSendData.emit()
+        self.results_frame.update()
         self.accept_button.setEnabled(False)
-        for key in ["d_sw", "d_tul", "wsp_k"]:
-            self.input_widgets[key].setEnabled(True)
+        for widget in self.tuning_widgets.values():
+            widget.setEnabled(True)
 
-    def copyDataToInputs(self, new_input_data: Dict[str, Union[int, float]]) -> None:
-        for key in self.input_widgets:
-            self.input_widgets[key].blockSignals(True)
-            self.input_widgets[key].setValue(new_input_data[key])
-            self.input_widgets[key].blockSignals(False)
-        self.recalculate()
+    # TODO: fix with new changes
+    # def copyDataToInputs(self, new_input_data: Dict[str, Union[int, float]]) -> None:
+    #     for key in self.input_widgets:
+    #         self.input_widgets[key].blockSignals(True)
+    #         self.input_widgets[key].setValue(new_input_data[key])
+    #         self.input_widgets[key].blockSignals(False)
+    #     self.recalculate()
 
     def closeChoiceWindow(self, choice: str) -> None:
-        self.input_dane["podparcie"] = choice
+        self.model.input_dane["podparcie"] = choice
         self.ch_var_label.setText(choice)
         self.support_popup.hide()
+        self.changeDiode.emit(StatusDiodes.Status.WARNING)
         self.accept_button.setEnabled(True)
 
     def toleranceUpdate(self, tol_data: Optional[Dict[str, Union[float, Tuple[float, float]]]]) -> None:
-        self.tol_data = tol_data
+        self.model.tol_data = tol_data
         self.recalculate()
 
 
 class PinOutTab(AbstractTab):
     thisEnabled = Signal(bool)
+    animDataUpdated = Signal(dict)
+    errorsUpdated = Signal(dict)
+
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
+        self.model = PinOutputMechanismModel()
 
         layout = QVBoxLayout()
+        self.setLayout(layout)
         button_layout = QGridLayout()
-        stacklayout = QStackedLayout()
         layout.addLayout(button_layout)
-        layout.addLayout(stacklayout)
+
+        self.diodes = StatusDiodes(self, ("Stan: Wystąpił błąd", "Stan: Niezaakceptowane zmiany w obliczeniach", "Stan: Mechanizm zaakceptowany", "Stan: Moduł nieużywany"))
+        layout.addWidget(self.diodes)
+
         self.use_this_check = QCheckBox(text="Używaj tego mechanizmu wyjściowego")
-        self.use_this_check.stateChanged.connect(self.useThisChanged)
         button_layout.addWidget(self.use_this_check, 1, 0, 1, 2)
 
         help_pdf_button = QPushButton("Pomoc")
         button_layout.addWidget(help_pdf_button, 1, 2)
         help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//mechanizmy-sworzniowe-help-1.pdf"))
 
-        self.data = DataEdit(self)
-        self.data.shouldSendData.connect(self.sendData)
+        self.data = DataEdit(self, self.model)
         self.wykresy = ResultsTab(self, "numer sworznia", {
             "sily": {"repr_name": "Siły", "chart_title": "Siły na sworzniach", "y_axis_title": "Siła [N]"},
             "naciski": {"repr_name": "Naciski", "chart_title": "Naciski powierzchniowe na sworzniach", "y_axis_title": "Wartość Nacisku [MPa]"},
@@ -354,12 +278,12 @@ class PinOutTab(AbstractTab):
             ("T_e", "T<sub>e</sub>", "Tolerancja wykonania mimośrodu"),
         ))
         
-        self.data.chartDataUpdated.connect(self.wykresy.updateResults)
-        self.tol_edit.toleranceDataUpdated.connect(self.data.toleranceUpdate)
-
         scrollable_tab = ResponsiveContainer(self, self.data, self.data.setupSmallLayout, self.data.setupLayout, 620, 1200)
         tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]
         stacked_widgets = [scrollable_tab, self.wykresy, self.tol_edit]
+
+        stacklayout = QStackedLayout()
+        layout.addLayout(stacklayout)
 
         for index, (title, widget) in enumerate(zip(tab_titles, stacked_widgets)):
             button = QPushButton(title)
@@ -367,33 +291,56 @@ class PinOutTab(AbstractTab):
             stacklayout.addWidget(widget)
             button.pressed.connect(partial(stacklayout.setCurrentIndex, index))
 
-        self.setLayout(layout)
+        self.model.animDataUpdated.connect(self.animDataUpdated.emit)
+        self.model.errorsUpdated.connect(self.errorsUpdated.emit)
+        self.model.shouldSendData.connect(self.sendData)
+        self.model.chartDataUpdated.connect(self.wykresy.updateResults)
+        self.model.changeDiode.connect(self.diodes.enableDiode)
+        self.data.changeDiode.connect(self.diodes.enableDiode)
+        self.tol_edit.toleranceDataUpdated.connect(self.data.toleranceUpdate)
+        self.use_this_check.stateChanged.connect(self.useThisChanged)
+
         self.data.setEnabled(False)
         self.tol_edit.setEnabled(False)
     
     def useThisChanged(self, state: bool) -> None:
+        '''
+        Method run when the module is enabled through the check box at the top.
+        The check box allows the user to pick the desired output mechanism, as the program foresees multiple of them,
+        each in a seperate module.
+        '''
         self.data.setEnabled(state)
         self.tol_edit.setEnabled(state)
         if state:
             self.thisEnabled.emit(True)
-            self.data.module_enabled = True
+            self.model.module_enabled = True
             self.data.recalculate()
+            if not self.data.visual_frame.filled_out or not self.data.visual_frame.is_accepted:
+                self.data.visualsChanged(False)
+            if self.model.has_error == True:
+                self.diodes.enableDiode(StatusDiodes.Status.ERROR)
+            elif self.data.accept_button.isEnabled() or not self.data.visual_frame.filled_out:
+                self.diodes.enableDiode(StatusDiodes.Status.WARNING)
+            else:
+                self.diodes.enableDiode(StatusDiodes.Status.OK)
         else:
             self.thisEnabled.emit(False)
-            self.data.module_enabled = False
-            self.data.animDataUpdated.emit({"PinOutTab": False})
+            self.model.module_enabled = False
+            self.diodes.enableDiode(StatusDiodes.Status.DISABLED)
+            self.animDataUpdated.emit({"PinOutTab": False})
 
     def useOtherChanged(self, state: bool) -> None:
+        '''
+        This method is run when another output mechanism module signals a change in its module enabling check box.
+        It ensures that only one output mechanism module is used.
+        '''
         self.use_this_check.setEnabled(not state)
 
     def sendData(self) -> None:
-        M_k = self.data.zew_dane["M_wyj"] / self.data.zew_dane["K"]
-        R_wt = self.data.input_dane["R_wt"]
-        
         self.dataChanged.emit({"PinOutTab": {
-            "Fwm": 1000 * 4 * M_k / (pi * R_wt),
-            "r_mr": pi * R_wt / 4,
-            "x": self.data.input_dane["e2"],
+            "Fwm": self.model.obliczone_dane["F_wmr"],
+            "r_mr": self.model.obliczone_dane["r_mr"],
+            "x": self.model.input_dane["e2"],
         }})
     
     def receiveData(self, new_data) -> None:
@@ -406,8 +353,8 @@ class PinOutTab(AbstractTab):
             return
         
         for key in wanted_data:
-            if self.data.zew_dane.get(key) is not None:
-                self.data.zew_dane[key] = wanted_data[key]
+            if self.model.zew_dane.get(key) is not None:
+                self.model.zew_dane[key] = wanted_data[key]
 
         # if wanted_data.get("K") == 2:
         #     self.data.label_e2.show()
@@ -415,19 +362,21 @@ class PinOutTab(AbstractTab):
         # elif wanted_data.get("K") == 1:
         #     self.data.label_e2.hide()
         #     self.data.input_widgets["e2"].hide()
-        if self.data.accept_button.isEnabled():
-            self.data.sendAnimationUpdates()
-        else:
-            self.data.recalculate()
-        
-        self.sendData()
+        if not self.model.module_enabled:
+            return
 
+        if self.diodes.current_status == StatusDiodes.Status.WARNING:
+            self.model.sendAnimationUpdates(self.model.input_dane["n"], self.model.input_dane["R_wt"])
+        elif self.diodes.current_status == StatusDiodes.Status.OK:
+            self.data.recalculate()
+
+    # TODO: update save & loading, report csv etc.
     def saveData(self) -> Dict:
-        self.data.recalculate()
+        # self.data.recalculate()
         return {
             "input_dane": self.data.input_dane,
             "zew_dane": self.data.zew_dane,
-            "material_data": self.data.material_frame.getData(),
+            "material_data": self.model.material_data,
             "tolerancje": self.tol_edit.tolerancje,
             "tol_mode": self.tol_edit.mode,
             "use_tol": self.tol_edit.check.isChecked()
@@ -455,8 +404,8 @@ class PinOutTab(AbstractTab):
 
         if not self.use_this_check.isChecked():
             return ''
-        materials = self.data.material_frame.getData()
-        wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, materials, self.data.tol_data, self.data.wheel_rotation_angle)
+        materials = self.model.material_data
+        wyniki = obliczenia_mech_wyjsciowy(self.model.input_dane, self.model.zew_dane, materials, self.model.tol_data, self.model.wheel_rotation_angle)
 
         text = "{\\pard\\b Mechanizm wyjściowy \\line\\par}"
         text += "{\\pard\\sa200\\b Dane: \\par}"
@@ -520,9 +469,9 @@ class PinOutTab(AbstractTab):
         return text
 
     def csvData(self) -> str:
-        if not self.use_this_check.isChecked():
+        if not self.model.module_enabled:
             return ''
-        wyniki = obliczenia_mech_wyjsciowy(self.data.input_dane, self.data.zew_dane, self.data.material_frame.getData(), self.data.tol_data, self.data.wheel_rotation_angle)
+        wyniki = obliczenia_mech_wyjsciowy(self.model.input_dane, self.model.zew_dane, self.model.material_data, self.model.tol_data, self.model.wheel_rotation_angle)
         title = "Mechanizm wyjściowy ze sworzniami\n"
         sily_text = [f"{i},{round(wyniki['sily'][0][i], 1)}\n" for i in range(1, len(wyniki['sily']) + 1)]
         naciski_text = [f"{i},{round(wyniki['naciski'][0][i], 2)}\n" for i in range(1, len(wyniki['naciski']) + 1)]

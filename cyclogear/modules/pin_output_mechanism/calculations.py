@@ -146,9 +146,9 @@ def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
 
 def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
     M_k = dane_zew["M_wyj"] / dane_zew["K"]
-    E, k_g = material_data["pin"]["E"], material_data["pin"]["Re"] / material_data["pin_sft_coef"]
-    E_k, v_k = material_data["wheel"]["E"], material_data["wheel"]["v"]
-    E_t, v_t = material_data["sleeve"]["E"], material_data["sleeve"]["v"]
+    E, k_g = material_data["pin_mat"]["E"], material_data["pin_mat"]["Re"] / material_data["pin_safety_coef"]
+    E_k, v_k = material_data["wheel_mat"]["E"], material_data["wheel_mat"]["v"]
+    E_t, v_t = material_data["sleeve_mat"]["E"], material_data["sleeve_mat"]["v"]
     b_kola = dane_zew["B"]
     n_sworzni = dane["n"]
     R_wt = dane["R_wt"]
@@ -172,9 +172,12 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
     M_gmax = oblicz_Mgmax(podparcie, K, F_max, b_kola, e1, e2)
     d_smax = oblicz_d_sworzen(M_gmax, k_g)
 
-    d_sw_wybrane = d_smax if d_sw <= d_smax else d_sw
+    d_sw_wybrane = d_sw if d_sw is not None and d_sw > d_smax else d_smax
+
+    # d_sw_wybrane = d_smax if d_sw <= d_smax else d_sw
     d_tul_obl = round(d_sw_wybrane * dane["wsp_k"], 2)
-    d_tul_wybrane = d_tul_obl if d_tul <= d_tul_obl else d_tul
+    d_tul_wybrane = d_tul if d_tul is not None and d_tul > d_tul_obl else d_tul_obl
+    # d_tul_wybrane = d_tul_obl if d_tul <= d_tul_obl else d_tul
     d_otw_obl = round(d_tul_wybrane + (2 * e), 2)
 
     if mode == "tolerances":
@@ -196,10 +199,10 @@ def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
         return return_values
     
     p_max = oblicz_naciski((F_max,), d_otw_obl, d_tul_wybrane, b_kola, v_k, v_t, E_k, E_t, tolerancje)[0]
-    strzalki = oblicz_fs(podparcie, K, sily, E, b_kola, d_sw, e1, e2)
+    strzalki = oblicz_fs(podparcie, K, sily, E, b_kola, d_sw_wybrane, e1, e2)
     lista_fi_gladka = lista_fi_sworzni(POINTS_SMOOTH_GRAPH, kat)
     sily_gladkie = oblicz_sily(F_max, lista_fi_gladka, POINTS_SMOOTH_GRAPH)
-    strzalki_gladkie = oblicz_fs(podparcie, K, sily_gladkie, E, b_kola, d_sw, e1, e2)
+    strzalki_gladkie = oblicz_fs(podparcie, K, sily_gladkie, E, b_kola, d_sw_wybrane, e1, e2)
     luzy = [[0] * n_sworzni, [0] * POINTS_SMOOTH_GRAPH]
     if mode == "deviations":
         wyniki_point = oblicz_sily_odchylka(M_k, lista_fi_kj, F_max, b_kola, R_wt, e, d_tul, d_otw_obl, strzalki, tolerancje, E_k, v_k, E_t, v_t, n_sworzni)
