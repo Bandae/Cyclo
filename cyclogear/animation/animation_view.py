@@ -51,6 +51,10 @@ class AnimationControls(QWidget):
         layout.addWidget(self.resetAnimationButton, 1, 1)
         layout.addWidget(self.animationSlider, 0, 0, 1, 2)
         layout.addWidget(self.angleLabel, 0, 3)
+
+        # self.toggleAnimationButton.setEnabled(False)
+        # self.resetAnimationButton.setEnabled(False)
+        self.setEnabled(False)
     
     def _updateAnimationButtonLabel(self, checked):
         """
@@ -100,10 +104,8 @@ class AnimationView(QWidget):
     """
     Main widget for managing the animation view and its controls.
     """
-    def __init__(self, parent, data):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.data = data
-
         self._initUI()
 
     def _initUI(self):   
@@ -116,7 +118,7 @@ class AnimationView(QWidget):
         self.setLayout(mainLayout)
 
         # Set animation
-        self.animation = Animation(self, self.data)
+        self.animation = Animation(self)
 
         # Set animation controls
         self.animationControls = AnimationControls(self)

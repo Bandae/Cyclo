@@ -1,13 +1,105 @@
+from typing import Dict, Optional
 from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QFrame, QGridLayout, QComboBox
-from common.common_widgets import DoubleSpinBox, QLabelD
+from PySide2.QtWidgets import QFrame, QGridLayout, QComboBox, QPushButton
+from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, StatusDiodes
+from .calculations import calculate_gear, get_lam_min, get_ro_min, gear_error_check
+
+
+class VisualsFrame(QFrame):
+    accepted = Signal(bool)
+
+    def __init__(self, parent, model):
+        super().__init__(parent)
+        self.model = model
+        self.filled_out = False
+        self.is_accepted = False
+
+        self.setFrameStyle(QFrame.Box | QFrame.Raised)
+        layout = QGridLayout()
+        # layout.setContentsMargins(0,0,0,0)
+        self.setLayout(layout)
+
+        self.label_z = QLabelD(str(self.model.data["z"]))
+        self.inputs = {
+            "ro": DoubleSpinBox(self.model.data["ro"], 1, 8, 0.05),
+            "lam": DoubleSpinBox(self.model.data["lam"], 0.5, 0.99, 0.005, 3),
+            "g": DoubleSpinBox(self.model.data["g"], 3, 14, 0.02),
+            "K": IntSpinBox(self.model.data["K"], 1, 2, 1),
+        }
+        for widget in self.inputs.values():
+            widget.valueChanged.connect(self.changed)
+
+        self.accept_button = QPushButton("Ok")
+        self.accept_button.setEnabled(False)
+        self.accept_button.clicked.connect(self.okClicked)
+
+        layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 4)
+        layout.addWidget(self.inputs["K"], 1, 4, 1, 2)
+        layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 4)
+        layout.addWidget(self.label_z, 3, 4, 1, 2)
+        layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 4)
+        layout.addWidget(self.inputs["ro"], 4, 4, 1, 2)
+        layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 5, 0, 1, 4)
+        layout.addWidget(self.inputs["lam"], 5, 4, 1, 2)
+        layout.addWidget(QLabelD("Promień rolek - g [mm]"), 6, 0, 1, 4)
+        layout.addWidget(self.inputs["g"], 6, 4, 1, 2)
+        layout.addWidget(self.accept_button, 7, 5)
+    
+    def changed(self):
+        self.is_accepted = False
+        self.accepted.emit(False)
+        if not all(widget.value() is not None for widget in self.inputs.values()):
+            return
+        
+        self.filled_out = True
+        for key, widget in self.inputs.items():
+            self.model.data[key] = widget.value()
+        
+        self.afterChanges()
+    
+    def okClicked(self):
+        # data is already written into the model when inputs are changed. (That is neccesary to calculate all wheel parameters needed for animation update)
+        self.accept_button.setEnabled(False)
+        self.filled_out = True
+        self.is_accepted = True
+        self.accepted.emit(True)
+    
+    def baseDataChanged(self, new_data: Dict[str, Dict[str, int]]) -> None:
+        for key in new_data:
+            if self.model.outside_data.get(key) is not None:
+                self.model.outside_data[key] = new_data[key]
+        
+        self.model.data["z"] = self.model.outside_data["i"]
+        self.label_z.setText(str(self.model.data["z"]))
+
+        lam_min = get_lam_min(self.model.data["z"])
+        if self.model.data["lam"] is not None:
+            if lam_min > self.model.data["lam"]: self.model.data["lam"] = lam_min
+        self.inputs["lam"].setMinimum(lam_min + 0.001)
+
+        self.accepted.emit(False)
+        if self.filled_out:
+            self.afterChanges()
+    
+    def afterChanges(self):
+        ro_min = get_ro_min(self.model.data["z"], self.model.data["lam"], self.model.data["g"])
+        if ro_min > self.model.data["ro"]: self.model.data["ro"] = ro_min
+        self.inputs["ro"].setMinimum(ro_min + 0.01)
+
+        self.model.refillData()
+        self.model.sendAnimationData()
+        self.accept_button.setEnabled(True)
 
 
 class ResultsFrame(QFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, model):
         super().__init__(parent)
-        layout = QGridLayout()
+        self.model = model
+
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
+
+        layout = QGridLayout()
+        self.setLayout(layout)
 
         data_label_names = ["F_max", "p_max", "F_wzx", "F_wzy", "F_wz", "N_Ck-ri"]
         self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
@@ -31,84 +123,50 @@ class ResultsFrame(QFrame):
         layout.addWidget(QLabelD("Całkowite straty mocy mechanicznej:", style=False), 9, 0, 1, 3)
         layout.addWidget(QLabelD("N<sub>Ck-ri</sub>", style=False), 10, 0, 1, 2)
         layout.addWidget(self.data_labels["N_Ck-ri"], 10, 2)
-
-        self.setLayout(layout)
     
-    def update(self, new_data):
-        # TODO: przechowywane żeby wysłać do modułu mech wejściowego. Zmienić całą strukture potem, będzie model na wszystkie dane.
-        self.data = {"F_wzx": new_data["F_wzx"], "F_wzy": new_data["F_wzy"]}
-        data_units = [" N", " MPa", " N", " N", " N", " W"]
-        for index, (key, label) in enumerate(self.data_labels.items()):
-            label.setText(str(new_data[key]) + data_units[index])
-        if new_data["p_max"] < new_data["p_dop"]:
+    def update(self):
+        keys = ("F_max", "p_max", "F_wzx", "F_wzy", "F_wz", "N_Ck-ri")
+        data_units = (" N", " MPa", " N", " N", " N", " W")
+        for key, unit in zip(keys, data_units):
+            self.data_labels[key].setText(str(self.model.data[key]) + unit)
+        
+        if self.model.data["p_max"] < self.model.material_data["p_dop"]:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> spełniony.")
         else:
             self.pressure_correct_label.setText("Warunek p<sub>max</sub> &lt; p<sub>dop</sub> nie jest spełniony.")
 
 
-class DaneMaterialowe(QFrame):
+class MaterialFrame(QFrame):
     changed = Signal()
     wheelMatChanged = Signal(dict, str)
-    def __init__(self, nwej):
-        super().__init__()
+
+    def __init__(self, parent, model):
+        super().__init__(parent)
+        self.model = model
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setMaximumHeight(400)
 
-        self.materials = {
-            "C30": {"nazwa": "C30", "type": "steel", "E": 210000, "v": 0.3, "p_dop_normalizowanie": 450, "p_dop_ulepszanie cieplne": 550, "p_dop_hartowanie": 1000},
-            "C45": {"nazwa": "C45", "type": "steel", "E": 210000, "v": 0.3, "Re": 710, "p_dop_normalizowanie": 550, "p_dop_ulepszanie cieplne": 700, "p_dop_hartowanie": 1300, "tempered": True},
-            "C55": {"nazwa": "C55", "type": "steel", "E": 210000, "v": 0.3, "Re": 810, "p_dop_normalizowanie": 600, "p_dop_ulepszanie cieplne": 900, "p_dop_hartowanie": 1500, "tempered": True},
-            "50G": {"nazwa": "50G", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 900, "p_dop_hartowanie": 1450},
-            "40H": {"nazwa": "40H", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1550},
-            "40HN": {"nazwa": "40HN", "type": "steel", "E": 210000, "v": 0.3, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1600},
-
-            "EN-GJL 200": {"nazwa": "EN-GJL 200", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 400},
-            "EN-GJL 300": {"nazwa": "EN-GJL 300", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 500},
-            "EN-GJL 400": {"nazwa": "EN-GJL 400", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 600},
-            "Zs 50007": {"nazwa": "Zs 50007", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 550, "p_dop_ulepszanie cieplne": 800, "p_dop_hartowanie": 900},
-            "Zs 70002": {"nazwa": "Zs 70002", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 600, "p_dop_ulepszanie cieplne": 1000, "p_dop_hartowanie": 1100},
-            "Zs 90002": {"nazwa": "Zs 90002", "type": "cast iron", "E": 98000, "v": 0.25, "p_dop_normalizowanie": 750, "p_dop_ulepszanie cieplne": 1100, "p_dop_hartowanie": 1300},
-        }
-        self.current_mats = {"wheel": self.materials["C30"], "roller": self.materials["C30"]}
-        self.other_data = {"b_wheel": 17, "f_kr": 0.00001, "f_ro": 0.00001}
-
         self.mat_inputs = {"wheel_mat": QComboBox(), "roller_mat": QComboBox(), "wheel_treat": QComboBox(), "roller_treat": QComboBox()}
-        self.mat_inputs["wheel_mat"].addItems([mat["nazwa"] for mat in self.materials.values()])
-        self.mat_inputs["roller_mat"].addItems([mat["nazwa"] for mat in self.materials.values() if mat["type"] == "steel"])
+        self.mat_inputs["wheel_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values()])
+        self.mat_inputs["roller_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values() if mat["type"] == "steel"])
         
         self.mat_inputs["wheel_treat"].addItems(["normalizowanie", "ulepszanie cieplne", "hartowanie"])
         self.mat_inputs["roller_treat"].addItems(["normalizowanie", "ulepszanie cieplne", "hartowanie"])
-        data_label_names = ["wh_E", "wh_v", "roll_E", "roll_v"]
-        self.data_labels = { key: QLabelD(style=False) for key in data_label_names}
 
-        self.data_inputs = {
-            "b_wheel": DoubleSpinBox(self.other_data["b_wheel"], 10, 100, 0.5),
-            "f_kr": DoubleSpinBox(self.other_data["f_kr"], 0.00001, 0.0001, 0.00001, 5),
-            "f_ro": DoubleSpinBox(self.other_data["f_ro"], 0.00001, 0.0001, 0.00001, 5),
-        }
+        self.data_labels = { key: QLabelD(style=False) for key in ["wh_E", "wh_v", "roll_E", "roll_v"]}
         self.p_dop_label = QLabelD(style=False)
-        self.n_out_label = QLabelD(str(nwej) + " obr/min", style=False)
-        for widget in self.data_inputs.values():
-            widget.valueChanged.connect(self.update)
+
         self.mat_inputs["wheel_mat"].currentIndexChanged.connect(lambda: self.update(sendSignal=True))
-        self.mat_inputs["roller_mat"].currentIndexChanged.connect(self.update)
+        self.mat_inputs["roller_mat"].currentIndexChanged.connect(lambda: self.update())
         self.mat_inputs["wheel_treat"].currentIndexChanged.connect(lambda: self.updateTreat(sendSignal=True))
-        self.mat_inputs["roller_treat"].currentIndexChanged.connect(self.updateTreat)
+        self.mat_inputs["roller_treat"].currentIndexChanged.connect(lambda: self.updateTreat())
 
         self.setupLayout()
         self.update()
 
-    def getAllowedPressure(self) -> int:
-        wheel_treat = self.mat_inputs["wheel_treat"].currentText()
-        roller_treat = self.mat_inputs["roller_treat"].currentText()
-        wheel_p_dop = self.current_mats["wheel"]["p_dop_" + wheel_treat]
-        roller_p_dop = self.current_mats["roller"]["p_dop_" + roller_treat]
-
-        return min(wheel_p_dop, roller_p_dop)
-
     def setupLayout(self):
         layout = QGridLayout()
-        layout.addWidget(QLabelD("DANE MATERIAŁOWE", style=False), 0, 0, 1, 6)
+        layout.addWidget(QLabelD("Dane materiałowe", style=False), 0, 0, 1, 6)
         layout.addWidget(QLabelD("Koło", style=False), 1, 0, 1, 2)
         layout.addWidget(self.mat_inputs["wheel_mat"], 1, 2, 1, 2)
         layout.addWidget(self.mat_inputs["wheel_treat"], 1, 4, 1, 2)
@@ -124,29 +182,16 @@ class DaneMaterialowe(QFrame):
         layout.addWidget(QLabelD("Dopuszczalny nacisk między kołem a rolką", style=False), 5, 0, 1, 4)
         layout.addWidget(self.p_dop_label, 5, 4, 1, 2)
 
-        layout.addWidget(QLabelD("Szerokość koła [mm]:", style=False), 6, 0, 1, 4)
-        layout.addWidget(self.data_inputs["b_wheel"], 6, 4, 1, 2)
-
-        layout.addWidget(QLabelD("DANE KINEMATYCZNE", style=False), 7, 0, 1, 5)
-        layout.addWidget(QLabelD("Prędkość obrotowa wyj:", style=False), 8, 0, 1, 4)
-        layout.addWidget(self.n_out_label, 8, 4, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia koło - rolka [m]:", style=False), 9, 0, 1, 4)
-        layout.addWidget(self.data_inputs["f_kr"], 9, 4, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia rolka - obudowa [m]:", style=False), 10, 0, 1, 4)
-        layout.addWidget(self.data_inputs["f_ro"], 10, 4, 1, 2)
-
         self.setLayout(layout)
 
     def update(self, sendSignal=False):
-        wh_mat = self.materials[self.mat_inputs["wheel_mat"].currentText()]
-        roll_mat = self.materials[self.mat_inputs["roller_mat"].currentText()]
-        self.current_mats["wheel"] = wh_mat
-        self.current_mats["roller"] = roll_mat
+        wh_mat = self.model.material_data["wheel_mat"] = self.model.materials[self.mat_inputs["wheel_mat"].currentText()]
+        roll_mat = self.model.material_data["roller_mat"] = self.model.materials[self.mat_inputs["roller_mat"].currentText()]
+        wheel_treat = self.mat_inputs["wheel_treat"].currentText()
+        roller_treat = self.mat_inputs["roller_treat"].currentText()
 
         self.mat_inputs["wheel_treat"].blockSignals(True)
         self.mat_inputs["roller_treat"].blockSignals(True)
-        wheel_treat = self.mat_inputs["wheel_treat"].currentText()
-        roller_treat = self.mat_inputs["roller_treat"].currentText()
         self.mat_inputs["wheel_treat"].clear()
         self.mat_inputs["roller_treat"].clear()
         for treat in ["normalizowanie", "ulepszanie cieplne", "hartowanie"]:
@@ -161,42 +206,24 @@ class DaneMaterialowe(QFrame):
             self.mat_inputs["roller_treat"].setCurrentText(roller_treat)
         self.mat_inputs["wheel_treat"].blockSignals(False)
         self.mat_inputs["roller_treat"].blockSignals(False)
-        # TODO:
-            # skoro dodanie przedmiotów powoduje sygnał indexChanged, to odpala sie znowu update, znowu dodane
-            # dodanie treat powoduje nieskończona pętla. WIęc blokuje sygnały chwilowo. Może jest lepsza opcja.
-        # chociaz jak wywalilem treat sygnał gdzie indziej to może nie przeszkadza.
 
-        for key in self.other_data:
-            self.other_data[key] = self.data_inputs[key].value()
+        self.model.material_data["wheel_treat"] = self.mat_inputs["wheel_treat"].currentText()
+        self.model.material_data["roller_treat"] = self.mat_inputs["roller_treat"].currentText()
         
-        p_dop = self.getAllowedPressure()
-        self.p_dop_label.setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
         self.data_labels["wh_E"].setText("E: " + str(wh_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(wh_mat["v"]))
         self.data_labels["roll_E"].setText("E: " + str(roll_mat["E"]) + " MPa")
         self.data_labels["roll_v"].setText("v: " + str(roll_mat["v"]))
 
-        if sendSignal:
-            self.wheelMatChanged.emit(self.materials[self.mat_inputs["wheel_mat"].currentText()], self.mat_inputs["wheel_treat"].currentText())
-        self.changed.emit()
+        self.updateTreat(sendSignal)
 
     def updateTreat(self, sendSignal=False):
-        p_dop = self.getAllowedPressure()
+        p_dop = self.model.findAllowedPressure()
         self.p_dop_label.setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
 
         if sendSignal:
-            self.wheelMatChanged.emit(self.materials[self.mat_inputs["wheel_mat"].currentText()], self.mat_inputs["wheel_treat"].currentText())
+            self.wheelMatChanged.emit(self.model.material_data["wheel_mat"], self.model.material_data["wheel_treat"])
         self.changed.emit()
-
-    def getData(self):
-        copy = self.current_mats.copy()
-        copy.update(self.other_data.copy())
-        copy.update({
-            "wheel_treat": self.mat_inputs["wheel_treat"].currentText(),
-            "roller_treat": self.mat_inputs["roller_treat"].currentText(),
-            "p_dop": self.getAllowedPressure(),
-        })
-        return copy
 
     def copyDataToInputs(self, new_input_data):
         for key in self.mat_inputs:

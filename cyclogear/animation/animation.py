@@ -33,7 +33,7 @@ class Animation(QLabel):
     PASTEL_BLUE = '#ADD8E6'
     PASTEL_BLUE2 = '#BDE4E6'
 
-    def __init__(self, parent, data):
+    def __init__(self, parent):
         """
         Args:
             parent (QWidget): Reference to the parent widget
@@ -41,10 +41,12 @@ class Animation(QLabel):
         """
         super().__init__(parent)
 
-        self._data = data
+        self._data = None
         self._dataWiktor = None
         self._angle = 0
-        self._angle2 = 180 * (self._data["z"] + 1)
+        # TODO: temporary solution while working on gear tab starting out with empty fields
+        self._angle2 = 180 * (24 + 1)
+        # self._angle2 = 180 * (self._data["z"] + 1)
         self._angleStep = 0
         self._paintArea = 700
 
@@ -52,8 +54,8 @@ class Animation(QLabel):
         self._animationThread = None
 
         self.setMinimumSize(750, 750)
-        self.updateData({})
-        self._draw()
+        # self.updateData({})
+        # self._draw()
 
     def _draw(self):
         """

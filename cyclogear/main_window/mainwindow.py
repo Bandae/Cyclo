@@ -32,11 +32,11 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
 
         self.gear_tab = GearTab(central_widget)
-        self.gear_tab.data.animDataUpdated.connect(self.updateAnimationData)
+        self.gear_tab.animDataUpdated.connect(self.updateAnimationData)
 
         self.pin_out_tab = PinOutTab(central_widget)
         self.pin_out_tab.animDataUpdated.connect(self.updateAnimationData)
-        self.gear_tab.data.dane_materialowe.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
+        self.gear_tab.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
         roller_out_tab = RollerOutTab(central_widget)
 
@@ -51,8 +51,7 @@ class MainWindow(QMainWindow):
         button_layout = QHBoxLayout()
         self.stacklayout = QStackedLayout()
         animation_layout = QStackedLayout()
-
-        self.animation_view = AnimationView(central_widget, self.gear_tab.data.dane_all.copy())
+        self.animation_view = AnimationView(central_widget)
         animation_layout.addWidget(self.animation_view)
         # self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
 
@@ -64,7 +63,7 @@ class MainWindow(QMainWindow):
         self.error_box = ErrorWidget(central_widget)
         self.error_box.show()
         self.pin_out_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
-        self.gear_tab.data.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
+        self.gear_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
         self.error_box.resetErrors()
 
         self.base_data = BaseDataWidget(central_widget)
@@ -204,8 +203,10 @@ class MainWindow(QMainWindow):
     def onAnimationTick(self, kat):
         self.pin_out_tab.data.recalculate(kat)
     
-    def updateAnimationData(self, dane):
-        self.animation_view.animation.updateData(dane)
+    def updateAnimationData(self, data):
+        self.animation_view.animation.updateData(data)
+        if data.get("GearTab") is not None:
+            self.animation_view.animationControls.setEnabled(True)
 
     def generateRaport(self):
         if self.error_box.errorsExist():

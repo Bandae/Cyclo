@@ -1,6 +1,7 @@
 from typing import Callable, Tuple
 from enum import Enum
-from PySide2.QtGui import QFont, QResizeEvent
+from PySide2.QtGui import QFont, QResizeEvent, QMouseEvent
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout, QPushButton
 
 class DoubleSpinBox(QDoubleSpinBox):
@@ -11,6 +12,20 @@ class DoubleSpinBox(QDoubleSpinBox):
         self.setDecimals(decimal_places)
         if value is None:
             self.lineEdit().setText("")
+    
+    def mousePressEvent(self, event):
+        '''
+        By default, when the up/down buttons are pressed while the line edit has a text other than the value of the widget,
+        the text is set to the value, and this is not treated as a change in value, thus no valueChanged signal is sent.
+        This method makes sure that in those cases, the signal is sent with the minimum value of the spin box, properly
+        fitting the model of the spin box starting with no value, until the user first interacts with it.
+        '''
+        # This event on spinBoxes is only fired when the up/down buttons are clicked.
+        if self.value() is None:
+            self.setValue(self.minimum())
+            self.valueChanged.emit(self.value())
+            return True
+        return super().mousePressEvent(event)
     
     def wheelEvent(self, event):
         '''
@@ -56,6 +71,20 @@ class IntSpinBox(QSpinBox):
         self.setSingleStep(step)
         if value is None:
             self.lineEdit().setText("")
+    
+    def mousePressEvent(self, event):
+        '''
+        By default, when the up/down buttons are pressed while the line edit has a text other than the value of the widget,
+        the text is set to the value, and this is not treated as a change in value, thus no valueChanged signal is sent.
+        This method makes sure that in those cases, the signal is sent with the minimum value of the spin box, properly
+        fitting the model of the spin box starting with no value, until the user first interacts with it.
+        '''
+        # This event on spinBoxes is only fired when the up/down buttons are clicked.
+        if self.value() is None:
+            self.setValue(self.minimum())
+            self.valueChanged.emit(self.value())
+            return True
+        return super().mousePressEvent(event)
     
     def wheelEvent(self, event):
         '''
