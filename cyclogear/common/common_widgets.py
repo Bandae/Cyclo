@@ -1,10 +1,77 @@
 from typing import Callable, Tuple
 from enum import Enum
-from PySide2.QtGui import QFont, QResizeEvent, QMouseEvent
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout, QPushButton
+from PySide2.QtGui import QFont, QResizeEvent
+from PySide2.QtWidgets import QDoubleSpinBox, QLabel, QFrame, QSpinBox, QScrollArea, QWidget, QGridLayout, QPushButton, QComboBox
 
-class DoubleSpinBox(QDoubleSpinBox):
+
+class ComboBox(QComboBox):
+    def wheelEvent(self, event):
+        '''
+        Overrides the default behaviour of changing the value on scrolling.
+        Allows the event to instead be handled by the parent, resulting in scrolling the container.
+        '''
+        return False
+
+
+class AbstractSpinBox:
+    def mousePressEvent(self, event):
+        '''
+        By default, when the up/down buttons are pressed while the line edit has a text other than the value of the widget,
+        the text is set to the value, and this is not treated as a change in value, thus no valueChanged signal is sent.
+        This method makes sure that in those cases, the signal is sent with the minimum value of the spin box, properly
+        fitting the model of the spin box starting with no value, until the user first interacts with it.
+        '''
+        # This event on spinBoxes is only fired when the up/down buttons are clicked.
+        if self.value() is None:
+            self.setValue(self.minimum())
+            self.valueChanged.emit(self.value())
+            return True
+        return super().mousePressEvent(event)
+    
+    def wheelEvent(self, event):
+        '''
+        Overrides the default behaviour of changing the value on scrolling.
+        Allows the event to instead be handled by the parent, resulting in scrolling the container.
+        '''
+        return False
+    
+    def hideEvent(self, event):
+        value = self.value()
+        super().hideEvent(event)
+        if value is None:
+            self.lineEdit().setText("")
+    
+    def showEvent(self, event):
+        value = self.value()
+        super().showEvent(event)
+        if value is None:
+            self.lineEdit().setText("")
+    
+    def focusOutEvent(self, event):
+        value = self.value()
+        super().focusOutEvent(event)
+        if value is None:
+            self.lineEdit().setText("")
+
+    def value(self):
+        return super().value() if self.lineEdit().text() != "" else None
+    
+    def setValue(self, val):
+        if val is not None:
+            return super().setValue(val)
+        else:
+            self.lineEdit().setText("")
+    
+    def modify(self, value=None, minimum=None, maximum=None):
+        if minimum is not None:
+            self.setMinimum(minimum)
+        if maximum is not None:
+            self.setMaximum(maximum)
+        if value is not None:
+            self.setValue(value)
+
+
+class DoubleSpinBox(AbstractSpinBox, QDoubleSpinBox):
     def __init__(self, value, minimum=None, maximum=None, step=0.01, decimal_places=2):
         super().__init__()
         self.modify(value, minimum, maximum)
@@ -12,115 +79,15 @@ class DoubleSpinBox(QDoubleSpinBox):
         self.setDecimals(decimal_places)
         if value is None:
             self.lineEdit().setText("")
-    
-    def mousePressEvent(self, event):
-        '''
-        By default, when the up/down buttons are pressed while the line edit has a text other than the value of the widget,
-        the text is set to the value, and this is not treated as a change in value, thus no valueChanged signal is sent.
-        This method makes sure that in those cases, the signal is sent with the minimum value of the spin box, properly
-        fitting the model of the spin box starting with no value, until the user first interacts with it.
-        '''
-        # This event on spinBoxes is only fired when the up/down buttons are clicked.
-        if self.value() is None:
-            self.setValue(self.minimum())
-            self.valueChanged.emit(self.value())
-            return True
-        return super().mousePressEvent(event)
-    
-    def wheelEvent(self, event):
-        '''
-        Overrides the default behaviour of changing the value on scrolling.
-        Allows the event to instead be handled by the parent, resulting in scrolling the container.
-        '''
-        return False
-    
-    def hideEvent(self, event):
-        value = self.value()
-        super().hideEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-    
-    def showEvent(self, event):
-        value = self.value()
-        super().showEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-    
-    def focusOutEvent(self, event):
-        value = self.value()
-        super().focusOutEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-
-    def value(self):
-        return super().value() if self.lineEdit().text() != "" else None
-    
-    def modify(self, value=None, minimum=None, maximum=None):
-        if minimum is not None:
-            self.setMinimum(minimum)
-        if maximum is not None:
-            self.setMaximum(maximum)
-        if value is not None:
-            self.setValue(value)
 
 
-class IntSpinBox(QSpinBox):
+class IntSpinBox(AbstractSpinBox, QSpinBox):
     def __init__(self, value, minimum=None, maximum=None, step=1):
         super().__init__()
         self.modify(value, minimum, maximum)
         self.setSingleStep(step)
         if value is None:
             self.lineEdit().setText("")
-    
-    def mousePressEvent(self, event):
-        '''
-        By default, when the up/down buttons are pressed while the line edit has a text other than the value of the widget,
-        the text is set to the value, and this is not treated as a change in value, thus no valueChanged signal is sent.
-        This method makes sure that in those cases, the signal is sent with the minimum value of the spin box, properly
-        fitting the model of the spin box starting with no value, until the user first interacts with it.
-        '''
-        # This event on spinBoxes is only fired when the up/down buttons are clicked.
-        if self.value() is None:
-            self.setValue(self.minimum())
-            self.valueChanged.emit(self.value())
-            return True
-        return super().mousePressEvent(event)
-    
-    def wheelEvent(self, event):
-        '''
-        Overrides the default behaviour of changing the value on scrolling.
-        Allows the event to instead be handled by the parent, resulting in scrolling the container.
-        '''
-        return False
-    
-    def hideEvent(self, event):
-        value = self.value()
-        super().hideEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-    
-    def showEvent(self, event):
-        value = self.value()
-        super().showEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-    
-    def focusOutEvent(self, event):
-        value = self.value()
-        super().focusOutEvent(event)
-        if value is None:
-            self.lineEdit().setText("")
-
-    def value(self):
-        return super().value() if self.lineEdit().text() != "" else None
-    
-    def modify(self, value=None, minimum=None, maximum=None):
-        if minimum is not None:
-            self.setMinimum(minimum)
-        if maximum is not None:
-            self.setMaximum(maximum)
-        if value is not None:
-            self.setValue(value)
 
 
 class PushButton(QPushButton):

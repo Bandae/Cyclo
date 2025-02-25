@@ -145,22 +145,23 @@ def oblicz_straty(omg_0, sily, e, R_w1, d_tul, d_sw, tolerancje, f_kt, f_ts):
     return [F_j * stala for F_j in sily]
 
 def obliczenia_mech_wyjsciowy(dane, dane_zew, material_data, tolerancje, kat):
-    M_k = dane_zew["M_wyj"] / dane_zew["K"]
+    M_k = dane_zew["M_wyj"] / dane_zew['n_k']
     E, k_g = material_data["pin_mat"]["E"], material_data["pin_mat"]["Re"] / material_data["pin_safety_coef"]
     E_k, v_k = material_data["wheel_mat"]["E"], material_data["wheel_mat"]["v"]
     E_t, v_t = material_data["sleeve_mat"]["E"], material_data["sleeve_mat"]["v"]
     b_kola = dane_zew["B"]
-    n_sworzni = dane["n"]
+    n_sworzni = dane['n_pin']
     R_wt = dane["R_wt"]
     e1, e2 = dane["e1"], dane["e2"]
     podparcie = dane["podparcie"]
     d_tul, d_sw = dane["d_tul"], dane["d_sw"]
-    e, K = dane_zew["e"], dane_zew["K"]
+    e, K = dane_zew["e"], dane_zew['n_k']
     f_kt, f_ts = dane["f_kt"], dane["f_ts"]
     omg_0 = math.pi * dane_zew["n_wej"] / 30
 
     mode = "ideal"
-    if tolerancje is not None and type(list(tolerancje.values())[0]) == tuple:
+    # json turns tuple into list, so loading from file creates list
+    if tolerancje is not None and type(list(tolerancje.values())[0]) in (tuple, list):
         mode = "tolerances"
     elif tolerancje is not None:
         mode = "deviations"

@@ -18,14 +18,14 @@ class GearModel(QWidget):
         self.data = {
             "z" : 24,       "ro" : None,
             "lam" : None,   "g" : None,
-            "Ra1" : 0,      "Rf1": 0,
-            "Rw1": 0,       "Ra2": 0,
+            "Ra1" : 0,      "R_f1": 0,
+            "R_w1": 0,       "Ra2": 0,
             "Rf2": 0,       "Rw2": 0,
             "Rb" : 0,       "Rb2": 0,
             "Rg" : 0,       "sr": 0,
             "e" : 0,        "h" : 0,
-            "K" : None,     "nwyj" : 21,
-            "b_wheel": None,
+            'n_k' : None,   "nwyj" : 21,
+            "B": None,
             "f_kr": None,   "f_ro": None,
             "F_max": 0,     "p_max": 0,
             "F_wzx": 0,     "F_wzy": 0,
@@ -75,15 +75,15 @@ class GearModel(QWidget):
         lam=self.data["lam"]
         g=self.data["g"]
         self.data["Ra1"] = round(ro*(z+1+lam)-g, 3)
-        self.data["Rf1"] = round(ro*(z+1-lam)-g, 3)
-        self.data["Rw1"] = round(ro*lam*z, 3)
+        self.data["R_f1"] = round(ro*(z+1-lam)-g, 3)
+        self.data["R_w1"] = round(ro*lam*z, 3)
         self.data["Ra2"] = round(ro*(z+1)-g, 3)
         self.data["Rf2"] = self.data["Ra1"]
         self.data["Rw2"] = round(ro*lam*(z+1), 3)
         self.data["Rb"] = round(ro*z, 3)
         self.data["Rg"] = round(ro*(z+1), 3)
         self.data["e"] = round(ro*lam, 3)
-        self.data["Rb2"] = self.data["e"]+g+self.data["Rf1"]
+        self.data["Rb2"] = self.data["e"]+g+self.data["R_f1"]
         self.data["h"] = 2*self.data["e"]
         self.data["sr"] = round((2*g)+(2*self.data["Rb2"]), 2)
     
@@ -104,7 +104,7 @@ class GearModel(QWidget):
         if self.has_visual_error:
             return
         
-        self.shouldSendData.emit()
+        # self.shouldSendData.emit()
         self.changeDiode.emit(StatusDiodes.Status.OK)
         if results["p_max"] > self.material_data["p_dop"]:
             self.changeDiode.emit(StatusDiodes.Status.ERROR)
@@ -122,3 +122,11 @@ class GearModel(QWidget):
             self.has_visual_error = False
             self.changeDiode.emit(StatusDiodes.Status.WARNING)
             self.animDataUpdated.emit({"GearTab": self.data.copy()})
+            self.shouldSendData.emit()
+    
+    def saveData(self):
+        return {name: getattr(self, name) for name in ("data", "outside_data", "material_data", "tolerances")}
+    
+    def loadData(self, data):
+        for name, value in data.items():
+            setattr(self, name, value)

@@ -16,11 +16,11 @@ class InputMechanismCalculator():
             'e': [3, 'mm'],                 # Mimośród
             'B': [17, 'mm'],                # Długość koła obiegowego
             'x': [5, 'mm'],                 # Odległość pomiędzy dwoma kołami obiegowymi
-            'rw1': [99, 'mm'],              # Promień koła toczengo (koło obiegowe)
+            'R_w1': [99, 'mm'],              # Promień koła toczengo (koło obiegowe)
             # Współrzędne podpór i kół obiegowych
             'LA': [None, 'mm'],             # Wsp. podpory przesuwnej - A
             'LB': [None, 'mm'],             # Wsp. podpory stałej - B
-            'n': [2, ''],                   # Liczba kół obiegowych
+            'n_k': [2, ''],                   # Liczba kół obiegowych
             'L1': [None, 'mm'],             # Wsp. pierwszego koła obiegowego
             'Lc': {},                       # Wsp. kolejnych kół obiegowych - domyślnie brak
             # Dobrany materiał i parametry
@@ -30,8 +30,8 @@ class InputMechanismCalculator():
             'tetadop': [None, 'rad'],       # Dopuszczalny kąt ugięcia wału
             'fdop': [None, 'mm'],           # Dopuszczalna strzałka ugięcia wału
             # Siły pochodzące od kół obiegowych
-            'Fwzx': [4444.44, 'N'],         # Wypadkowa siła międzyzębna działająca w osi x
-            'Fwzy': [2799.16, 'N'],         # Wypadkowa siła międzyzębn działająca w osi y
+            'F_wzx': [4444.44, 'N'],         # Wypadkowa siła międzyzębna działająca w osi x
+            'F_wzy': [2799.16, 'N'],         # Wypadkowa siła międzyzębn działająca w osi y
             'Fwm': [5602.25, 'N'],          # Wypadkowa siła w mechanizmie wyjściowym
             # Reakcje podporowe i siły działające na wał
             'Ra':[None, 'N'],               # Reakcja w podporze nieruchomej
@@ -203,21 +203,21 @@ class InputMechanismCalculator():
         return self.data
     
     def set_initial_data(self):
-        fwzx = self.data['Fwzx'][0]
-        fwzy = self.data['Fwzy'][0]
+        fwzx = self.data['F_wzx'][0]
+        fwzy = self.data['F_wzy'][0]
         fwm = self.data['Fwm'][0]
 
         self.data['F'][0] = (fwzx**2 + (fwm - fwzy)**2)**0.5
 
-        if len(self.data['Lc']) != self.data['n'][0]-1:
+        if len(self.data['Lc']) != self.data['n_k'][0]-1:
             self.data['Lc'] = {}
 
-            for idx in range(self.data['n'][0]-1):
+            for idx in range(self.data['n_k'][0]-1):
                 self.data['Lc'][f'L{idx+2}'] = copy.deepcopy(self.data['L1'])
 
             self.data['Fx'] = {}
 
-        for idx in range(self.data['n'][0]):
+        for idx in range(self.data['n_k'][0]):
             self.data['Fx'][f'F{idx+1}'] = copy.deepcopy(self.data['F'])
             self.data['Fx'][f'F{idx+1}'][0] = self.data['F'][0] * (-1)**idx
 

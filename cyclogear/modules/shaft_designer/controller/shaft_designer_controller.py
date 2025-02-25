@@ -181,7 +181,7 @@ class ShaftDesignerController:
         self._shaft_designer.shaftViewer.init_shaft(self.functions_calculator.get_shaft_coordinates())
 
         # (Re)set number of eccentrics
-        self.eccentrics_number = data['n'][0]
+        self.eccentrics_number = data['n_k'][0]
         if self.eccentrics_number < 2 and 'Pomiędzy Mimośrodami' in self._sections:
             self._shaft_designer.removeSectionFromSidebar(self._sections['Pomiędzy Mimośrodami'])
             del self._sections['Pomiędzy Mimośrodami']

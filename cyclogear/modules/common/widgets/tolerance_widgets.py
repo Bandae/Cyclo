@@ -227,8 +227,16 @@ class ToleranceEdit(QWidget):
     def saveData(self) -> Dict[str, Tuple[float, float, float]]:
         return {key: (val[0], val[1], val[2]) for key, val in self.tolerancje.items()}
 
-    def copyDataToInputs(self, new_tolerances: Dict[str, Tuple[float, float, float]]) -> None:
+    def loadData(self, new_tolerances: Dict[str, Tuple[float, float, float]], mode: str, use_tol: bool) -> None:
         for key, widget in self.fields.items():
             widget.low_input.setValue(new_tolerances[key][0])
             widget.high_input.setValue(new_tolerances[key][1])
             widget.deviation_input.setValue(new_tolerances[key][2])
+        
+        if mode == "deviations":
+            self.tol_check.setChecked(False)
+            self.dev_check.setChecked(True)
+        else:
+            self.tol_check.setChecked(True)
+            self.dev_check.setChecked(False)
+        self.check.setChecked(use_tol)

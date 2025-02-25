@@ -12,7 +12,7 @@ class PowerLossTabCalculator():
         """
         w0 = self._component_data['w0'][0]
         e = self._component_data['e'][0] * 0.001
-        rw1 = self._component_data['rw1'][0] * 0.001
+        rw1 = self._component_data['R_w1'][0] * 0.001
         F = self._component_data['Bearings'][bearing_section_id]['F'][0]
         Dw = self._component_data['Bearings'][bearing_section_id]['data']['d_in'][0] * 0.001
         Dz = self._component_data['Bearings'][bearing_section_id]['data']['d_out'][0] * 0.001

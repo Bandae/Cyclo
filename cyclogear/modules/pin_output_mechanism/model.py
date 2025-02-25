@@ -23,7 +23,7 @@ class PinOutputMechanismModel(QWidget):
         self.has_error = False
         self.tol_data = None
         self.input_dane = {
-            "n": None,
+            "n_pin": None,
             "R_wt": None,
             "podparcie": None,
             "d_sw": 5,
@@ -33,12 +33,10 @@ class PinOutputMechanismModel(QWidget):
             "e2": None,
             "f_kt": None,
             "f_ts": None,
-            "f_kt": None,
-            "f_ts": None,
         }
         self.obliczone_dane = {
-            "d_sw": None,
-            "d_tul": None,
+            "d_sw_calc": None,
+            "d_tul_calc": None,
             "d_otw": 13.24,
             "F_max": None,
             "p_max": None,
@@ -50,7 +48,7 @@ class PinOutputMechanismModel(QWidget):
             "R_w1": 72,
             "R_f1": 107,
             "e": 3.62,
-            "K": 2,
+            'n_k': 2,
             "B": 20,
             "M_wyj": 500,
             "n_wej": 500,
@@ -113,8 +111,8 @@ class PinOutputMechanismModel(QWidget):
 
         wyniki = obliczenia_mech_wyjsciowy(self.input_dane, self.zew_dane, self.material_data, self.tol_data, self.wheel_rotation_angle)
 
-        self.obliczone_dane["d_sw"] = wyniki["d_s_obl"]
-        self.obliczone_dane["d_tul"] = wyniki["d_t_obl"]
+        self.obliczone_dane["d_sw_calc"] = wyniki["d_s_obl"]
+        self.obliczone_dane["d_tul_calc"] = wyniki["d_t_obl"]
         self.obliczone_dane["d_otw"] = wyniki["d_o_obl"]
         self.obliczone_dane["F_max"] = wyniki["F_max"]
         self.obliczone_dane["p_max"] = wyniki["p_max"]
@@ -124,7 +122,7 @@ class PinOutputMechanismModel(QWidget):
         self.input_dane["d_sw"] = self.input_dane["d_sw"] if self.input_dane["d_sw"] is not None and self.input_dane["d_sw"] >= wyniki["d_s_obl"] else wyniki["d_s_obl"]
         self.input_dane["d_tul"] = self.input_dane["d_tul"] if self.input_dane["d_tul"] is not None and self.input_dane["d_tul"] >= wyniki["d_t_obl"] else wyniki["d_t_obl"]
 
-        no_errors = self.sendAnimationUpdates(self.input_dane["n"], self.input_dane["R_wt"], wyniki["p_max"], self.material_data["p_dop"])
+        no_errors = self.sendAnimationUpdates(self.input_dane['n_pin'], self.input_dane["R_wt"], wyniki["p_max"], self.material_data["p_dop"])
         if no_errors:
             self.chartDataUpdated.emit({
                 "sily": wyniki["sily"],
@@ -133,13 +131,10 @@ class PinOutputMechanismModel(QWidget):
                 "luzy": wyniki["luzy"],
             })
 
-        self.obliczone_dane["F_wmr"] = round(1000 * 4 * (self.zew_dane["M_wyj"] / self.zew_dane["K"]) / (pi * self.input_dane["R_wt"]), 1)
+        self.obliczone_dane["F_wmr"] = round(1000 * 4 * (self.zew_dane["M_wyj"] / self.zew_dane['n_k']) / (pi * self.input_dane["R_wt"]), 1)
         self.obliczone_dane["r_mr"] = round(pi * self.input_dane["R_wt"] / 4, 2)
         self.obliczone_dane["N_cmr"] = round(sum(wyniki['straty'][0]), 3)
 
-        # if should_send_data:
-        # zrobie tak bo nie wiem jak wyslac po oddznaczeniu, bo jak sie zmieni K albo M jak jest wylaczone to potem bym nie wyslal jak sie odblokuje
-        # TODO: a moze wysyłac ten sygnal/odpalac metode sendData w tej funkcji od zaznaczenia ze chce to, po uzyciu inputsModified
         self.shouldSendData.emit()
         if no_errors:
             self.changeDiode.emit(StatusDiodes.Status.OK)
@@ -148,7 +143,7 @@ class PinOutputMechanismModel(QWidget):
     def sendAnimationUpdates(self, n, R_wt, p_max: Optional[Union[int, float]]=None, p_dop: Optional[Union[int, float]]=None) -> bool:
         if not n or not R_wt or not self.input_dane["d_sw"]: return
         anim_data = {
-            "n": n,
+            'n_pin': n,
             "R_wt": R_wt,
             "d_sw": self.input_dane["d_sw"],
             "d_tul": self.input_dane["d_tul"],
@@ -171,3 +166,10 @@ class PinOutputMechanismModel(QWidget):
         self.changeDiode.emit(StatusDiodes.Status.ERROR)
         self.has_error = True
         return False
+    
+    def saveData(self):
+        return {name: getattr(self, name) for name in ("input_dane", "obliczone_dane", "zew_dane", "material_data", "tol_data", "module_enabled")}
+    
+    def loadData(self, data):
+        for name, value in data.items():
+            setattr(self, name, value)

@@ -16,6 +16,7 @@ from common.utils import open_pdf
 
 class DataEdit(QWidget):
     changeDiode = Signal(StatusDiodes.Status)
+    filledOut = Signal()
 
     def __init__(self, parent: AbstractTab, model) -> None:
         super().__init__(parent)
@@ -26,7 +27,7 @@ class DataEdit(QWidget):
         self.results_frame = ResultsFrame(self, model)
 
         self.data_inputs = {
-            "b_wheel": DoubleSpinBox(self.model.data["b_wheel"], 10, 100, 0.5),
+            "B": DoubleSpinBox(self.model.data["B"], 10, 100, 0.5),
             "f_kr": DoubleSpinBox(self.model.data["f_kr"], 0.00001, 0.0001, 0.00001, 5),
             "f_ro": DoubleSpinBox(self.model.data["f_ro"], 0.00001, 0.0001, 0.00001, 5),
         }
@@ -40,13 +41,13 @@ class DataEdit(QWidget):
         self.material_data.changed.connect(self.inputsChanged)
         self.visuals_frame.accepted.connect(self.visualsChanged)
 
-        self.data_labels = { key: QLabelD("") for key in ("sr", "Ra1", "Rf1", "Rw1", "Ra2", "Rf2", "Rw2", "Rg", "e", "h") }
+        self.data_labels = { key: QLabelD("") for key in ("sr", "Ra1", "R_f1", "R_w1", "Ra2", "Rf2", "Rw2", "Rg", "e", "h") }
 
         self.label_descriptions = {
             "sr": "Średnica zewnętrzna przekładni",
             "Ra1": "Promień koła wierzchołkowego",
-            "Rf1": "Promień koła stóp",
-            "Rw1": "Promień koła tocznego",
+            "R_f1": "Promień koła stóp",
+            "R_w1": "Promień koła tocznego",
             "Ra2": "Promień koła wierzchołkowego",
             "Rf2": "Promień koła stóp",
             "Rw2": "Promień koła tocznego",
@@ -69,50 +70,33 @@ class DataEdit(QWidget):
     
     def setupLayout(self, layout: QGridLayout) -> None:
         layout.addWidget(self.visuals_frame, 0, 0, 6, 3)
-        # layout.addWidget(QLabelD("DANE WEJSCIOWE:"), 0, 0, 1, 3)
-        # layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 2)
-        # layout.addWidget(self.spin_l_k, 1, 2, 1, 1)
-        # layout.addWidget(QLabelD("Liczba Zębów - z"), 2, 0, 1, 2)
-        # layout.addWidget(self.label_z, 2, 2, 1, 1)
-        # layout.addWidget(QLabelD("Promień - ρ [mm]"), 3, 0, 1, 2)
-        # layout.addWidget(self.spin_ro, 3, 2, 1, 1)
-        # layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 4, 0, 1, 2)
-        # layout.addWidget(self.spin_lam, 4, 2, 1, 1)
-        # layout.addWidget(QLabelD("Promień rolek - g [mm]"), 5, 0, 1, 2)
-        # layout.addWidget(self.spin_g, 5, 2, 1, 1)
         
-        label = QLabelD("sr")
-        layout.addWidget(label, 7, 0, 1, 2)
-        label.setToolTip(self.label_descriptions["sr"])
+        layout.addWidget(self.labels["sr"], 7, 0, 1, 2)
         layout.addWidget(self.data_labels["sr"], 7, 2, 1, 1)
 
-        layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 8, 0, 1, 3)
-        for index, (text, qlabel) in enumerate(self.data_labels.items(), start=1):
-            # rozdzielenie na dwie czesci, zeby podpisac co sie tyczy jakiego koła.
-            if "1" in text:
-                name_label = QLabelD(text)
-                name_label.setToolTip(self.label_descriptions[text])
-                layout.addWidget(name_label, 8+index, 0, 1, 2)
+        layout.addWidget(self.labels["cyclo_gear_header"], 8, 0, 1, 3)
+
+        index = 0
+        for text, qlabel in self.data_labels.items():
+            if text in ("Ra1", "R_f1", "R_w1"):
+                index += 1
+                layout.addWidget(self.labels[text], 8+index, 0, 1, 2)
                 layout.addWidget(qlabel, 8+index, 2, 1, 1)
         
-        layout.addWidget(QLabelD("Koło współpracujące:"), 12, 0, 1, 3)
+        layout.addWidget(self.labels["rollers_header"], 12, 0, 1, 3)
         roller_labels = {text: qlabel for text, qlabel in self.data_labels.items() if text in ("Ra2", "Rf2", "Rw2", "Rg", "e", "h")}
         for index, (text, qlabel) in enumerate(roller_labels.items(), start=1):
-            name_label = QLabelD(text)
-            name_label.setToolTip(self.label_descriptions[text])
-            layout.addWidget(name_label, 12+index, 0, 1, 2)
+            layout.addWidget(self.labels[text], 12+index, 0, 1, 2)
             layout.addWidget(qlabel, 12+index, 2, 1, 1)
 
-        # TODO: sprawdzic na wiekszym ekranie
-
-        layout.addWidget(QLabelD("Szerokość koła [mm]:"), 0, 3, 1, 4)
-        layout.addWidget(self.data_inputs["b_wheel"], 0, 7, 1, 2)
-        layout.addWidget(QLabelD("Dane kinematyczne"), 1, 3, 1, 6)
-        layout.addWidget(QLabelD("Prędkość obrotowa wyj:"), 2, 3, 1, 4)
+        layout.addWidget(self.labels["B"], 0, 3, 1, 4)
+        layout.addWidget(self.data_inputs["B"], 0, 7, 1, 2)
+        layout.addWidget(self.labels["kinematics_header"], 1, 3, 1, 6)
+        layout.addWidget(self.labels["n_out"], 2, 3, 1, 4)
         layout.addWidget(self.n_out_label, 2, 7, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia koło - rolka [m]:"), 3, 3, 1, 4)
+        layout.addWidget(self.labels["f_kr"], 3, 3, 1, 4)
         layout.addWidget(self.data_inputs["f_kr"], 3, 7, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia rolka - obudowa [m]:"), 4, 3, 1, 4)
+        layout.addWidget(self.labels["f_ro"], 4, 3, 1, 4)
         layout.addWidget(self.data_inputs["f_ro"], 4, 7, 1, 2)
 
         layout.addWidget(self.material_data, 5, 3, 5, 6)
@@ -120,46 +104,48 @@ class DataEdit(QWidget):
         layout.addWidget(self.results_frame, 11, 5, 7, 4)
     
     def setupSmallLayout(self, layout: QGridLayout) -> None:
+        if not hasattr(self, "labels"):
+            self.labels = {
+                "B": QLabelD("Szerokość koła [mm]:"),
+                "kinematics_header": QLabelD("Dane kinematyczne"),
+                "n_out": QLabelD("Prędkość obrotowa wyj:"),
+                "f_kr": QLabelD("Współczynnik tarcia koło - rolka [m]:"),
+                "f_ro": QLabelD("Współczynnik tarcia rolka - obudowa [m]:"),
+                "cyclo_gear_header": QLabelD("Obiegowe koło cykloidalne:"),
+                "rollers_header": QLabelD("Koło współpracujące:"),
+            }
+            self.labels.update({key: QLabelD(text) for key, text in self.label_descriptions.items()})
         layout.addWidget(self.visuals_frame, 0, 0, 6, 6)
-        # layout.addWidget(QLabelD("DANE WEJSCIOWE:"), 0, 0, 1, 6)
-        # layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 4)
-        # layout.addWidget(self.spin_l_k, 1, 4, 1, 2)
-        # layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 4)
-        # layout.addWidget(self.label_z, 3, 4, 1, 2)
-        # layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 4)
-        # layout.addWidget(self.spin_ro, 4, 4, 1, 2)
-        # layout.addWidget(QLabelD("Wsp. wysokości zęba - λ"), 5, 0, 1, 4)
-        # layout.addWidget(self.spin_lam, 5, 4, 1, 2)
-        # layout.addWidget(QLabelD("Promień rolek - g [mm]"), 6, 0, 1, 4)
-        # layout.addWidget(self.spin_g, 6, 4, 1, 2)
 
-        layout.addWidget(QLabelD("Szerokość koła [mm]:"), 6, 0, 1, 4)
-        layout.addWidget(self.data_inputs["b_wheel"], 6, 4, 1, 2)
+        layout.addWidget(self.labels["B"], 6, 0, 1, 4)
+        layout.addWidget(self.data_inputs["B"], 6, 4, 1, 2)
 
-        layout.addWidget(QLabelD("Dane kinematyczne"), 7, 0, 1, 6)
-        layout.addWidget(QLabelD("Prędkość obrotowa wyj:"), 8, 0, 1, 4)
+        layout.addWidget(self.labels["kinematics_header"], 7, 0, 1, 6)
+        layout.addWidget(self.labels["n_out"], 8, 0, 1, 4)
         layout.addWidget(self.n_out_label, 8, 4, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia koło - rolka [m]:"), 9, 0, 1, 4)
+        layout.addWidget(self.labels["f_kr"], 9, 0, 1, 4)
         layout.addWidget(self.data_inputs["f_kr"], 9, 4, 1, 2)
-        layout.addWidget(QLabelD("Współczynnik tarcia rolka - obudowa [m]:"), 10, 0, 1, 4)
+        layout.addWidget(self.labels["f_ro"], 10, 0, 1, 4)
         layout.addWidget(self.data_inputs["f_ro"], 10, 4, 1, 2)
 
         layout.addWidget(self.material_data, 11, 0, 5, 6)
         layout.addWidget(self.accept_button, 16, 0, 1, 6)
 
-        layout.addWidget(QLabelD(self.label_descriptions["sr"]), 18, 0, 1, 4)
+        layout.addWidget(self.labels["sr"], 18, 0, 1, 4)
         layout.addWidget(self.data_labels["sr"], 18, 4, 1, 2)
-        layout.addWidget(QLabelD("Obiegowe koło cykloidalne:"), 19, 0, 1, 6)
+        layout.addWidget(self.labels["cyclo_gear_header"], 19, 0, 1, 6)
         for index, (text, qlabel) in enumerate(self.data_labels.items(), start=1):
             # rozdzielenie na dwie czesci, zeby podpisac co sie tyczy jakiego koła.
             if "1" in text:
-                layout.addWidget(QLabelD(self.label_descriptions[text]), 19+index, 0, 1, 4)
+                layout.addWidget(self.labels[text], 19+index, 0, 1, 4)
+                # layout.addWidget(QLabelD(self.label_descriptions[text]), 19+index, 0, 1, 4)
                 layout.addWidget(qlabel, 19+index, 4, 1, 2)
         
-        layout.addWidget(QLabelD("Koło współpracujące:"), 24, 0, 1, 6)
+        layout.addWidget(self.labels["rollers_header"], 24, 0, 1, 6)
         roller_labels = {text: qlabel for text, qlabel in self.data_labels.items() if text in ("Ra2", "Rf2", "Rw2", "Rg", "e", "h")}
         for index, (text, qlabel) in enumerate(roller_labels.items(), start=1):
-            layout.addWidget(QLabelD(self.label_descriptions[text]), 24+index, 0, 1, 4)
+            layout.addWidget(self.labels[text], 24+index, 0, 1, 4)
+            # layout.addWidget(QLabelD(self.label_descriptions[text]), 24+index, 0, 1, 4)
             layout.addWidget(qlabel, 24+index, 4, 1, 2)
 
         layout.addWidget(self.results_frame, 31, 0, 6, 6)
@@ -172,26 +158,26 @@ class DataEdit(QWidget):
             child.setEnabled(is_accepted)
     
     def inputsChanged(self) -> None:
+        for key in self.data_inputs:
+            self.model.data[key] = self.data_inputs[key].value()
+        
+        if not all(widget.value() is not None for widget in self.data_inputs.values()): return
+
         self.accept_button.setEnabled(True)
         self.changeDiode.emit(StatusDiodes.Status.WARNING)
     
     def recalculate(self) -> None:
-        for key in self.data_inputs:
-            if self.data_inputs[key].value() is None: return
-            self.model.data[key] = self.data_inputs[key].value()
-        
         self.model.recalculate()
         self.results_frame.update()
         self.accept_button.setEnabled(False)
 
-    def copyDataToInputs(self, new_input_data: Dict[str, Union[int, float]]) -> None:
-        self.spin_ro.setValue(new_input_data["ro"])
-        self.spin_lam.setValue(new_input_data["lam"])
-        self.spin_g.setValue(new_input_data["g"])
-        self.spin_l_k.setValue(new_input_data["K"])
+        self.filledOut.emit()
 
-        # self.inputsModified(True) #TODO
-        self.model.data = new_input_data
+    def loadData(self, new_input_data: Dict[str, Union[int, float]]) -> None:
+        for key, widget in self.data_inputs.items():
+            widget.blockSignals(True)
+            widget.setValue(new_input_data[key])
+            widget.blockSignals(False)
     
     def toleranceUpdate(self, tol_data: Optional[Dict[str, Union[float, Tuple[float, float]]]]) -> None:
         self.model.tolerances = tol_data
@@ -199,7 +185,7 @@ class DataEdit(QWidget):
 
 
 class GearTab(AbstractTab):
-    wheelMatChanged = Signal(dict)
+    wheelMatChanged = Signal(dict, str)
     animDataUpdated = Signal(dict)
     errorsUpdated = Signal(dict)
 
@@ -240,6 +226,7 @@ class GearTab(AbstractTab):
         self.model.errorsUpdated.connect(self.errorsUpdated.emit)
         self.model.changeDiode.connect(self.diodes.enableDiode)
         self.data.material_data.wheelMatChanged.connect(self.wheelMatChanged.emit)
+        self.data.filledOut.connect(self.filledOut.emit)
         self.tolerance_edit.toleranceDataUpdated.connect(self.data.toleranceUpdate)
 
         help_pdf_button = QPushButton("Pomoc")
@@ -259,15 +246,7 @@ class GearTab(AbstractTab):
         self.setLayout(layout)
 
     def sendData(self) -> None:
-        self.dataChanged.emit({"GearTab": {
-            "R_w1": self.model.data["Rw1"],
-            "R_f1": self.model.data["Rf1"],
-            "Fwzx": self.model.data["F_wzx"],
-            "Fwzy": self.model.data["F_wzy"],
-            "e": self.model.data["e"],
-            "K": self.model.data["K"],
-            "B": self.model.data["b_wheel"],
-        }})
+        self.dataChanged.emit({"GearTab": {key: self.model.data[key] for key in ["R_w1", "R_f1", "F_wzx", "F_wzy", "e", 'n_k', "B"] if self.model.data[key] is not None}})
     
     def receiveData(self, new_data) -> None:
         base_data = new_data.get("base")
@@ -277,18 +256,31 @@ class GearTab(AbstractTab):
         self.data.n_out_label.setText(str(self.model.data["nwyj"]) + " obr/min")
     
     def saveData(self):
-        # self.data.inputsModified(True) #TODO
         return {
-            "dane_all": self.model.data,
-            "material_data": self.model.material_data,
+            "model_data": self.model.saveData(),
+            "visual_frame_accepted": self.data.visuals_frame.is_accepted,
+            "module_accepted": not self.data.accept_button.isEnabled(),
+            "tolerance_input_state": self.tolerance_edit.saveData(),
+            "tol_mode": self.tolerance_edit.mode,
+            "use_tol": self.tolerance_edit.check.isChecked()
         }
 
     def loadData(self, new_data) -> None:
         if new_data is None:
             return
-        self.data.copyDataToInputs(new_data["dane_all"])
-        self.data.material_data.copyDataToInputs(new_data["material_data"])
-        self.data.dane_all = new_data["dane_all"]
+        self.model.loadData(new_data["model_data"])
+        self.data.visuals_frame.loadData(new_data["model_data"]["data"])
+        self.data.loadData(new_data["model_data"]["data"])
+        self.data.material_data.loadData(new_data["model_data"]["material_data"])
+
+        if new_data["visual_frame_accepted"]:
+            self.data.visuals_frame.okClicked()
+        if new_data["module_accepted"]:
+            self.data.recalculate()
+
+        self.model.loadData(new_data["model_data"])
+
+        self.tolerance_edit.loadData(new_data.get("tolerance_input_state"), new_data.get("tol_mode"), new_data.get("use_tol"))
     
     def reportData(self) -> str:
         def indent_point(point_text, bullet, bold, sa=100):
@@ -302,35 +294,35 @@ class GearTab(AbstractTab):
         text = "{\\pard\\b Zazębienie \\line\\par}"
         text += indent_point("Materiały", True, True)
         text += "{\\pard\\sa100 - koło podstawowe: \\par}"
-        text += indent_point(f"Materiał: {materials['wheel']['nazwa']}", False, False)
-        text += indent_point(f"Moduł Younga: E = {materials['wheel']['E']} [MPa]", False, False)
-        text += indent_point(f"Liczba Poissona: v = {materials['wheel']['v']}", False, False)
+        text += indent_point(f"Materiał: {materials['wheel_mat']['nazwa']}", False, False)
+        text += indent_point(f"Moduł Younga: E = {materials['wheel_mat']['E']} [MPa]", False, False)
+        text += indent_point(f"Liczba Poissona: v = {materials['wheel_mat']['v']}", False, False)
         text += "{\\pard\\sa100 - koło współpracujące (rolki): \\par}"
-        text += indent_point(f"Materiał: {materials['roller']['nazwa']}", False, False)
-        text += indent_point(f"Moduł Younga: E = {materials['roller']['E']} [MPa]", False, False)
-        text += indent_point(f"Liczba Poissona: v = {materials['roller']['v']}", False, False)
+        text += indent_point(f"Materiał: {materials['roller_mat']['nazwa']}", False, False)
+        text += indent_point(f"Moduł Younga: E = {materials['roller_mat']['E']} [MPa]", False, False)
+        text += indent_point(f"Liczba Poissona: v = {materials['roller_mat']['v']}", False, False)
 
         text += f"{{\\pard\\sa100 Nacisk dopuszczalny (dla pary materiałów): p{{\sub dop}} = {materials['p_dop']} [MPa]\\par}}"
-        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy zarysem koła a rolkami: f{{\sub k-r}} = {materials['f_kr']:.5f} [m]\\par}}"
-        text += f"{{\\pard\\sa500 Współczynnik tarcia tocznego pomiędzy rolkami a obudową: f{{\sub r-o}} = {materials['f_ro']:.5f} [m]\\par}}"
+        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy zarysem koła a rolkami: f{{\sub k-r}} = {self.model.data['f_kr']:.5f} [m]\\par}}"
+        text += f"{{\\pard\\sa500 Współczynnik tarcia tocznego pomiędzy rolkami a obudową: f{{\sub r-o}} = {self.model.data['f_ro']:.5f} [m]\\par}}"
 
         text += "{\\pard\\sa200\\b Obliczenia: \\par}"
         text += indent_point("Geometria kół:", True, True)
         text += "{\\pard\\sa100 - koło podstawowe: \\par}"
-        text += indent_point(f"Liczba zębów: z{{\sub 1}} = {self.data.dane_all['z']}", False, False)
-        text += indent_point(f"Promień (średnica) koła wierzchołkowego: r{{\sub a1}} = {self.data.dane_all['Ra1']} ({self.data.dane_all['Ra1'] * 2}) [mm]", False, False)
-        text += indent_point(f"Promień (średnica) koła stóp: r{{\sub f1}} = {self.data.dane_all['Rf1']} ({self.data.dane_all['Rf1'] * 2}) [mm]", False, False)
-        text += indent_point(f"Promień (średnica) koła tocznego: r{{\sub w1}} = {self.data.dane_all['Rw1']} ({self.data.dane_all['Rw1'] * 2}) [mm]", False, False)
-        text += indent_point(f"Promień (średnica) koła zasadniczego: r{{\sub b1}} = {self.data.dane_all['Rb']} ({self.data.dane_all['Rb'] * 2}) [mm]", False, False)
-        text += indent_point(f"Wysokość zęba: h = {self.data.dane_all['h']} [mm]", False, False)
-        text += indent_point(f"Szerokość koła: B = {materials['b_wheel']} [mm]", False, False)
+        text += indent_point(f"Liczba zębów: z{{\sub 1}} = {self.model.data['z']}", False, False)
+        text += indent_point(f"Promień (średnica) koła wierzchołkowego: r{{\sub a1}} = {self.model.data['Ra1']} ({self.model.data['Ra1'] * 2}) [mm]", False, False)
+        text += indent_point(f"Promień (średnica) koła stóp: r{{\sub f1}} = {self.model.data['R_f1']} ({self.model.data['R_f1'] * 2}) [mm]", False, False)
+        text += indent_point(f"Promień (średnica) koła tocznego: r{{\sub w1}} = {self.model.data['R_w1']} ({self.model.data['R_w1'] * 2}) [mm]", False, False)
+        text += indent_point(f"Promień (średnica) koła zasadniczego: r{{\sub b1}} = {self.model.data['Rb']} ({self.model.data['Rb'] * 2}) [mm]", False, False)
+        text += indent_point(f"Wysokość zęba: h = {self.model.data['h']} [mm]", False, False)
+        text += indent_point(f"Szerokość koła: B = {self.model.data['B']} [mm]", False, False)
 
         text += "{\\pard\\sa100 - koło współpracujące: \\par}"
-        text += indent_point(f"Liczba zębów (rolek): z{{\sub 2}} = {self.data.dane_all['z'] + 1}", False, False)
-        text += indent_point(f"Promień (średnica) rolki: r{{\sub r}} = {self.data.dane_all['g']} ({self.data.dane_all['g'] * 2}) [mm]", False, False)
-        text += indent_point(f"Promień (średnica) rozmieszczenia rolek: r{{\sub b2}} = {self.data.dane_all['Rb2']} ({self.data.dane_all['Rb2'] * 2}) [mm]", False, False)
-        text += indent_point(f"Promień (średnica) koła tocznego: r{{\sub w2}} = {self.data.dane_all['Rw2']} ({self.data.dane_all['Rw2'] * 2}) [mm]", False, False)
-        text += indent_point(f"Mimośród: e = {self.data.dane_all['e']} [mm]", False, False, 500)
+        text += indent_point(f"Liczba zębów (rolek): z{{\sub 2}} = {self.model.data['z'] + 1}", False, False)
+        text += indent_point(f"Promień (średnica) rolki: r{{\sub r}} = {self.model.data['g']} ({self.model.data['g'] * 2}) [mm]", False, False)
+        text += indent_point(f"Promień (średnica) rozmieszczenia rolek: r{{\sub b2}} = {self.model.data['Rb2']} ({self.model.data['Rb2'] * 2}) [mm]", False, False)
+        text += indent_point(f"Promień (średnica) koła tocznego: r{{\sub w2}} = {self.model.data['Rw2']} ({self.model.data['Rw2'] * 2}) [mm]", False, False)
+        text += indent_point(f"Mimośród: e = {self.model.data['e']} [mm]", False, False, 500)
 
         text += indent_point("Siły międzyzębne:", True, True)
         text += indent_point(f"Maksymalna siła międzyzębna: F{{\sub max}} = {results['F_max']} [N]", False, False)
@@ -342,10 +334,10 @@ class GearTab(AbstractTab):
         text += f"{{\\pard\\sa500\\qc Warunek p{{\sub max}} = {results['p_max']} [MPa] < p{{\sub dop}} = {materials['p_dop']} [MPa] został spełniony. \\par}}"
 
         text += indent_point("Moc tracona:", True, True)
-        text += indent_point(f"Prędkość kątowa wałka czynnego: \\uc1\\u969*{{\sub wej}} = {round(math.pi * self.data.outside_data['n_wej'] / 30, 2)} [rad/s]", False, False)
+        text += indent_point(f"Prędkość kątowa wałka czynnego: \\uc1\\u969*{{\sub wej}} = {round(math.pi * self.model.outside_data['n_wej'] / 30, 2)} [rad/s]", False, False)
         text += indent_point(f"Całkowita strata mocy: N{{\sub Ck-r}} = {round(sum(results['straty'][0]), 3)} [W]", False, False)
-        text += indent_point(f"Prędkość obrotowa wałka biernego: n{{\sub wyj}} = {self.data.dane_all['nwyj']} [obr/min]", False, False)
-        text += indent_point(f"Prędkość kątowa wałka biernego: \\uc1\\u969*{{\sub wyj}} = {round(math.pi * self.data.dane_all['nwyj'] / 30, 2)} [rad/s]", False, False, 500)
+        text += indent_point(f"Prędkość obrotowa wałka biernego: n{{\sub wyj}} = {self.model.data['nwyj']} [obr/min]", False, False)
+        text += indent_point(f"Prędkość kątowa wałka biernego: \\uc1\\u969*{{\sub wyj}} = {round(math.pi * self.model.data['nwyj'] / 30, 2)} [rad/s]", False, False, 500)
 
         a = "{\\trowd\\trleft3200"
         b = "{\\trowd\\trleft4000"

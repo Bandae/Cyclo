@@ -285,11 +285,11 @@ class FunctionsCalculator():
             'LA': self._data['LA'][0],
             'Li': self._eccentrics_positions,
             'LB': self._data['LB'][0],
-            'n': self._data['n'][0],
+            'n_k': self._data['n_k'][0],
             'ds': self._data['dsc'][0],
             'de': self._data['dec'][0],
             'B': self._data['B'][0],
-            'Bx': [self._data['B'][0] for _ in range(self._data['n'][0])],
+            'Bx': [self._data['B'][0] for _ in range(self._data['n_k'][0])],
             'e': self._data['e'][0],
             'x': self._data['x'][0]}
         

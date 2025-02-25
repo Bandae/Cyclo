@@ -78,14 +78,21 @@ class MainWindow(QMainWindow):
         self.help_button.pressed.connect(self.helpClicked)
 
         self.tab_titles = ["Zarys", "Mechanizm Wyj I", "Mechanizm Wyj II", "Mechanizm Wej"]
+        self.tab_buttons = []
         self.stacked_widgets = [self.gear_tab, self.pin_out_tab, roller_out_tab, self.input_shaft_tab_controller]
 
         for index, (title, widget) in enumerate(zip(self.tab_titles, self.stacked_widgets)):
             button = QPushButton(title)
             button_layout.addWidget(button)
+            button.pressed.connect(partial(self.activateTab, index))
+            self.tab_buttons.append(button)
+
             self.stacklayout.addWidget(widget.getView())
             widget.dataChanged.connect(self.exchangeData)
-            button.pressed.connect(partial(self.activateTab, index))
+            widget.filledOut.connect(partial(self.tabFilledOut, tab_index=index))
+        
+        for button in self.tab_buttons[1::]:
+            button.setEnabled(False)
         
         #Menu główne:
         menu = self.menuBar()
@@ -182,11 +189,6 @@ class MainWindow(QMainWindow):
             event.ignore()
 
     def activateTab(self, index):
-        old_index = self.stacklayout.currentIndex()
-        # TODO: to zrobic zeby nie bylo potrzebne
-        # if old_index == 0 or old_index == 1:
-        #     self.stacked_widgets[old_index].data.recalculate()
-        
         self.stacklayout.setCurrentIndex(index)
         self.help_button.show()
         if index == 0:
@@ -207,6 +209,13 @@ class MainWindow(QMainWindow):
         self.animation_view.animation.updateData(data)
         if data.get("GearTab") is not None:
             self.animation_view.animationControls.setEnabled(True)
+    
+    def tabFilledOut(self, tab_index):
+        if tab_index == 0:
+            self.tab_buttons[1].setEnabled(True)
+            self.tab_buttons[2].setEnabled(True)
+        if tab_index == 1 or tab_index == 2:
+            self.tab_buttons[3].setEnabled(True)
 
     def generateRaport(self):
         if self.error_box.errorsExist():
@@ -261,15 +270,14 @@ class MainWindow(QMainWindow):
                 f.write("0\nSECTION\n2\nENTITIES\n")
 
                 data = ''
-                z, ro = self.gear_tab.data.dane_all["z"], self.gear_tab.data.dane_all["ro"]
-                h, g = self.gear_tab.data.dane_all["lam"], self.gear_tab.data.dane_all["g"]
-                e = self.gear_tab.data.dane_all["e"]
-                Rg = self.gear_tab.data.dane_all["Rg"]
+                z, ro = self.gear_tab.model.data["z"], self.gear_tab.model.data["ro"]
+                h, g = self.gear_tab.model.data["lam"], self.gear_tab.model.data["g"]
+                e = self.gear_tab.model.data["e"]
+                Rg = self.gear_tab.model.data["Rg"]
 
                 wheel_layer_name = "zarys"
 
                 data += f"0\nPOLYLINE\n8\n{wheel_layer_name}\n66\n1\n"
-                # TODO: dokładniejsza konwersja na radiany` jest konieczna, żeby nie było drobnych błędów, przecinania kół.
                 for j in range(0, 1440):
                     i = j / 4
                     x = (ro * (z + 1) * math.cos(i * 0.01745329)) - (h * ro * (math.cos((z + 1) * i * 0.01745329))) - ((g * ((math.cos(i * 0.01745329) - (h * math.cos((z + 1) * i * 0.01745329))) / (math.sqrt(1 - (2 * h * math.cos(z * i * 0.01745329)) + (h * h))))))
@@ -293,9 +301,9 @@ class MainWindow(QMainWindow):
                 data += f"0\nCIRCLE\n8\n{layer_name}\n10\n0\n20\n0\n40\n{Rg}\n"
 
                 if self.pin_out_tab.use_this_check.isChecked():
-                    radius, bushings_count = self.pin_out_tab.data.input_dane["R_wt"], self.pin_out_tab.data.input_dane["n"]
-                    pin_diameter, bushing_diameter = self.pin_out_tab.data.input_dane["d_sw"], self.pin_out_tab.data.input_dane["d_tul"]
-                    hole_diameter = self.pin_out_tab.data.obliczone_dane["d_otw"]
+                    radius, bushings_count = self.pin_out_tab.model.input_dane["R_wt"], self.pin_out_tab.model.input_dane["n_pin"]
+                    pin_diameter, bushing_diameter = self.pin_out_tab.model.input_dane["d_sw"], self.pin_out_tab.model.input_dane["d_tul"]
+                    hole_diameter = self.pin_out_tab.model.obliczone_dane["d_otw"]
 
                     layer_name = "mechanizm_wyjsciowy"
                     for i in range(bushings_count):
@@ -332,14 +340,22 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku: {str(e)}')
         
-        if data is None or list(data.keys()) != self.tab_titles:
-            # QMessageBox.critical(self, 'Błąd', f'Wystąpił błąd przy wczytywaniu pliku.')
-            return
-        
         self.loaded_file = file_path
+
+        # To load data, values need to be set on spin boxes and other inputs.
+        # However, doing this while the first module is open breaks the layout for pin mechanism (it stays as small layout, and doesn't change even after.)
+        # So, if the the first tab is filled out, switch to the 2nd before loading. TODO Figure out layouts better.
         self.base_data.loadData(data.get("base"))
-        for key, tab in zip(self.tab_titles, self.stacked_widgets):
-            tab.loadData(data.get(key))
+        
+        self.gear_tab.loadData(data.get(self.tab_titles[0]))
+        if self.tab_buttons[1].isEnabled():
+            self.activateTab(1)
+            self.pin_out_tab.loadData(data.get(self.tab_titles[1]))
+        
+        self.stacked_widgets[2].loadData(data.get(self.tab_titles[2]))
+        self.stacked_widgets[3].loadData(data.get(self.tab_titles[3]))
+        # for key, tab in zip(self.tab_titles, self.stacked_widgets):
+        #     tab.loadData(data.get(key))
         
     def saveToJSON(self, mode="save"):
         '''Zapis do pliku JSON. Wywołuje na każdej zakładce metodę saveData(), zbiera zwrócone przez nie dane i zapisuje jako obiekty,
@@ -350,7 +366,7 @@ class MainWindow(QMainWindow):
         def save_ess(f_path, dane):
             try:
                 with open(f_path, 'w') as f:
-                    json.dump(dane, f)
+                    json.dump(dane, f, indent=2)
                 QMessageBox.information(self, 'Plik zapisany', 'Dane zostały zapisane do pliku JSON.')
                 self.loaded_file = f_path
             except Exception as e:

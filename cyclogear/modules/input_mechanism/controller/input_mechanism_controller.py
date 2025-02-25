@@ -247,23 +247,27 @@ class InputMechanismController(AbstractTab):
         # kiedy już się dojdzie pierwszy raz do którejś zakładki to jest "odblokowana" i nawet jak coś sie zmieni wcześniej i np. poprzednia zakładka jest niewypełniona - to nadal jest dostęp do tej następnej.
 
         wanted_data = None
-        if new_data.get("GearTab") is not None: # rw1, B, n, e, Fwzx, Fwzy, n
+        if new_data.get("GearTab") is not None: # R_w1, B, n, e, F_wzx, F_wzy, n
             wanted_data = new_data.get("GearTab")
-            self._calculator.update_data({
-                'Fwzx': [wanted_data["Fwzx"], 'N'],
-                'Fwzy': [wanted_data["Fwzy"], 'N'],
-                'n': [wanted_data["K"], ''],
-                'B': [wanted_data["B"], 'mm'],
-                'rw1': [wanted_data["R_w1"], 'mm'],
-                'e': [wanted_data["e"], 'mm']
-            })
+            # TODO: this allows only updating passed values. Might not be neccesary when this module is blocked until the others are filled out.
+            desired = (('F_wzx', 'N'), ('F_wzy', 'N'), ('n_k', 'N'), ('B', 'mm'), ('R_w1', 'mm'), ('e', 'mm'))
+            self._calculator.update_data({key: [wanted_data[key], unit] for key, unit in desired if wanted_data.get(key) is not None})
+            # self._calculator.update_data({
+            #     'F_wzx': [wanted_data["F_wzx"], 'N'],
+            #     'F_wzy': [wanted_data["F_wzy"], 'N'],
+            #     'n_k': [wanted_data['n_k'], ''],
+            #     'B': [wanted_data["B"], 'mm'],
+            #     'R_w1': [wanted_data["R_w1"], 'mm'],
+            #     'e': [wanted_data["e"], 'mm']
+            # })
 
             self._calculator.set_initial_data() # to tylko przelicza na podstawie nowych danych zależne od nich dane w kalkulatorze. Trzeba jeszcze je wpisać w view.
-            self.tabs[0]._outputs["B"][0].setValue(wanted_data["B"]) # zakladka pierwsza
+            if wanted_data.get("B") is not None:
+                self.tabs[0]._outputs["B"][0].setValue(wanted_data["B"]) # zakladka pierwsza
             self.tabs[0]._outputs["e"][0].setValue(wanted_data["e"]) # atrybuty łożysk w input_mech_calc, łączna strata mocy w łożyskach w ostatniej zakładce
             self.tab_controllers[0].update_state()
 
-            # rw1, e -- zmienia straty mocy w łożyskach.
+            # R_w1, e -- zmienia straty mocy w łożyskach.
             for section_id in ['support_A', 'support_B', 'eccentrics']:
                 # Zakłada, że straty się zmienią tylko jeśli zmieni się f, znormalizowana średnica, lub zmieni się łożysko w poprzedniej zakładce.
                 # reasumując - muszę zrobić przeliczenie tylko jeśli jest wypełniona dana sekcja. Jeśli nie jest, to i tak będzie musiała być przeliczona później, a wtedy zaciągnie już nowe dane.
@@ -304,7 +308,7 @@ class InputMechanismController(AbstractTab):
 
         # Wszystkie nowe dane należy najpierw wpisać do głównego słownika z danymi przez self._calculator.update_data()
         #       niestety, trzeba podawać jednostki; wpisywanie bezpośrednio wartości do 0-wego elementu jest wątpliwe, bo obchodzi wewnętrzne funkcje tego modułu do zarządzania danymi (fetch_data_subset)
-        #       dodatkowo:  F_wmr, Fwzx, Fwzy -- zależą od nich inne dane w kalkulatorze. Należy wywołać self._calculator.set_initial_data()
+        #       dodatkowo:  F_wmr, F_wzx, F_wzy -- zależą od nich inne dane w kalkulatorze. Należy wywołać self._calculator.set_initial_data()
         
         # 1) self.tabs[0]._outputs["..."][0].setValue(...)
         #       3 dane wyświetlane na początku modułu. Trzeba je ręcznie aktualizować (bo założono, że sie nie zmieniają)
@@ -312,7 +316,7 @@ class InputMechanismController(AbstractTab):
 
         # 2) self.tab_controllers[0].update_state()
         #       Ta metoda poprawia min-maxy w pierwszej zakładce, i czyści pola które się w nowych nie mieszczą, oraz wszystko za nimi.
-        #       Potrzebna po: B, x, e. Możliwe, że po F_wmr, Fwzx, Fwzy też.
+        #       Potrzebna po: B, x, e. Możliwe, że po F_wmr, F_wzx, F_wzy też.
 
         # 3) przejście po sub-sekcjach zakładki łożysk, wywołanie _on_bearing_data_provided.
         #       Zewnętrzne dane wpływają na nośność - C. Wykonać ponownie obliczenia trzeba więc tylko jeśli wszystko do nośności jest już podane, a ona obliczona.
@@ -321,7 +325,7 @@ class InputMechanismController(AbstractTab):
 
         # 4) przejście po sub-sekcjach zakładki strat mocy, wywołanie _on_rolling_element_data_provided.
         #       Analogicznie do 2), odnośnik == dataSubsections
-        #       Potrzebne po: rw1, e, w0
+        #       Potrzebne po: R_w1, e, w0
 
         # 5) self.tab_controllers[3].update_state()
         #       Aktualizacja wyników

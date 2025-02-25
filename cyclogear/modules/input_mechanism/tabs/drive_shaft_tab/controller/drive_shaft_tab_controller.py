@@ -85,7 +85,7 @@ class DriveShaftTabController():
         """
         Update the tab with component data.
         """
-        if len(self._tab_data['Lc']) != self._component_data['n'][0]-1:
+        if len(self._tab_data['Lc']) != self._component_data['n_k'][0]-1:
             self._tab_data['Lc'] = extract_data(self._component_data, [['Lc']])['Lc']
             self._inputs['Lc'] = extract_data(self._component_data, [['Lc']])['Lc']
             self._tab.updateEccentricsComponent()

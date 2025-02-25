@@ -19,8 +19,10 @@ DaneZapis = Dict[str, Union[int, float, str, dict, list]]
 class AbstractTab(QWidget):
     '''Abstrakcyjna klasa do dziedziczenia przez każdą z naszych zakładek.'''
 
-    dataChanged = Signal(dict)
     # sygnal wysyłany, kiedy zmienią się dane potrzebne dla innych zakładek
+    dataChanged = Signal(dict)
+    # sygnał wysyłany, kiedy zakładka została wypełniona i można aktywować kolejne zakładki
+    filledOut = Signal()
 
     def getView(self) -> QWidget:
         '''

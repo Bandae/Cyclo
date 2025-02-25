@@ -117,7 +117,7 @@ class Animation(QLabel):
             drawBushingsAndPins(painter, self.scale, self._dataWiktor, {'bushings': self.BRONZE, 'pins': self.STEEL})
 
         # Handle additional components based on configuration
-        if self._data["K"] == 2:
+        if self._data['n_k'] == 2:
             painter.translate(translation_x, translation_y)
             painter.setBrush(QBrush(self.PASTEL_BLUE2, Qt.SolidPattern))
             
@@ -316,7 +316,7 @@ def cutHoles(outlinePath, scale, bushingData, initialRotationDegrees):
     Returns:
         The modified QPainterPath with holes cut out.
     """
-    bushingsCount = bushingData["n"]  # Number of bushings
+    bushingsCount = bushingData['n_pin']  # Number of bushings
     bushingRadius = bushingData["R_wt"]  # Radius for the bushing placement circle
     holeDiameter = bushingData["d_otw"] * scale  # Diameter of each hole (scaled)
 
@@ -350,7 +350,7 @@ def drawBushingsAndPins(painter, scale, bushingData, colors):
         bushingData: Dictionary containing data related to the bushings.
         colors: Dictionary of colors for drawing the bushings and pins.
     """
-    bushingsCount = bushingData["n"]  # Number of bushings
+    bushingsCount = bushingData['n_pin']  # Number of bushings
     bushingRadius = bushingData["R_wt"]  # Radius for the bushing placement circle
     pinDiameter = bushingData["d_sw"] * scale  # Diameter of the pins (scaled)
     bushingDiameter = bushingData["d_tul"] * scale  # Diameter of the bushings (scaled)

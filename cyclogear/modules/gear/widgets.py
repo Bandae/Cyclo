@@ -1,7 +1,7 @@
 from typing import Dict, Optional
 from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QFrame, QGridLayout, QComboBox, QPushButton
-from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, StatusDiodes
+from PySide2.QtWidgets import QFrame, QGridLayout, QPushButton
+from common.common_widgets import DoubleSpinBox, QLabelD, IntSpinBox, ComboBox
 from .calculations import calculate_gear, get_lam_min, get_ro_min, gear_error_check
 
 
@@ -24,7 +24,7 @@ class VisualsFrame(QFrame):
             "ro": DoubleSpinBox(self.model.data["ro"], 1, 8, 0.05),
             "lam": DoubleSpinBox(self.model.data["lam"], 0.5, 0.99, 0.005, 3),
             "g": DoubleSpinBox(self.model.data["g"], 3, 14, 0.02),
-            "K": IntSpinBox(self.model.data["K"], 1, 2, 1),
+            'n_k': IntSpinBox(self.model.data['n_k'], 1, 2, 1),
         }
         for widget in self.inputs.values():
             widget.valueChanged.connect(self.changed)
@@ -34,7 +34,7 @@ class VisualsFrame(QFrame):
         self.accept_button.clicked.connect(self.okClicked)
 
         layout.addWidget(QLabelD("Liczba Kół - K"), 1, 0, 1, 4)
-        layout.addWidget(self.inputs["K"], 1, 4, 1, 2)
+        layout.addWidget(self.inputs['n_k'], 1, 4, 1, 2)
         layout.addWidget(QLabelD("Liczba Zębów - z"), 3, 0, 1, 4)
         layout.addWidget(self.label_z, 3, 4, 1, 2)
         layout.addWidget(QLabelD("Promień - ρ [mm]"), 4, 0, 1, 4)
@@ -48,17 +48,17 @@ class VisualsFrame(QFrame):
     def changed(self):
         self.is_accepted = False
         self.accepted.emit(False)
+        for key, widget in self.inputs.items():
+            self.model.data[key] = widget.value()
+        
         if not all(widget.value() is not None for widget in self.inputs.values()):
             return
         
         self.filled_out = True
-        for key, widget in self.inputs.items():
-            self.model.data[key] = widget.value()
-        
         self.afterChanges()
     
     def okClicked(self):
-        # data is already written into the model when inputs are changed. (That is neccesary to calculate all wheel parameters needed for animation update)
+        # data is already written into the model when all inputs are changed. (That is neccesary to calculate all wheel parameters needed for animation update)
         self.accept_button.setEnabled(False)
         self.filled_out = True
         self.is_accepted = True
@@ -89,6 +89,13 @@ class VisualsFrame(QFrame):
         self.model.refillData()
         self.model.sendAnimationData()
         self.accept_button.setEnabled(True)
+    
+    def loadData(self, new_input_data) -> None:
+        for key, widget in self.inputs.items():
+            widget.blockSignals(True)
+            widget.setValue(new_input_data[key])
+            widget.blockSignals(False)
+        self.changed()
 
 
 class ResultsFrame(QFrame):
@@ -146,7 +153,7 @@ class MaterialFrame(QFrame):
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setMaximumHeight(400)
 
-        self.mat_inputs = {"wheel_mat": QComboBox(), "roller_mat": QComboBox(), "wheel_treat": QComboBox(), "roller_treat": QComboBox()}
+        self.mat_inputs = {"wheel_mat": ComboBox(), "roller_mat": ComboBox(), "wheel_treat": ComboBox(), "roller_treat": ComboBox()}
         self.mat_inputs["wheel_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values()])
         self.mat_inputs["roller_mat"].addItems([mat["nazwa"] for mat in self.model.materials.values() if mat["type"] == "steel"])
         
@@ -206,9 +213,6 @@ class MaterialFrame(QFrame):
             self.mat_inputs["roller_treat"].setCurrentText(roller_treat)
         self.mat_inputs["wheel_treat"].blockSignals(False)
         self.mat_inputs["roller_treat"].blockSignals(False)
-
-        self.model.material_data["wheel_treat"] = self.mat_inputs["wheel_treat"].currentText()
-        self.model.material_data["roller_treat"] = self.mat_inputs["roller_treat"].currentText()
         
         self.data_labels["wh_E"].setText("E: " + str(wh_mat["E"]) + " MPa")
         self.data_labels["wh_v"].setText("v: " + str(wh_mat["v"]))
@@ -218,6 +222,9 @@ class MaterialFrame(QFrame):
         self.updateTreat(sendSignal)
 
     def updateTreat(self, sendSignal=False):
+        self.model.material_data["wheel_treat"] = self.mat_inputs["wheel_treat"].currentText()
+        self.model.material_data["roller_treat"] = self.mat_inputs["roller_treat"].currentText()
+        
         p_dop = self.model.findAllowedPressure()
         self.p_dop_label.setText("p<sub>dop</sub> = " + str(p_dop) + " MPa")
 
@@ -225,9 +232,9 @@ class MaterialFrame(QFrame):
             self.wheelMatChanged.emit(self.model.material_data["wheel_mat"], self.model.material_data["wheel_treat"])
         self.changed.emit()
 
-    def copyDataToInputs(self, new_input_data):
+    def loadData(self, new_input_data):
         for key in self.mat_inputs:
-            self.mat_inputs[key].setCurrentText(new_input_data[key]["nazwa"])
-
-        for key in self.other_data:
-            self.data_inputs[key].setValue(new_input_data[key])
+            if key in ("wheel_mat", "roller_mat"):
+                self.mat_inputs[key].setCurrentText(new_input_data[key]["nazwa"])
+            else:
+                self.mat_inputs[key].setCurrentText(new_input_data[key])

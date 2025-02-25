@@ -22,6 +22,7 @@ from .model import PinOutputMechanismModel
 
 class DataEdit(QWidget):
     changeDiode = Signal(StatusDiodes.Status)
+    filledOut = Signal()
     
     def __init__(self, parent: AbstractTab, model) -> None:
         super().__init__(parent)
@@ -77,21 +78,12 @@ class DataEdit(QWidget):
     def visualsChanged(self, is_accepted):
         for child in (child for child in self.children() if child != self.visual_frame):
             child.setEnabled(is_accepted)
+        
+        if is_accepted:
+            for widget in self.tuning_widgets.values():
+                widget.setEnabled(False)
     
     def setupLayout(self, layout: QGridLayout) -> None:
-        # layout.setVerticalSpacing(10)
-        # n_label = QLabelD("Liczba sworzni [n]")
-        # layout.addWidget(n_label, 0, 0, 1, 2)
-        # layout.addWidget(self.input_widgets["n"], 0, 2, 1, 2)
-        # lab_Rwt = QLabelD("R<sub>wt</sub> [mm]")
-        # lab_Rwt.setToolTip("Promień rozmieszczenia sworzni")
-        # layout.addWidget(lab_Rwt, 1, 0)
-        # layout.addWidget(self.input_widgets["R_wt"], 1, 1)
-        # name_Rwk = QLabelD("R<sub>wk</sub>")
-        # name_Rwk.setToolTip("Promień rozmieszczenia otworów w kole cykloidalnym")
-        # layout.addWidget(name_Rwk, 1, 2)
-        # layout.addWidget(self.Rwk_label, 1, 3)
-        # TODO: moze byc za male
         layout.addWidget(self.visual_frame, 0, 0, 2, 4)
         layout.addWidget(self.material_frame, 0, 5, 6, 4)
         layout.addWidget(self.ch_support_button, 2, 0, 1, 2)
@@ -213,16 +205,9 @@ class DataEdit(QWidget):
 
         self.results_frame.update()
         self.accept_button.setEnabled(False)
+        self.filledOut.emit()
         for widget in self.tuning_widgets.values():
             widget.setEnabled(True)
-
-    # TODO: fix with new changes
-    # def copyDataToInputs(self, new_input_data: Dict[str, Union[int, float]]) -> None:
-    #     for key in self.input_widgets:
-    #         self.input_widgets[key].blockSignals(True)
-    #         self.input_widgets[key].setValue(new_input_data[key])
-    #         self.input_widgets[key].blockSignals(False)
-    #     self.recalculate()
 
     def closeChoiceWindow(self, choice: str) -> None:
         self.model.input_dane["podparcie"] = choice
@@ -234,6 +219,21 @@ class DataEdit(QWidget):
     def toleranceUpdate(self, tol_data: Optional[Dict[str, Union[float, Tuple[float, float]]]]) -> None:
         self.model.tol_data = tol_data
         self.recalculate()
+    
+    def loadData(self, new_input_data):
+        '''
+        Method called on loading a saved file. Sets values in inputs while signals are blocked.
+        This avoids side effects, and any recalculating methods are called from the top module class as needed.
+        '''
+        self.ch_var_label.setText(new_input_data["podparcie"])
+        for key in self.input_widgets:
+            self.input_widgets[key].blockSignals(True)
+            self.input_widgets[key].setValue(new_input_data[key])
+            self.input_widgets[key].blockSignals(False)
+        for key in self.tuning_widgets:
+            self.tuning_widgets[key].blockSignals(True)
+            self.tuning_widgets[key].setValue(new_input_data[key])
+            self.tuning_widgets[key].blockSignals(False)
 
 
 class PinOutTab(AbstractTab):
@@ -297,6 +297,7 @@ class PinOutTab(AbstractTab):
         self.model.chartDataUpdated.connect(self.wykresy.updateResults)
         self.model.changeDiode.connect(self.diodes.enableDiode)
         self.data.changeDiode.connect(self.diodes.enableDiode)
+        self.data.filledOut.connect(self.filledOut.emit)
         self.tol_edit.toleranceDataUpdated.connect(self.data.toleranceUpdate)
         self.use_this_check.stateChanged.connect(self.useThisChanged)
 
@@ -356,45 +357,50 @@ class PinOutTab(AbstractTab):
             if self.model.zew_dane.get(key) is not None:
                 self.model.zew_dane[key] = wanted_data[key]
 
-        # if wanted_data.get("K") == 2:
+        # if wanted_data.get('n_k') == 2:
         #     self.data.label_e2.show()
         #     self.data.input_widgets["e2"].show()
-        # elif wanted_data.get("K") == 1:
+        # elif wanted_data.get('n_k') == 1:
         #     self.data.label_e2.hide()
         #     self.data.input_widgets["e2"].hide()
         if not self.model.module_enabled:
             return
 
         if self.diodes.current_status == StatusDiodes.Status.WARNING:
-            self.model.sendAnimationUpdates(self.model.input_dane["n"], self.model.input_dane["R_wt"])
+            self.model.sendAnimationUpdates(self.model.input_dane['n_pin'], self.model.input_dane["R_wt"])
         elif self.diodes.current_status == StatusDiodes.Status.OK:
             self.data.recalculate()
 
-    # TODO: update save & loading, report csv etc.
     def saveData(self) -> Dict:
-        # self.data.recalculate()
         return {
-            "input_dane": self.data.input_dane,
-            "zew_dane": self.data.zew_dane,
-            "material_data": self.model.material_data,
-            "tolerancje": self.tol_edit.tolerancje,
+            "model_data": self.model.saveData(),
+            "visual_frame_accepted": self.data.visual_frame.is_accepted,
+            "module_enabled": self.use_this_check.isChecked(),
+            "module_accepted": not self.data.accept_button.isEnabled(), # TODO: will work wrong on module disabled maybe
+            "tolerance_input_state": self.tol_edit.saveData(),
             "tol_mode": self.tol_edit.mode,
             "use_tol": self.tol_edit.check.isChecked()
         }
 
     def loadData(self, new_data: Dict) -> None:
-        self.tol_edit.copyDataToInputs(new_data.get("tolerancje"))
-        if new_data.get("tol_mode") == "deviations":
-            self.tol_edit.tol_check.setChecked(False)
-            self.tol_edit.dev_check.setChecked(True)
-        else:
-            self.tol_edit.tol_check.setChecked(True)
-            self.tol_edit.dev_check.setChecked(False)
-        self.tol_edit.check.setChecked(new_data.get("use_tol"))
+        if new_data is None:
+            return
+        
+        if new_data["module_enabled"]:
+            self.use_this_check.setChecked(True),
 
-        self.data.material_frame.loadData(new_data.get("material_data"))
-        self.data.zew_dane = new_data.get("zew_dane")
-        self.data.copyDataToInputs(new_data.get("input_dane"))
+        self.data.visual_frame.loadData(new_data["model_data"]["input_dane"])
+        self.data.loadData({**new_data["model_data"]["input_dane"], **new_data["model_data"]["obliczone_dane"]})
+        self.data.material_frame.loadData(new_data["model_data"]["material_data"])
+        self.tol_edit.loadData(new_data.get("tolerance_input_state"), new_data.get("tol_mode"), new_data.get("use_tol"))
+
+        if new_data["visual_frame_accepted"]:
+            self.data.visual_frame.okClicked()
+        
+        self.model.loadData(new_data["model_data"])
+
+        if new_data["module_accepted"]:
+            self.data.recalculate()
 
     def reportData(self) -> str:
         def indent_point(point_text, bullet, bold, sa=100):
@@ -409,42 +415,42 @@ class PinOutTab(AbstractTab):
 
         text = "{\\pard\\b Mechanizm wyjściowy \\line\\par}"
         text += "{\\pard\\sa200\\b Dane: \\par}"
-        text += indent_point(f"Liczba sworzni z tulejami: n = {self.data.input_dane['n']}", True, True)
-        text += indent_point(f"Promień rozmieszczenia sworzni z tulejami: R{{\sub wt}} = {self.data.input_dane['R_wt']} [mm]", True, True)
-        if self.data.zew_dane["K"] == 2:
-            text += indent_point(f"Odstęp pomiędzy kołami: x = {self.data.input_dane['e2']} [mm]", True, True)
+        text += indent_point(f"Liczba sworzni z tulejami: n = {self.model.input_dane['n_pin']}", True, True)
+        text += indent_point(f"Promień rozmieszczenia sworzni z tulejami: R{{\sub wt}} = {self.model.input_dane['R_wt']} [mm]", True, True)
+        if self.model.zew_dane['n_k'] == 2:
+            text += indent_point(f"Odstęp pomiędzy kołami: x = {self.model.input_dane['e2']} [mm]", True, True)
         
         text += "{\\pard\\sa200\\b Materiały: \\par}"
         text += "{\\pard\\sa100 koło cykloidalne: \\par}"
-        text += indent_point(f"Materiał: {materials['wheel']['nazwa']}", False, False)
-        text += indent_point(f"Moduł Younga: E = {materials['wheel']['E']} [MPa]", False, False)
-        text += indent_point(f"Liczba Poissona: v = {materials['wheel']['v']}", False, False)
+        text += indent_point(f"Materiał: {materials['wheel_mat']['nazwa']}", False, False)
+        text += indent_point(f"Moduł Younga: E = {materials['wheel_mat']['E']} [MPa]", False, False)
+        text += indent_point(f"Liczba Poissona: v = {materials['wheel_mat']['v']}", False, False)
         text += "{\\pard\\sa100 tuleja: \\par}"
-        text += indent_point(f"Materiał: {materials['sleeve']['nazwa']}", False, False)
-        text += indent_point(f"Moduł Younga: E = {materials['sleeve']['E']} [MPa]", False, False)
-        text += indent_point(f"Liczba Poissona: v = {materials['sleeve']['v']}", False, False)
+        text += indent_point(f"Materiał: {materials['sleeve_mat']['nazwa']}", False, False)
+        text += indent_point(f"Moduł Younga: E = {materials['sleeve_mat']['E']} [MPa]", False, False)
+        text += indent_point(f"Liczba Poissona: v = {materials['sleeve_mat']['v']}", False, False)
         text += "{\\pard\\sa100 sworzeń: \\par}"
-        text += indent_point(f"Materiał: {materials['pin']['nazwa']}", False, False)
-        text += indent_point(f"Granica plastyczności: R{{\sub e}} {materials['pin']['Re']} [MPa]", False, False)
-        text += indent_point(f"Współczynnik bezpieczeństwa: k = {materials['pin_sft_coef']}", False, False)
+        text += indent_point(f"Materiał: {materials['pin_mat']['nazwa']}", False, False)
+        text += indent_point(f"Granica plastyczności: R{{\sub e}} {materials['pin_mat']['Re']} [MPa]", False, False)
+        text += indent_point(f"Współczynnik bezpieczeństwa: k = {materials['pin_safety_coef']}", False, False)
         
-        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy otworami a tulejami: f{{\sub k-t}} = {self.data.input_dane['f_kt']:.5f} [m]\\par}}"
-        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy tulejami a sworzniami: f{{\sub t-s}} = {self.data.input_dane['f_ts']:.5f} [m]\\par}}"
+        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy otworami a tulejami: f{{\sub k-t}} = {self.model.input_dane['f_kt']:.5f} [m]\\par}}"
+        text += f"{{\\pard\\sa100 Współczynnik tarcia tocznego pomiędzy tulejami a sworzniami: f{{\sub t-s}} = {self.model.input_dane['f_ts']:.5f} [m]\\par}}"
         text += indent_point(f"Nacisk dopuszczalny (dla pary materiałów): p{{\sub dop}} = {materials['p_dop']} [MPa]", False, False)
 
         text += "{\\pard\\sa200\\b Obliczenia: \\par}"
         text += indent_point("Siły działające na sworzeń:", True, True)
         text += indent_point(f"Maksymalna siła działająca na sworzeń: F{{\sub max}} = {wyniki['F_max']} [N]", False, False)
-        text += indent_point(f"Wypadkowa siła w mechanizmie: F{{\sub wmr}} = {self.data.obliczone_dane['F_wmr']} [N]", False, False)
-        text += indent_point(f"Ramię działania siły wypadkowej w mechanizmie: r{{\sub mr}} = {self.data.obliczone_dane['r_mr']} [mm]", False, False, 500)
+        text += indent_point(f"Wypadkowa siła w mechanizmie: F{{\sub wmr}} = {self.model.obliczone_dane['F_wmr']} [N]", False, False)
+        text += indent_point(f"Ramię działania siły wypadkowej w mechanizmie: r{{\sub mr}} = {self.model.obliczone_dane['r_mr']} [mm]", False, False, 500)
         
         text += indent_point("Geometria mechanizmu wyjściowego:", True, True)
-        text += indent_point(f"Sposób podparcia sworznia: {self.data.input_dane['podparcie']}", False, False)
-        text += indent_point(f"Obliczona średnica sworznia: d{{\sub sobl}} = {self.data.obliczone_dane['d_sw']} [mm]", False, False)
-        text += indent_point(f"Przyjęta średnica sworznia: d{{\sub s}} = {self.data.input_dane['d_sw']} [mm]", False, False)
-        text += indent_point(f"Obliczona średnica zewnętrzna tulei: d{{\sub tzobl}} = {self.data.obliczone_dane['d_tul']} [mm]", False, False)
-        text += indent_point(f"Przyjęta średnica zewnętrzna tulei: d{{\sub tz}} = {self.data.input_dane['d_tul']} [mm]", False, False)
-        text += indent_point(f"Średnica otworu pod tuleje: d{{\sub o}} = {self.data.obliczone_dane['d_otw']} [mm]", False, False, 500)
+        text += indent_point(f"Sposób podparcia sworznia: {self.model.input_dane['podparcie']}", False, False)
+        text += indent_point(f"Obliczona średnica sworznia: d{{\sub sobl}} = {self.model.obliczone_dane['d_sw_calc']} [mm]", False, False)
+        text += indent_point(f"Przyjęta średnica sworznia: d{{\sub s}} = {self.model.input_dane['d_sw']} [mm]", False, False)
+        text += indent_point(f"Obliczona średnica zewnętrzna tulei: d{{\sub tzobl}} = {self.model.obliczone_dane['d_tul_calc']} [mm]", False, False)
+        text += indent_point(f"Przyjęta średnica zewnętrzna tulei: d{{\sub tz}} = {self.model.input_dane['d_tul']} [mm]", False, False)
+        text += indent_point(f"Średnica otworu pod tuleje: d{{\sub o}} = {self.model.obliczone_dane['d_otw']} [mm]", False, False, 500)
         
         text += indent_point("Naciski pomiędzy tulejami a otworami:", True, True)
         text += indent_point(f"Maksymalne naciski pomiędzy tuleją a otworem: p{{\sub max}} = {wyniki['p_max']} [MPa]", False, False)

@@ -77,7 +77,7 @@ class DriveShaftTabCalculator:
             max_value = self.validated_inputs_values['L']
         elif input_name == 'L1':
             min_value =  self.validated_inputs_values['LA'] + 0.5 * self._component_data['B'][0]
-            max_value = self.validated_inputs_values['LB'] - 0.5 * self._component_data['B'][0] - (self._component_data['x'][0] + self._component_data['B'][0]) * (self._component_data['n'][0] - 1)
+            max_value = self.validated_inputs_values['LB'] - 0.5 * self._component_data['B'][0] - (self._component_data['x'][0] + self._component_data['B'][0]) * (self._component_data['n_k'][0] - 1)
         
         self.validated_inputs_limits[input_name] = (round(min_value, 2), round(max_value, 2))
         self._inputs[input_name][0].setPlaceholderText(f"{min_value:.2f}-{max_value:.2f}")

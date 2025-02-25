@@ -47,7 +47,7 @@ def gear_error_check(z, lam, g, e, Rg, ro):
 def calculate_gear(gear_data, material_data, out_data, tolerancje=None):
     liczba_rolek = gear_data["z"] + 1
     liczba_obciazonych_rolek = int(gear_data["z"]/2 if gear_data["z"]%2 == 0 else (gear_data["z"]+1)/2)
-    F_max = 1000 * 4 * (out_data["M_wyj"] / gear_data["K"]) / (gear_data["Rw1"] * liczba_rolek)
+    F_max = 1000 * 4 * (out_data["M_wyj"] / gear_data['n_k']) / (gear_data["R_w1"] * liczba_rolek)
 
     Fx = [0] * liczba_obciazonych_rolek
     Fy = [0] * liczba_obciazonych_rolek
@@ -65,17 +65,17 @@ def calculate_gear(gear_data, material_data, out_data, tolerancje=None):
 
         #SILY
         al_ki = 2 * math.pi * i / liczba_rolek
-        al_si[i] = (math.pi / 2) - abs(math.atan(gear_data["Rb2"] * math.sin(al_ki) / ((gear_data["Rw1"] + gear_data["e"]) - gear_data["Rb2"] * math.cos(al_ki))))
-        hi = gear_data["Rw1"] * math.cos(al_si[i])
-        Fx[i] = F_max * hi * math.cos(al_si[i]) / gear_data["Rw1"]
-        Fy[i] = F_max * hi * math.sin(al_si[i]) / gear_data["Rw1"]
+        al_si[i] = (math.pi / 2) - abs(math.atan(gear_data["Rb2"] * math.sin(al_ki) / ((gear_data["R_w1"] + gear_data["e"]) - gear_data["Rb2"] * math.cos(al_ki))))
+        hi = gear_data["R_w1"] * math.cos(al_si[i])
+        Fx[i] = F_max * hi * math.cos(al_si[i]) / gear_data["R_w1"]
+        Fy[i] = F_max * hi * math.sin(al_si[i]) / gear_data["R_w1"]
         sily[i] = math.sqrt(Fx[i]**2 + Fy[i]**2)
 
         R_eke[i] = (gear_data["ro"] * liczba_rolek * ((1 - (2 * gear_data["lam"] * math.cos(gear_data["z"] * al_ki)) + (gear_data["lam"]**2))**1.5)/(1-(gear_data["lam"]*(gear_data["z"]+2)*math.cos(gear_data["z"]*al_ki)) + (gear_data["lam"]**2 * liczba_rolek))) - gear_data["g"]
-        naciski[i] = math.sqrt((sily[i] * abs(gear_data["g"] + R_eke[i])) / ((gear_data["g"] * abs(R_eke[i]) * gear_data["b_wheel"]) * (((1 - material_data["wheel_mat"]["v"]**2) / material_data["wheel_mat"]["E"]) + ((1 - material_data["roller_mat"]["v"]**2) / material_data["roller_mat"]["E"])) * math.pi))
+        naciski[i] = math.sqrt((sily[i] * abs(gear_data["g"] + R_eke[i])) / ((gear_data["g"] * abs(R_eke[i]) * gear_data["B"]) * (((1 - material_data["wheel_mat"]["v"]**2) / material_data["wheel_mat"]["E"]) + ((1 - material_data["roller_mat"]["v"]**2) / material_data["roller_mat"]["E"])) * math.pi))
 
         AIC = math.sqrt(gear_data["Rw2"]**2 + (gear_data["Ra2"] + gear_data["g"])**2 - 2 * gear_data["Rw2"] * (gear_data["Ra2"] + gear_data["g"]) * math.cos(al_ki)) - gear_data["g"]
-        straty[i] = (math.pi * out_data["n_wej"] / 30) * (gear_data["e"] / gear_data["Rw1"]) * ((AIC / gear_data["g"]+1) * gear_data["f_kr"] + (AIC/gear_data["g"]) * gear_data["f_ro"]) * sily[i]
+        straty[i] = (math.pi * out_data["n_wej"] / 30) * (gear_data["e"] / gear_data["R_w1"]) * ((AIC / gear_data["g"]+1) * gear_data["f_kr"] + (AIC/gear_data["g"]) * gear_data["f_ro"]) * sily[i]
 
 
     common_return_values = {
@@ -85,7 +85,7 @@ def calculate_gear(gear_data, material_data, out_data, tolerancje=None):
         "F_wz": round(math.sqrt(sum(Fx)**2 + sum(Fy)**2), 1),
     }
 
-    if tolerancje is not None and type(list(tolerancje.values())[0]) == tuple:
+    if tolerancje is not None and type(list(tolerancje.values())[0]) in (tuple, list):
         results = calculate_gear_tolerances(gear_data, material_data, out_data, sily, R_eke, al_si, tolerancje)
         common_return_values.update(results)
         return common_return_values
@@ -120,27 +120,27 @@ def calculate_gear_clearance(gear_data, material_data, out_data, sily_0, R_eke_0
         x_ozri = (gear_data["Rb2"]+tolerancje["T_Rg"])*math.sin(eta+tolerancje["T_fi_Ri"])
         y_ozri = (gear_data["Rb2"]+tolerancje["T_Rg"])*math.cos(eta+tolerancje["T_fi_Ri"])-(gear_data["e"]+tolerancje["T_e"])
         luzy[i] = ((x_ozri-x_ze)**2 + (y_ozri-y_ze)**2)**0.5 - gear_data["g"]
-        ac[i] = (x_ozri**2 + (y_ozri-gear_data["Rw1"])**2)**0.5 - (gear_data["g"]+tolerancje["T_Rr"])
+        ac[i] = (x_ozri**2 + (y_ozri-gear_data["R_w1"])**2)**0.5 - (gear_data["g"]+tolerancje["T_Rr"])
 
-    c = (4.9*10**-3)*((max(sily_0)/gear_data["b_wheel"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*((max(R_eke_0)*gear_data["g"])/(max(R_eke_0)+gear_data["g"])))**0.5
-    delta_max = (max(sily_0)/(math.pi*gear_data["b_wheel"]))*((((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])*((1/3)+math.log(4*max(R_eke_0)/c)))+(((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"])*((1/3)+math.log(4*gear_data["g"]/c))))
+    c = (4.9*10**-3)*((max(sily_0)/gear_data["B"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*((max(R_eke_0)*gear_data["g"])/(max(R_eke_0)+gear_data["g"])))**0.5
+    delta_max = (max(sily_0)/(math.pi*gear_data["B"]))*((((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])*((1/3)+math.log(4*max(R_eke_0)/c)))+(((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"])*((1/3)+math.log(4*gear_data["g"]/c))))
 
     delta = [delta_max * math.sin(math.pi/2 - alfa) for alfa in al_si_0]
-    h_list = [gear_data["Rw1"] * math.cos(alfa) for alfa in al_si_0]
+    h_list = [gear_data["R_w1"] * math.cos(alfa) for alfa in al_si_0]
     beta_obr = [luz / h for luz, h in zip(luzy, h_list)]
     h_t_beta_obr_min = [h * min(beta_obr[1:-1]) for h in h_list]
 
     temp = [(delta[i]-(luzy[i]-h_t_beta_obr_min[i]))*h_list[i] for i in range(liczba_obciazonych_rolek)]
     temp_sum = sum([el if el > 0 else 0 for el in temp])
 
-    sily_temp = [1000*(out_data["M_wyj"] / gear_data["K"])*(delta[i]-(luzy[i]-h_t_beta_obr_min[i]))/temp_sum for i in range(liczba_obciazonych_rolek)]
+    sily_temp = [1000*(out_data["M_wyj"] / gear_data['n_k'])*(delta[i]-(luzy[i]-h_t_beta_obr_min[i]))/temp_sum for i in range(liczba_obciazonych_rolek)]
     sily = [sila_temp if sila_temp > 0 else 0 for sila_temp in sily_temp]
 
     R_eke = [rek - tolerancje["T_ze"] for rek in R_eke_0]
-    naciski = [((sily[i]*abs(gear_data["g"]+R_eke[i]))/((gear_data["g"]*abs(R_eke[i])*gear_data["b_wheel"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*math.pi))**0.5 for i in range(liczba_obciazonych_rolek)]
+    naciski = [((sily[i]*abs(gear_data["g"]+R_eke[i]))/((gear_data["g"]*abs(R_eke[i])*gear_data["B"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*math.pi))**0.5 for i in range(liczba_obciazonych_rolek)]
 
     omg_wej = math.pi*out_data["n_wej"]/30
-    straty = [omg_wej * (gear_data["e"]/gear_data["Rw1"])*sily[i]*(((ac[i]/(gear_data["g"]+tolerancje["T_Rr"])+1)*gear_data["f_kr"]+(ac[i]/(gear_data["g"]+tolerancje["T_Rr"]))*gear_data["f_ro"])) for i in range(liczba_obciazonych_rolek)]
+    straty = [omg_wej * (gear_data["e"]/gear_data["R_w1"])*sily[i]*(((ac[i]/(gear_data["g"]+tolerancje["T_Rr"])+1)*gear_data["f_kr"]+(ac[i]/(gear_data["g"]+tolerancje["T_Rr"]))*gear_data["f_ro"])) for i in range(liczba_obciazonych_rolek)]
 
     return {
         "p_max": round(max(naciski), 2),
@@ -166,10 +166,10 @@ def calculate_gear_tolerances(gear_data, material_data, out_data, sily_0, R_eke_
     odch_e = normal_in_tolerance(gear_data["e"], tolerancje["T_e"], sample_amount=SAMPLES)
 
     omg_wej = math.pi*out_data["n_wej"]/30
-    c = (4.9*10**-3)*((max(sily_0)/gear_data["b_wheel"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*((max(R_eke_0)*gear_data["g"])/(max(R_eke_0)+gear_data["g"])))**0.5
-    delta_max = (max(sily_0)/(math.pi*gear_data["b_wheel"]))*((((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])*((1/3)+math.log(4*max(R_eke_0)/c)))+(((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"])*((1/3)+math.log(4*gear_data["g"]/c))))
+    c = (4.9*10**-3)*((max(sily_0)/gear_data["B"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*((max(R_eke_0)*gear_data["g"])/(max(R_eke_0)+gear_data["g"])))**0.5
+    delta_max = (max(sily_0)/(math.pi*gear_data["B"]))*((((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])*((1/3)+math.log(4*max(R_eke_0)/c)))+(((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"])*((1/3)+math.log(4*gear_data["g"]/c))))
     delta = np.array([delta_max * math.sin(math.pi/2 - alfa) for alfa in al_si_0])
-    h_list = np.array([gear_data["Rw1"] * math.cos(al_si) for al_si in al_si_0])
+    h_list = np.array([gear_data["R_w1"] * math.cos(al_si) for al_si in al_si_0])
 
     luzy = np.zeros(SAMPLES*liczba_obciazonych_rolek)
     ac = np.zeros(SAMPLES*liczba_obciazonych_rolek)
@@ -180,7 +180,7 @@ def calculate_gear_tolerances(gear_data, material_data, out_data, sily_0, R_eke_
         x_ozri = odch_rb2[i//liczba_obciazonych_rolek]*math.sin(odch_eta[i])
         y_ozri = odch_rb2[i//liczba_obciazonych_rolek]*math.cos(odch_eta[i])-(odch_e[i//liczba_obciazonych_rolek])
         luzy[i] = ((((x_ozri-x_ze)**2)+((y_ozri-y_ze)**2))**0.5)-(gear_data["g"])
-        ac[i] = (x_ozri**2+(y_ozri-gear_data["Rw1"])**2)**0.5-(odch_rolka[i//liczba_obciazonych_rolek])
+        ac[i] = (x_ozri**2+(y_ozri-gear_data["R_w1"])**2)**0.5-(odch_rolka[i//liczba_obciazonych_rolek])
         beta_obr[i] = luzy[i] / h_list[i%liczba_obciazonych_rolek]
 
     h_t_beta_obr_min = np.array([h_list[i%liczba_obciazonych_rolek] * min(beta_obr[(i//liczba_obciazonych_rolek)*liczba_obciazonych_rolek+1:((i//liczba_obciazonych_rolek)+1)*liczba_obciazonych_rolek-1]) for i in range(SAMPLES*liczba_obciazonych_rolek)])
@@ -192,11 +192,11 @@ def calculate_gear_tolerances(gear_data, material_data, out_data, sily_0, R_eke_
     naciski = np.zeros(SAMPLES*liczba_obciazonych_rolek)
     straty = np.zeros(SAMPLES*liczba_obciazonych_rolek)
     for i in range(SAMPLES*liczba_obciazonych_rolek):
-        sila_temp = 1000*(out_data["M_wyj"] / gear_data["K"])*(delta[i%liczba_obciazonych_rolek]-(luzy[i]-h_t_beta_obr_min[i]))/temp_sum
+        sila_temp = 1000*(out_data["M_wyj"] / gear_data['n_k'])*(delta[i%liczba_obciazonych_rolek]-(luzy[i]-h_t_beta_obr_min[i]))/temp_sum
         sily[i] = sila_temp if sila_temp > 0 else 0
         R_eke = R_eke_0[i%liczba_obciazonych_rolek] + gear_data["g"] - odch_zarys[i//liczba_obciazonych_rolek]
-        naciski[i] = ((sily[i]*abs(gear_data["g"]+R_eke))/((gear_data["g"]*abs(R_eke)*gear_data["b_wheel"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*math.pi))**0.5
-        straty[i] = omg_wej * (gear_data["e"]/gear_data["Rw1"])*sily[i]*(((ac[i]/odch_rolka[i//liczba_obciazonych_rolek]+1)*gear_data["f_kr"]+(ac[i]/odch_rolka[i//liczba_obciazonych_rolek])*gear_data["f_ro"]))
+        naciski[i] = ((sily[i]*abs(gear_data["g"]+R_eke))/((gear_data["g"]*abs(R_eke)*gear_data["B"])*(((1-material_data["wheel_mat"]["v"]**2)/material_data["wheel_mat"]["E"])+((1-material_data["roller_mat"]["v"]**2)/material_data["roller_mat"]["E"]))*math.pi))**0.5
+        straty[i] = omg_wej * (gear_data["e"]/gear_data["R_w1"])*sily[i]*(((ac[i]/odch_rolka[i//liczba_obciazonych_rolek]+1)*gear_data["f_kr"]+(ac[i]/odch_rolka[i//liczba_obciazonych_rolek])*gear_data["f_ro"]))
     
     results = {
         "sily": sily,
