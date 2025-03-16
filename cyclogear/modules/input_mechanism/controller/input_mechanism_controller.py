@@ -26,6 +26,13 @@ from db_handler.view.DbItemsWindow import DbItemsWindow
 
 from modules.common.abstract_tab import AbstractTab
 import math
+from PySide2.QtCore import Signal
+
+# TODO HACK: move this
+def bearing_fits_in_cycloidal(error_check_data, eccentric_out_dia):
+    max_dia = error_check_data['R_wt'] * 2 - error_check_data['hole_dia']
+    return eccentric_out_dia < max_dia
+
 
 class InputMechanismController(AbstractTab):
     """
@@ -35,6 +42,8 @@ class InputMechanismController(AbstractTab):
     including initializing the view with data, connecting signals and slots, and handling
     user interactions.
     """
+    errorsUpdated = Signal(dict)
+    
     def __init__(self, parent_for_view):
         """
         Initialize the InputMechanismController.
@@ -160,6 +169,22 @@ class InputMechanismController(AbstractTab):
         limits = self._calculator.get_bearings_attributes_limits(bearing_section_id)
         if self.db_controller.show_bearings(support_type, bearing_type, *limits):
             self.tab_controllers[1].on_bearing_selected(bearing_section_id, self.db_controller.data)
+            # HACK TODO: tutaj zostało wybrane łożysko z tabeli z bazy dabych. Od tego zależy animacja. Natomiast błędy należy jeszcze sprawdzić po pobraniu danych od innych zakładek.
+            if bearing_section_id == 'eccentrics':
+                d_out = self.db_controller.data['d_out'][0]
+                d_in = self.db_controller.data['d_in'][0]
+
+                # TODO HACK: for some reason the bearing data in calculator is not set right here, but when calculating the power losses. I set it here (relevant data (d_in, d_out) only.)
+                eccentric_data = self._calculator.data['Bearings']['eccentrics']['data']
+                if eccentric_data is None:
+                    self._calculator.data['Bearings']['eccentrics']['data'] = {'d_in': [d_in, ''], 'd_out': [d_out, '']}
+
+                if bearing_fits_in_cycloidal(self._calculator.error_check_data, d_out):
+                    self.animDataUpdated.emit({'InputTab': {'bearing_out_dia': d_out, 'bearing_in_dia': d_in}})
+                    self.errorsUpdated.emit(None)
+                else:
+                    self.animDataUpdated.emit({'InputTab': False})
+                    self.errorsUpdated.emit({'bearing does not fit': True})
 
     def _on_select_rolling_element(self, bearing_section_id, data):
         """
@@ -252,14 +277,8 @@ class InputMechanismController(AbstractTab):
             # TODO: this allows only updating passed values. Might not be neccesary when this module is blocked until the others are filled out.
             desired = (('F_wzx', 'N'), ('F_wzy', 'N'), ('n_k', 'N'), ('B', 'mm'), ('R_w1', 'mm'), ('e', 'mm'))
             self._calculator.update_data({key: [wanted_data[key], unit] for key, unit in desired if wanted_data.get(key) is not None})
-            # self._calculator.update_data({
-            #     'F_wzx': [wanted_data["F_wzx"], 'N'],
-            #     'F_wzy': [wanted_data["F_wzy"], 'N'],
-            #     'n_k': [wanted_data['n_k'], ''],
-            #     'B': [wanted_data["B"], 'mm'],
-            #     'R_w1': [wanted_data["R_w1"], 'mm'],
-            #     'e': [wanted_data["e"], 'mm']
-            # })
+            if wanted_data.get('R_f1') is not None:
+                self._calculator.error_check_data.update({'R_f1': wanted_data['R_f1']})
 
             self._calculator.set_initial_data() # to tylko przelicza na podstawie nowych danych zależne od nich dane w kalkulatorze. Trzeba jeszcze je wpisać w view.
             if wanted_data.get("B") is not None:
@@ -296,15 +315,26 @@ class InputMechanismController(AbstractTab):
             self.tab_controllers[3].update_state()
         elif new_data.get("PinOutTab") is not None: # F_wmr, r_mr, x
             wanted_data = new_data.get("PinOutTab")
-            self._calculator.update_data({
-                'Fwm': [wanted_data["Fwm"], 'N'],
-                'x': [wanted_data["x"], 'mm'],
-            })
+            # true if all data is passed, not just the visuals (pin placement radius and pin count)
+            if wanted_data.get('Fwm') is not None:
+                self._calculator.update_data({
+                    'Fwm': [wanted_data["Fwm"], 'N'],
+                    'x': [wanted_data["x"], 'mm'],
+                })
+                self._calculator.set_initial_data()
+                self.tabs[0]._outputs["x"][0].setValue(wanted_data["x"])
+                self.tab_controllers[0].update_state()
+                self.tab_controllers[3].update_state()
 
-            self._calculator.set_initial_data()
-            self.tabs[0]._outputs["x"][0].setValue(wanted_data["x"])
-            self.tab_controllers[0].update_state()
-            self.tab_controllers[3].update_state()
+            self._calculator.error_check_data.update({'R_wt': wanted_data['R_wt'], 'hole_dia': wanted_data['hole_dia']})
+            eccentric_data = self._calculator.data['Bearings']['eccentrics']['data']
+
+            if eccentric_data is not None and bearing_fits_in_cycloidal(self._calculator.error_check_data, eccentric_data['d_out'][0]):
+                self.animDataUpdated.emit({'InputTab': {'bearing_out_dia': eccentric_data['d_out'][0], 'bearing_in_dia': eccentric_data['d_in'][0]}})
+                self.errorsUpdated.emit(None)
+            elif eccentric_data is not None:
+                self.animDataUpdated.emit({'InputTab': False})
+                self.errorsUpdated.emit({'bearing does not fit': True})
 
         # Wszystkie nowe dane należy najpierw wpisać do głównego słownika z danymi przez self._calculator.update_data()
         #       niestety, trzeba podawać jednostki; wpisywanie bezpośrednio wartości do 0-wego elementu jest wątpliwe, bo obchodzi wewnętrzne funkcje tego modułu do zarządzania danymi (fetch_data_subset)

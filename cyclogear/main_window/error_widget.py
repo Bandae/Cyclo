@@ -20,7 +20,10 @@ class ErrorWidget(QWidget):
                 # "g duze": QLabelD("Zbyt duży promień rolek. Zmniejsz g."),
                 # "e duze": QLabelD("Zbyt duży mimośród. Zmniejsz ρ lub λ."),
                 "naciski przekroczone": QLabelD("Przekroczono dopuszczalne naciski między kołem a rolkami. Zmień parę materiałów, lub zmniejsz obciążenie."),
-            }
+            },
+            "InputTab": {
+                "bearing does not fit": QLabelD("Łożysko mimośrodowe nie mieści się w kole. Zmniejsz średnicę łożyska, lub wróć do edycji mechanizmu wyjściowego.")
+            },
         }
         for module_name in self.errors:
             for label in self.errors[module_name].values():

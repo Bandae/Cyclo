@@ -1,12 +1,13 @@
 import math
 import time
-from PySide2.QtCore import QThread, QPoint, Qt, QObject, Signal 
-from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen, QBrush, QPainterPath
+from PySide2.QtCore import QThread, QPoint, Qt, QObject, Signal
+from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen, QBrush, QPainterPath, QPolygonF, QConicalGradient, QColor
 from PySide2.QtWidgets import QLabel
 
 # TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self._angle może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
 # reset animacji to naprawia od razu, ale nie jej start. jest to kwestia kumulacji błędów, bo jak lece od 24 do 10 to sie zepsuje, ale jak zresetuje na 11 i zejde do 10 to już nie.
 # narazie ustawiam reset jeśli było zmienione przełożenie/liczba zębów. Inny pomysł mam, żeby zmienić self._angle do najbliższego podzielnego przez skok kąta, to powinno działać
+# TODO: find a way to draw in higher resolution.
 
 class Animation(QLabel):
     """
@@ -43,6 +44,7 @@ class Animation(QLabel):
 
         self._data = None
         self._dataWiktor = None
+        self._shaft_data = None
         self._angle = 0
         # TODO: temporary solution while working on gear tab starting out with empty fields
         self._angle2 = 180 * (24 + 1)
@@ -69,6 +71,7 @@ class Animation(QLabel):
             return
 
         painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
         pen = QPen(Qt.black, 1)
         painter.setPen(pen)
 
@@ -143,9 +146,39 @@ class Animation(QLabel):
         else:
             cutout_shape = cutHoles(self._outline, self.scale, self._dataWiktor, -180)
             painter.drawPath(cutout_shape)
-
+        
+        # Draw the eccentric bearing
+        if self._shaft_data is not None:
+            painter.setBrush(QBrush(self.WHITE, Qt.SolidPattern))
+            bearing_diameter = self._shaft_data["bearing_out_dia"] * self.scale
+            inner = bearing_diameter * 0.8
+            ball_center = bearing_diameter * 0.82
+            ball_dia = bearing_diameter * 0.2
+            painter.drawEllipse(-bearing_diameter / 2, -bearing_diameter / 2, bearing_diameter, bearing_diameter)
+            painter.setBrush(QBrush(self.GRAY_LIGHT, Qt.SolidPattern))
+            for i in range(10):
+                bushingAngle = (2 * math.pi * i) / 10
+                ballCenterX = (ball_center * math.cos(bushingAngle)) / 2
+                ballCenterY = (ball_center * math.sin(bushingAngle)) / 2
+                painter.drawEllipse(ballCenterX - ball_dia / 2, ballCenterY - ball_dia / 2, ball_dia, ball_dia)
+            painter.drawEllipse(-inner / 2, -inner / 2, inner, inner)
+        
         painter.translate(-translation_x, -translation_y)
+        # TODO: drawing with a gradient to show rotation around the main axis
+        # rg = QConicalGradient(0, 0, 0)
+        # rg.setColorAt(0, QColor(self.STEEL))
+        # rg.setColorAt(0.5, QColor(self.GRAY_LIGHT))
+        # rg.setColorAt(1, QColor(self.STEEL))
+        # painter.setBrush(QBrush(rg))
+        # shaft_dia = 40 * self.scale
+        # painter.drawEllipse(-shaft_dia / 2, -shaft_dia / 2, shaft_dia, shaft_dia)
         painter.rotate(-secondary_rotation_angle)
+
+        # Draw the input shaft
+        if self._shaft_data is not None:
+            painter.setBrush(QBrush(self.STEEL, Qt.SolidPattern))
+            shaft_dia = self._shaft_data["bearing_in_dia"] * self.scale
+            painter.drawEllipse(-shaft_dia / 2, -shaft_dia / 2, shaft_dia, shaft_dia)
 
         # Draw the rollers around the outer ring
         painter.setBrush(QBrush(self.GRAY_LIGHT, Qt.SolidPattern))
@@ -255,6 +288,11 @@ class Animation(QLabel):
             self._dataWiktor = None
         elif data.get("PinOutTab") is not None:
             self._dataWiktor = data["PinOutTab"]
+        
+        if data.get("InputTab") is False:
+            self._shaft_data = None
+        elif data.get("InputTab") is not None:
+            self._shaft_data = data["InputTab"]
 
         max_size = (self._data["Rg"] * 2) + (self._data["g"] * 4)
         self.scale = self._paintArea / max_size
@@ -263,6 +301,7 @@ class Animation(QLabel):
         if self._data["z"] != oldTeethCount:
             self.reset.emit()
         self._draw()
+
 
 def drawGearOutline(teethCount, baseRadius, heightFactor, displacementFactor, scale):
     """
@@ -277,7 +316,7 @@ def drawGearOutline(teethCount, baseRadius, heightFactor, displacementFactor, sc
         A QPainterPath object representing the gear's outline.
     """
     outline = QPainterPath()
-    points = QPolygon()
+    points = QPolygonF()
 
     # Loop to calculate the points of the gear outline
     for pointIndex in range(720):

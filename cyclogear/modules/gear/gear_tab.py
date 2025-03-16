@@ -231,7 +231,7 @@ class GearTab(AbstractTab):
 
         help_pdf_button = QPushButton("Pomoc")
         button_layout.addWidget(help_pdf_button)
-        help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//zazebienie-help-1.pdf"))
+        help_pdf_button.clicked.connect(lambda: open_pdf("help_docs/zazebienie-help-1.pdf"))
 
         scrollable_tab = ResponsiveContainer(self, self.data, self.data.setupSmallLayout, self.data.setupLayout, 480, 1300)
         tab_titles = ["Wprowadzanie Danych", "Wykresy", "Tolerancje"]

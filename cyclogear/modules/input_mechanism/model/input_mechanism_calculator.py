@@ -102,6 +102,9 @@ class InputMechanismCalculator():
               }
             }
         }
+        
+        # HACK TODO: seperate from self.data to avoid potential side consequences:
+        self.error_check_data = {"R_f1": None, "R_wt": None, "hole_dia": None}
         self._add_data_reference()
 
     def _add_data_reference(self):

@@ -157,6 +157,7 @@ class PinOutputMechanismModel(QWidget):
             self.errorsUpdated.emit({"R_wt male": True})
         elif p_max is not None and p_max > p_dop:
             self.errorsUpdated.emit({"naciski przekroczone": True})
+            self.animDataUpdated.emit({"PinOutTab": anim_data})
         else:
             self.errorsUpdated.emit(None)
             self.animDataUpdated.emit({"PinOutTab": anim_data})

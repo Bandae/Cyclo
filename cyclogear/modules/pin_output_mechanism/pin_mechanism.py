@@ -23,6 +23,7 @@ from .model import PinOutputMechanismModel
 class DataEdit(QWidget):
     changeDiode = Signal(StatusDiodes.Status)
     filledOut = Signal()
+    shouldSendData = Signal(bool)
     
     def __init__(self, parent: AbstractTab, model) -> None:
         super().__init__(parent)
@@ -80,6 +81,9 @@ class DataEdit(QWidget):
             child.setEnabled(is_accepted)
         
         if is_accepted:
+            # TODO: sent for visual error checking in input tab. Should it also happen if not is_accepted?
+            self.shouldSendData.emit(True)
+
             for widget in self.tuning_widgets.values():
                 widget.setEnabled(False)
     
@@ -258,7 +262,7 @@ class PinOutTab(AbstractTab):
 
         help_pdf_button = QPushButton("Pomoc")
         button_layout.addWidget(help_pdf_button, 1, 2)
-        help_pdf_button.clicked.connect(lambda: open_pdf("resources//help_docs//mechanizmy-sworzniowe-help-1.pdf"))
+        help_pdf_button.clicked.connect(lambda: open_pdf("help_docs/mechanizmy-sworzniowe-help-1.pdf"))
 
         self.data = DataEdit(self, self.model)
         self.wykresy = ResultsTab(self, "numer sworznia", {
@@ -298,6 +302,7 @@ class PinOutTab(AbstractTab):
         self.model.changeDiode.connect(self.diodes.enableDiode)
         self.data.changeDiode.connect(self.diodes.enableDiode)
         self.data.filledOut.connect(self.filledOut.emit)
+        self.data.shouldSendData.connect(self.sendData) # visuals_only = True
         self.tol_edit.toleranceDataUpdated.connect(self.data.toleranceUpdate)
         self.use_this_check.stateChanged.connect(self.useThisChanged)
 
@@ -337,12 +342,20 @@ class PinOutTab(AbstractTab):
         '''
         self.use_this_check.setEnabled(not state)
 
-    def sendData(self) -> None:
-        self.dataChanged.emit({"PinOutTab": {
-            "Fwm": self.model.obliczone_dane["F_wmr"],
-            "r_mr": self.model.obliczone_dane["r_mr"],
-            "x": self.model.input_dane["e2"],
-        }})
+    def sendData(self, visuals_only=False) -> None:
+        data = {
+            # for error checking (does eccentric bearing fit):
+            "hole_dia": self.model.obliczone_dane["d_otw"],
+            "R_wt": self.model.input_dane["R_wt"],
+        }
+        if not visuals_only:
+            data.update({
+                "Fwm": self.model.obliczone_dane["F_wmr"],
+                "r_mr": self.model.obliczone_dane["r_mr"],
+                "x": self.model.input_dane["e2"],
+            })
+
+        self.dataChanged.emit({"PinOutTab": data})
     
     def receiveData(self, new_data) -> None:
         wanted_data = None
@@ -363,6 +376,10 @@ class PinOutTab(AbstractTab):
         # elif wanted_data.get('n_k') == 1:
         #     self.data.label_e2.hide()
         #     self.data.input_widgets["e2"].hide()
+        # TODO HACK: necessary for proper displaying of the mechanism before it is first completely calculated
+        if self.model.zew_dane["e"] is not None:
+            self.model.obliczone_dane["d_otw"] = self.model.input_dane["d_tul"] + self.model.zew_dane["e"] * 2
+        
         if not self.model.module_enabled:
             return
 

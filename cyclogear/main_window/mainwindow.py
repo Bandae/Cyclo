@@ -32,10 +32,9 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
 
         self.gear_tab = GearTab(central_widget)
-        self.gear_tab.animDataUpdated.connect(self.updateAnimationData)
 
         self.pin_out_tab = PinOutTab(central_widget)
-        self.pin_out_tab.animDataUpdated.connect(self.updateAnimationData)
+
         self.gear_tab.wheelMatChanged.connect(self.pin_out_tab.data.material_frame.changeWheelMat)
 
         roller_out_tab = RollerOutTab(central_widget)
@@ -64,6 +63,7 @@ class MainWindow(QMainWindow):
         self.error_box.show()
         self.pin_out_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
         self.gear_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="GearTab"))
+        self.input_shaft_tab_controller.errorsUpdated.connect(partial(self.error_box.updateErrors, module="InputTab"))
         self.error_box.resetErrors()
 
         self.base_data = BaseDataWidget(central_widget)
@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
             self.stacklayout.addWidget(widget.getView())
             widget.dataChanged.connect(self.exchangeData)
             widget.filledOut.connect(partial(self.tabFilledOut, tab_index=index))
+            widget.animDataUpdated.connect(self.updateAnimationData)
         
         for button in self.tab_buttons[1::]:
             button.setEnabled(False)

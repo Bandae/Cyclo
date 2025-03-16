@@ -2,10 +2,11 @@ from typing import Optional
 import os
 import re
 from PySide2.QtWidgets import QMessageBox, QFileDialog
+from config import RESOURCES_PATH
 
 
 def open_pdf(relative_path: str) -> None:
-    filename = os.path.join(os.path.dirname(__file__), relative_path)
+    filename = os.path.join(RESOURCES_PATH, relative_path)
     os.startfile(filename)
 
 

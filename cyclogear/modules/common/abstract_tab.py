@@ -23,6 +23,10 @@ class AbstractTab(QWidget):
     dataChanged = Signal(dict)
     # sygnał wysyłany, kiedy zakładka została wypełniona i można aktywować kolejne zakładki
     filledOut = Signal()
+    # sygnał z danymi potrzebnymi do rysowania modułu w animacji. Powinien być {'nazwa_modułu': x}
+    # gdzie x == słownik z potrzebymi wielkościami
+    # LUB x == False (jeśli animacja ma przestać rysować moduł (np. wystąpił błąd wywołujący niepoprawny wygląd, jak przecinanie się elementów))
+    animDataUpdated = Signal(dict)
 
     def getView(self) -> QWidget:
         '''
