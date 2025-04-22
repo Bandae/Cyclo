@@ -100,9 +100,9 @@ class DriveShaftTabController():
         self._calculator.update_eccentrics_position()
         self._calculator.setup_inputs_validation()
 
-    def set_state(self, data):
+    def load_state(self, data):
         """
-        Set tab's state.
+        Set the tab state with data loaded from a JSON file.
 
         Args:
             data (dict): Data to set the state of the tab with.

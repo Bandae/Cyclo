@@ -205,7 +205,7 @@ class DataEdit(QWidget):
         self.obl_srednice_labels[1].setText(str(results["d_t_obl"]) + " mm")
         self.obl_srednice_labels[2].setText(str(results["d_o_obl"]) + " mm")
         self.tuning_widgets["d_sw"].modify(minimum=results["d_s_obl"])
-        self.tuning_widgets["d_tul"].modify(minimum=results["d_t_obl"])
+        self.tuning_widgets["d_tul"].modify(value=results["d_t_obl"], minimum=results["d_t_obl"])
 
         self.results_frame.update()
         self.accept_button.setEnabled(False)

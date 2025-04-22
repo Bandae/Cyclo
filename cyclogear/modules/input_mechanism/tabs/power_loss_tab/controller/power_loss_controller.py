@@ -117,9 +117,9 @@ class PowerLossTabController:
 
         update_data_subset(self._component_data, self._outputs, update_output)
 
-    def set_state(self, data):
+    def load_state(self, data):
         """
-        Set tab's state.
+        Set the tab state with data loaded from a JSON file.
 
         Args:
             data (dict): Data to set the state of the tab with.

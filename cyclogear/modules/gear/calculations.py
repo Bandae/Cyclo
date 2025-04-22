@@ -46,7 +46,7 @@ def gear_error_check(z, lam, g, e, Rg, ro):
 
 def calculate_gear(gear_data, material_data, out_data, tolerancje=None):
     liczba_rolek = gear_data["z"] + 1
-    liczba_obciazonych_rolek = int(gear_data["z"]/2 if gear_data["z"]%2 == 0 else (gear_data["z"]+1)/2)
+    liczba_obciazonych_rolek = int(gear_data["z"]/2 + 1 if gear_data["z"]%2 == 0 else (gear_data["z"]+1)/2 + 1)
     F_max = 1000 * 4 * (out_data["M_wyj"] / gear_data['n_k']) / (gear_data["R_w1"] * liczba_rolek)
 
     Fx = [0] * liczba_obciazonych_rolek

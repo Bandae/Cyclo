@@ -61,7 +61,7 @@ class BearingsTabController:
             self._tab_data (dict): The entered user data.
         """
         def get_input(recipient, source, attribute):
-           recipient[attribute][0] = source[attribute][0].value()
+            recipient[attribute][0] = source[attribute][0].value()
         
         def get_item(recipient, source, attribute):
             recipient[attribute] = source[attribute].data()
@@ -115,9 +115,9 @@ class BearingsTabController:
 
         update_data_subset(self._component_data, self._outputs, update_output)
     
-    def set_state(self, data):
+    def load_state(self, data):
         """
-        Set tab's state.
+        Set the tab state with data loaded from a JSON file.
 
         Args:
             data (dict): Data to set the state of the tab with.
@@ -133,6 +133,11 @@ class BearingsTabController:
 
         for name, item in self._items['Bearings'].items():
             item['data'].setData(data['Bearings'][name]['data'])
+            item['bearing_type'].setData(data['Bearings'][name]['bearing_type'])
+            self.on_bearing_type_selected(name, data['Bearings'][name]['bearing_type'])
+
+        # TODO HACK to sprawia że działa wczytywanie poprawnie???
+        self.get_data()
 
         self.update_state()
         self._tab.trackState(True)

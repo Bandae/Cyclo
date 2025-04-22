@@ -154,6 +154,9 @@ class InputMechanismController(AbstractTab):
         """
         support_type = 'centralne' if bearing_section_id == 'eccentrics' else 'podporowe'
         if self.db_controller.show_bearing_types(support_type):
+            # TODO not sure how the fetch_data_subset in update_data will work
+            self._calculator.data['Bearings'][bearing_section_id]['bearing_type'] = self.db_controller.data
+
             self.tab_controllers[1].on_bearing_type_selected(bearing_section_id, self.db_controller.data)
 
     def _on_select_bearing(self, bearing_section_id, data):
@@ -220,7 +223,7 @@ class InputMechanismController(AbstractTab):
     def _on_shaft_designing_finished(self):
         self._input_mechanism.handleShaftDesigningFinished()
 
-    def save_data(self):
+    def saveData(self):
         '''
         Get the component data
         '''
@@ -239,7 +242,7 @@ class InputMechanismController(AbstractTab):
         data.append(self._input_mechanism.isShaftDesigned)
         return data
 
-    def load_data(self, data):
+    def loadData(self, data):
         '''
         Set the initial component data.
         '''
@@ -254,12 +257,16 @@ class InputMechanismController(AbstractTab):
 
         # Set every tab data
         for idx, tab_controller in enumerate(self.tab_controllers[:-1]):
-            tab_controller.set_state(data[idx+2])
+            tab_controller.load_state(data[idx+2])
         
         # Set isShaftDesigned flag
         self._input_mechanism.isShaftDesigned = data[-1]
         if self._input_mechanism.isShaftDesigned:
             self._on_shaft_designing_finished()
+
+        # TODO should be inside its tab, but no access to calculator. Figure out the signals on elements
+        for bearing_section in self._calculator.data['Bearings']:
+            self._calculator.data['Bearings'][bearing_section]['bearing_type'] = data[3]['Bearings'][bearing_section]['bearing_type']
     
     # ---------- methods used for interactions with other modules and main window ----------
 

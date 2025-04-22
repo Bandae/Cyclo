@@ -23,7 +23,7 @@ class VisualsFrame(QFrame):
         self.inputs = {
             "ro": DoubleSpinBox(self.model.data["ro"], 1, 8, 0.05),
             "lam": DoubleSpinBox(self.model.data["lam"], 0.5, 0.99, 0.005, 3),
-            "g": DoubleSpinBox(self.model.data["g"], 3, 14, 0.02),
+            "g": DoubleSpinBox(self.model.data["g"], 0.01, 14, 0.02),
             'n_k': IntSpinBox(self.model.data['n_k'], 1, 2, 1),
         }
         for widget in self.inputs.values():

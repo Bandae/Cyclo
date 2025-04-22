@@ -123,7 +123,7 @@ class ITrackedWidget(QWidget, metaclass=ABCQWidgetMeta):
         current_state = self._getState()
 
         # Check if all inputs were provided
-        all_provided = all(current_state)
+        all_provided = all(field_state is not None for field_state in current_state)
 
         state_changed = current_state != self._original_state
 

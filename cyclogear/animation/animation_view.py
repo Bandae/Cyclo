@@ -114,7 +114,8 @@ class AnimationView(QWidget):
         """
         mainLayout = QVBoxLayout()
         mainLayout.setAlignment(Qt.AlignHCenter)
-        mainLayout.setContentsMargins(80, 20, 80, 20)
+        # setting a bottom margin > 0 messes the layout with animation controls
+        mainLayout.setContentsMargins(20, 20, 100, 0)
         self.setLayout(mainLayout)
 
         # Set animation
