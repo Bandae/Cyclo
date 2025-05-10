@@ -64,10 +64,7 @@ class AnimationControls(QWidget):
         Args:
             checked (bool): A boolean indicating whether the button is checked (animation running).
         """
-        if checked:
-            self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOn)
-        else:
-            self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOff)
+        self.toggleAnimationButton.setText(self.toggleAnimationButtonLabelOn if checked else self.toggleAnimationButtonLabelOff)
     
     def _setAngleLabel(self, sliderValue):
         """
@@ -113,9 +110,10 @@ class AnimationView(QWidget):
         Initializes the UI elements and layout.
         """
         mainLayout = QVBoxLayout()
-        mainLayout.setAlignment(Qt.AlignHCenter)
+        # mainLayout.setAlignment(Qt.AlignHCenter)
         # setting a bottom margin > 0 messes the layout with animation controls
-        mainLayout.setContentsMargins(20, 20, 100, 0)
+        # mainLayout.setContentsMargins(20, 20, 100, 0)
+        # mainLayout.setSpacing(20)
         self.setLayout(mainLayout)
 
         # Set animation
@@ -154,17 +152,6 @@ class AnimationView(QWidget):
         self.animationControls.resetAnimationControls()
         self.animation.setAngle(0, reset=True)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """
-        Handles window resize events and adjusts the animation area.
-        Args:
-            event (QResizeEvent): Resize event of this widget.
-        """
-        new_size = min(event.size().width(), 1000), event.size().height()
-        self.animation.setFixedSize(*new_size)
-        self.animation.updatePaintArea(min(new_size) - 75)
-        return super().resizeEvent(event)
-    
     def closeEvent(self, event):
         """
         Handle app closure to ensure thread is stopped.

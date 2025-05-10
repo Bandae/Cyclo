@@ -1,7 +1,7 @@
 import math
 import time
-from PySide2.QtCore import QThread, QPoint, Qt, QObject, Signal
-from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen, QBrush, QPainterPath, QPolygonF, QConicalGradient, QColor
+from PySide2.QtCore import QThread, QPoint, Qt, QObject, Signal, QSize
+from PySide2.QtGui import QPainter, QPixmap, QPolygon, QPen, QBrush, QPainterPath, QPolygonF, QConicalGradient, QColor, QResizeEvent
 from PySide2.QtWidgets import QLabel
 
 # TODO: skok kąta zmienia się przy liczbie zębów. Więc dla niektoych liczb zębów, self._angle może sie zdarzyć nie taki jak trzeba jak sie zmienia poza animacją.
@@ -55,16 +55,12 @@ class Animation(QLabel):
         self._worker = None
         self._animationThread = None
 
-        self.setMinimumSize(750, 750)
-        # self.updateData({})
-        # self._draw()
-
     def _draw(self):
         """
         Draws the current frame of the animation.
         """
         # Create a pixmap with the size of the widget and fill it with the background color
-        pixmap = QPixmap(self.size())
+        pixmap = QPixmap(QSize(self._paintArea, self._paintArea))
         pixmap.fill(self.BACKGROUND_COLOR)
         
         if self._data is None:
@@ -258,16 +254,16 @@ class Animation(QLabel):
         self._angle2 = self._angle + 180 * (self._data["z"] + 1)
         self._draw()
 
-    def updatePaintArea(self, paintArea):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """
-        Updates the paint area dimensions when the window is resized.
+        Handles window resize events and adjusts the animation area.
+        Args:
+            event (QResizeEvent): Resize event of this widget.
         """
-        self._paintArea = paintArea
-        if self._data is None:
-            return
-
+        
+        self._paintArea = min(event.size().toTuple()) - 30
         self.updateData({})
-        self._draw()
+        return super().resizeEvent(event)
 
     def updateData(self, data):
         """

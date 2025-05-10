@@ -20,8 +20,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Przekładnia Cykloidalna")
-        self.setMinimumSize(1050,750)
-        self.showMaximized()
+        self.setMinimumSize(1170,750)
+        # self.showMaximized() # for some reason the responsive container for gear tab breaks when it starts maximized, (height is fixed at about half the available space) but is fixed when minimizing and then maximizing.
 
         #ustawienie ikonki :
         main_icon = QIcon()
@@ -49,16 +49,14 @@ class MainWindow(QMainWindow):
         data_layout = QVBoxLayout()
         button_layout = QHBoxLayout()
         self.stacklayout = QStackedLayout()
-        animation_layout = QStackedLayout()
         self.animation_view = AnimationView(central_widget)
-        animation_layout.addWidget(self.animation_view)
         # self.animation_view.animacja.animation_tick.connect(self.onAnimationTick)
 
         data_layout.addLayout(button_layout)
         data_layout.addLayout(self.stacklayout)
 
-        main_layout.addLayout(animation_layout,0,1,1,6)
-        main_layout.addLayout(data_layout,0,7,1,3)
+        main_layout.addWidget(self.animation_view,0,0,1,6)
+        main_layout.addLayout(data_layout,0,6,1,4)
         self.error_box = ErrorWidget(central_widget)
         self.error_box.show()
         self.pin_out_tab.errorsUpdated.connect(partial(self.error_box.updateErrors, module="PinOutTab"))
@@ -139,13 +137,17 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
     
     def resizeEvent(self, event) -> None:
-        try:
-            w, h = self.animation_view.size().toTuple()
-            self.help_button.move(w-150, 20)
-            self.base_data.move(w-200, h-170)
-        except AttributeError:
-            # pierwsze ustalenie rozmiaru okna, jeszcze nie ma animation view.
-            pass
+        self.animation_view.setMinimumWidth(event.size().width() * 0.6) # acording to the GridLayout setup
+        max_x, max_y = self.stacklayout.parent().contentsRect().x(), self.size().height()
+        self.help_button.move(max_x-150, 20)
+        self.base_data.move(max_x-200, max_y-200)
+
+        # Based on what the size of animation view is with starting window size.
+        # max_x starts as 0 on first resize event, and this needs to be done manually.
+        if max_x == 0:
+            self.help_button.move(703-150, 20)
+            self.base_data.move(703-200, 750-200)
+
         return super().resizeEvent(event)
 
     def helpClicked(self):
